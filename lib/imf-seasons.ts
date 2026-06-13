@@ -11,7 +11,7 @@ export interface ImfSeason {
 export async function getImfSeasons(): Promise<ImfSeason[]> {
   const { data } = await supabase
     .from('imf_seasons')
-    .select('year, start_date, manual_wins')
+    .select('*')
     .order('year', { ascending: false });
 
   if (!data || data.length === 0) return [];
