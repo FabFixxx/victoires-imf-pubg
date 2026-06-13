@@ -20,7 +20,7 @@ LocaleConfig.defaultLocale = 'fr';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/colors';
 import { getCurrentPlayer } from '../../lib/storage';
-import { GROUP_PLAYERS } from '../../constants/config';
+import { GROUP_PLAYERS } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,

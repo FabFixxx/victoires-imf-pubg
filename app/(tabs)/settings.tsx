@@ -25,7 +25,7 @@ import {
   addManualWin, deleteManualWin,
   ImfSeason, ManualWin,
 } from '../../lib/imf-seasons';
-import { GROUP_PLAYERS } from '../../constants/config';
+import { GROUP_PLAYERS } from '../../constants/players';
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
 

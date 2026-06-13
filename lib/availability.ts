@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { GROUP_PLAYERS } from '../constants/config';
+import { GROUP_PLAYERS } from '../constants/players';
 
 export const PLAYER_COLORS: Record<string, string> = {
   FabFix: '#4FC3F7',

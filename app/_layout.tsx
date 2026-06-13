@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
-import { GROUP_PLAYERS } from '../constants/config';
+import { GROUP_PLAYERS } from '../constants/players';
 import { registerPushToken, scheduleSundayReminder } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 

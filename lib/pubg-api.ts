@@ -1,4 +1,5 @@
-import { PUBG_API_KEY, PUBG_BASE_URL, GROUP_PLAYERS } from '../constants/config';
+import { PUBG_API_KEY, PUBG_BASE_URL } from '../constants/config';
+import { GROUP_PLAYERS } from '../constants/players';
 import { supabase } from './supabase';
 
 const PUBG_HEADERS = {

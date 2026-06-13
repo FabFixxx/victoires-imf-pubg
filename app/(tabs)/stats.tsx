@@ -14,7 +14,7 @@ import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
 import { getPlayerStats, PlayerStats } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
-import { GROUP_PLAYERS, PlayerName } from '../../constants/config';
+import { GROUP_PLAYERS, PlayerName } from '../../constants/players';
 
 interface RecentMatch {
   match_id: string;
