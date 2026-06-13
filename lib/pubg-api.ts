@@ -97,7 +97,8 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
       GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number])
     );
 
-    if (groupPlayers.length > 0) {
+    // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
+    if (groupPlayers.length === GROUP_PLAYERS.length) {
       await supabase.from('player_match_stats').upsert(
         groupPlayers.map((p) => ({
           match_id: matchId,
