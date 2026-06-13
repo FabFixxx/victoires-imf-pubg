@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Générateur d'icônes IMF PUBG</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a1a; color: #eee; font-family: Arial, sans-serif; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 6px; color: #F5A623; }
+  p { color: #aaa; font-size: 14px; margin-bottom: 20px; }
+  .upload-area {
+    border: 2px dashed #555; border-radius: 12px; padding: 32px; text-align: center;
+    cursor: pointer; margin-bottom: 24px; transition: border-color .2s;
+  }
+  .upload-area:hover { border-color: #F5A623; }
+  .upload-area input { display: none; }
+  .main { display: flex; gap: 32px; flex-wrap: wrap; }
+  .left { flex: 0 0 auto; }
+  .right { flex: 1; min-width: 260px; }
+  #cropWrap {
+    position: relative; display: inline-block; overflow: hidden;
+    border: 1px solid #444; border-radius: 8px; user-select: none;
+  }
+  #imgEl { display: block; max-height: 480px; max-width: 360px; }
+  #cropBox {
+    position: absolute; border: 2px solid #F5A623;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+    cursor: move;
+  }
+  .resize-handle {
+    position: absolute; width: 12px; height: 12px;
+    background: #F5A623; border-radius: 2px;
+  }
+  .resize-handle.tl { top: -6px; left: -6px; cursor: nwse-resize; }
+  .resize-handle.tr { top: -6px; right: -6px; cursor: nesw-resize; }
+  .resize-handle.bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+  .resize-handle.br { bottom: -6px; right: -6px; cursor: nwse-resize; }
+  .previews { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .preview-item { text-align: center; }
+  .preview-item canvas { border-radius: 12px; display: block; border: 1px solid #333; }
+  .preview-item span { display: block; margin-top: 4px; font-size: 11px; color: #888; }
+  .btn-group { display: flex; flex-direction: column; gap: 10px; }
+  button {
+    background: #F5A623; color: #111; border: none; padding: 10px 18px;
+    border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer;
+    text-align: left; transition: background .15s;
+  }
+  button:hover { background: #ffc03d; }
+  button span { font-weight: normal; color: #555; font-size: 12px; display: block; }
+  .hint { font-size: 12px; color: #666; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>Générateur d'icônes — Victoires IMF PUBG</h1>
+<p>Charge l'image, ajuste le cadrage carré, puis télécharge les fichiers PNG à mettre dans <code>assets/</code>.</p>
+
+<div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+  <input type="file" id="fileInput" accept="image/*">
+  <div style="font-size:32px;margin-bottom:8px">📁</div>
+  <div>Clique ou glisse l'image ici</div>
+</div>
+
+<div class="main" id="mainArea" style="display:none">
+  <div class="left">
+    <div style="margin-bottom:8px;font-size:13px;color:#aaa">Ajuste le cadrage :</div>
+    <div id="cropWrap">
+      <img id="imgEl">
+      <div id="cropBox">
+        <div class="resize-handle tl"></div>
+        <div class="resize-handle tr"></div>
+        <div class="resize-handle bl"></div>
+        <div class="resize-handle br"></div>
+      </div>
+    </div>
+    <div class="hint">Glisse la zone jaune pour cadrer · poignées pour redimensionner</div>
+  </div>
+  <div class="right">
+    <div style="margin-bottom:12px;font-size:13px;color:#aaa">Aperçus :</div>
+    <div class="previews">
+      <div class="preview-item"><canvas id="p1" width="96" height="96" style="border-radius:16px"></canvas><span>icon.png</span></div>
+      <div class="preview-item"><canvas id="p2" width="64" height="64" style="border-radius:10px"></canvas><span>adaptive fg</span></div>
+      <div class="preview-item"><canvas id="p3" width="48" height="48" style="border-radius:8px"></canvas><span>56px</span></div>
+    </div>
+    <div class="btn-group">
+      <button onclick="download('icon.png', 1024, false)">
+        Télécharger icon.png
+        <span>1024×1024 — icône principale</span>
+      </button>
+      <button onclick="download('splash-icon.png', 1024, false)">
+        Télécharger splash-icon.png
+        <span>1024×1024 — écran de démarrage</span>
+      </button>
+      <button onclick="download('android-icon-foreground.png', 1024, false)">
+        Télécharger android-icon-foreground.png
+        <span>1024×1024 — icône adaptative Android (avant-plan)</span>
+      </button>
+      <button onclick="downloadBg()">
+        Télécharger android-icon-background.png
+        <span>1024×1024 — fond uni #160C02</span>
+      </button>
+      <button onclick="downloadMono()">
+        Télécharger android-icon-monochrome.png
+        <span>1024×1024 — version monochrome blanche</span>
+      </button>
+      <button onclick="downloadFavicon()">
+        Télécharger favicon.png
+        <span>196×196 — favicon web</span>
+      </button>
+      <button onclick="downloadAll()" style="background:#333;color:#F5A623;border:1px solid #F5A623">
+        ⬇ Tout télécharger
+        <span style="color:#777">Télécharge les 6 fichiers</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let img = null;
+let cropX = 0, cropY = 0, cropSize = 100;
+let displayScale = 1;
+
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+const mainArea = document.getElementById('mainArea');
+const imgEl = document.getElementById('imgEl');
+const cropBox = document.getElementById('cropBox');
+const cropWrap = document.getElementById('cropWrap');
+
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor='#F5A623'; });
+uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor='#555'; });
+uploadArea.addEventListener('drop', e => { e.preventDefault(); loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => loadFile(fileInput.files[0]));
+
+function loadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    img = new Image();
+    img.onload = () => {
+      imgEl.src = img.src;
+      imgEl.onload = initCrop;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function initCrop() {
+  mainArea.style.display = 'flex';
+  uploadArea.style.display = 'none';
+
+  const maxH = 480, maxW = 360;
+  displayScale = Math.min(maxH / img.naturalHeight, maxW / img.naturalWidth, 1);
+
+  const dw = Math.round(img.naturalWidth * displayScale);
+  const dh = Math.round(img.naturalHeight * displayScale);
+  imgEl.style.width = dw + 'px';
+  imgEl.style.height = dh + 'px';
+
+  // Initial crop: center square
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  cropSize = side;
+  cropX = Math.round((img.naturalWidth - side) / 2);
+  cropY = Math.round((img.naturalHeight - side) / 2);
+
+  updateCropBox();
+  updatePreviews();
+}
+
+function updateCropBox() {
+  const ds = displayScale;
+  cropBox.style.left   = Math.round(cropX * ds) + 'px';
+  cropBox.style.top    = Math.round(cropY * ds) + 'px';
+  cropBox.style.width  = Math.round(cropSize * ds) + 'px';
+  cropBox.style.height = Math.round(cropSize * ds) + 'px';
+}
+
+function renderCrop(canvas, size) {
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, size, size);
+}
+
+function updatePreviews() {
+  renderCrop(document.getElementById('p1'), 96);
+  renderCrop(document.getElementById('p2'), 64);
+  renderCrop(document.getElementById('p3'), 48);
+}
+
+// Drag crop box
+let dragState = null;
+cropBox.addEventListener('mousedown', e => {
+  if (e.target.classList.contains('resize-handle')) return;
+  e.preventDefault();
+  dragState = { type:'move', sx: e.clientX, sy: e.clientY, ox: cropX, oy: cropY };
+});
+cropBox.querySelectorAll('.resize-handle').forEach(h => {
+  h.addEventListener('mousedown', e => {
+    e.preventDefault(); e.stopPropagation();
+    dragState = { type:'resize', corner: h.className.split(' ')[1], sx: e.clientX, sy: e.clientY, ox: cropX, oy: cropY, os: cropSize };
+  });
+});
+document.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  const dx = (e.clientX - dragState.sx) / displayScale;
+  const dy = (e.clientY - dragState.sy) / displayScale;
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+
+  if (dragState.type === 'move') {
+    cropX = Math.max(0, Math.min(iw - cropSize, dragState.ox + dx));
+    cropY = Math.max(0, Math.min(ih - cropSize, dragState.oy + dy));
+  } else {
+    const d = Math.max(dx, dy);
+    let ns = Math.max(60, dragState.os + (dragState.corner === 'br' || dragState.corner === 'tr' ? d : -d));
+    ns = Math.min(ns, iw, ih);
+    let nx = dragState.ox, ny = dragState.oy;
+    if (dragState.corner === 'tl') { nx = dragState.ox + dragState.os - ns; ny = dragState.oy + dragState.os - ns; }
+    else if (dragState.corner === 'tr') { ny = dragState.oy + dragState.os - ns; }
+    else if (dragState.corner === 'bl') { nx = dragState.ox + dragState.os - ns; }
+    cropSize = ns;
+    cropX = Math.max(0, Math.min(iw - cropSize, nx));
+    cropY = Math.max(0, Math.min(ih - cropSize, ny));
+  }
+  updateCropBox();
+  updatePreviews();
+});
+document.addEventListener('mouseup', () => { dragState = null; });
+
+function download(filename, size, alpha) {
+  const c = document.createElement('canvas');
+  renderCrop(c, size);
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+function downloadBg() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#160C02'; ctx.fillRect(0,0,1024,1024);
+  const a = document.createElement('a'); a.download='android-icon-background.png'; a.href=c.toDataURL('image/png'); a.click();
+}
+
+function downloadMono() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+  const ctx = c.getContext('2d');
+  renderCrop(c, 1024);
+  const id = ctx.getImageData(0,0,1024,1024);
+  for (let i=0;i<id.data.length;i+=4) {
+    const lum = id.data[i]*.3 + id.data[i+1]*.59 + id.data[i+2]*.11;
+    id.data[i]=id.data[i+1]=id.data[i+2]=lum>60?255:0;
+  }
+  ctx.putImageData(id,0,0);
+  const a=document.createElement('a');a.download='android-icon-monochrome.png';a.href=c.toDataURL('image/png');a.click();
+}
+
+function downloadFavicon() {
+  const c = document.createElement('canvas');
+  renderCrop(c, 196);
+  const a=document.createElement('a');a.download='favicon.png';a.href=c.toDataURL('image/png');a.click();
+}
+
+async function downloadAll() {
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  download('icon.png', 1024, false); await delay(300);
+  download('splash-icon.png', 1024, false); await delay(300);
+  download('android-icon-foreground.png', 1024, false); await delay(300);
+  downloadBg(); await delay(300);
+  downloadMono(); await delay(300);
+  downloadFavicon();
+}
+</script>
+</body>
+</html>
