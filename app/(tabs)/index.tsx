@@ -15,17 +15,14 @@ import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
 import {
   syncData,
-  syncSeasonStats,
   getMonthlyStats,
   getLastMatch,
   getAllPlayersStats,
-  getSeasonStats,
   getImfSeasonHighlights,
   getTopFinisher,
   MonthlyStats,
   LastMatch,
   AllPlayersStats,
-  SeasonStats,
 } from '../../lib/pubg-api';
 import { getLastSync, setLastSync } from '../../lib/storage';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
@@ -38,7 +35,6 @@ const MONTH_NAMES = [
 export default function DashboardScreen() {
   const now = new Date();
   const [monthly, setMonthly] = useState<MonthlyStats | null>(null);
-  const [seasonStats, setSeasonStats] = useState<SeasonStats[]>([]);
   const [imfSeason, setImfSeason] = useState<ImfSeason | null>(null);
   const [imfStats, setImfStats] = useState<MonthlyStats | null>(null);
   const [topFinisher, setTopFinisher] = useState<{ username: string; count: number } | null>(null);
@@ -53,9 +49,8 @@ export default function DashboardScreen() {
     setLoading(true);
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
-    const [m, season, lm, ls, all, imf, tf] = await Promise.all([
+    const [m, lm, ls, all, imf, tf] = await Promise.all([
       getMonthlyStats(now.getFullYear(), now.getMonth() + 1),
-      getSeasonStats(),
       getLastMatch(),
       getLastSync(),
       getAllPlayersStats(),
@@ -67,7 +62,6 @@ export default function DashboardScreen() {
         : Promise.resolve(null),
     ]);
     setMonthly(m);
-    setSeasonStats(season);
     setLastMatch(lm);
     setLastSyncState(ls);
     setAllStats(all);
@@ -86,7 +80,6 @@ export default function DashboardScreen() {
     setSyncMsg('Démarrage...');
     try {
       await syncData((msg) => setSyncMsg(msg));
-      await syncSeasonStats((msg) => setSyncMsg(msg));
       const now_ = new Date();
       await setLastSync(now_);
       setLastSyncState(now_);
@@ -259,34 +252,6 @@ export default function DashboardScreen() {
         )}
 
         {/* Season stats */}
-        <SectionHeader title="Saison PUBG en cours" />
-
-        {seasonStats.length === 0 ? (
-          <View style={styles.emptyBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={Colors.primary} />
-            <Text style={styles.emptyBannerText}>Synchro pour voir les stats de saison complètes</Text>
-          </View>
-        ) : (
-          <View style={styles.leaderboard}>
-            {seasonStats.map((s, idx) => (
-              <View key={s.username} style={styles.leaderRow}>
-                <Text style={[styles.rank, idx === 0 && styles.rankGold]}>
-                  {idx === 0 ? '🏆' : `#${idx + 1}`}
-                </Text>
-                <View style={styles.leaderAvatar}>
-                  <Text style={styles.leaderAvatarText}>{s.username[0].toUpperCase()}</Text>
-                </View>
-                <Text style={styles.leaderName}>{s.username}</Text>
-                <View style={styles.leaderStats}>
-                  <Text style={styles.leaderWins}>{s.wins}W</Text>
-                  <Text style={styles.leaderKd}>K/D {s.kd}</Text>
-                  <Text style={styles.leaderWr}>{s.winRate}%</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* Leaderboard */}
         {allStats.some((s) => s.matches > 0) && (
           <>
