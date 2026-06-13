@@ -97,6 +97,9 @@ CREATE TABLE IF NOT EXISTS player_availability (
 );
 ALTER TABLE player_availability DISABLE ROW LEVEL SECURITY;
 
+-- Victoires manuelles par saison IMF (override du calcul automatique)
+ALTER TABLE imf_seasons ADD COLUMN IF NOT EXISTS manual_wins INT;
+
 -- Disable RLS for this personal app (no auth needed)
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
 ALTER TABLE match_cache DISABLE ROW LEVEL SECURITY;

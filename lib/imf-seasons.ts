@@ -5,12 +5,13 @@ export interface ImfSeason {
   startDate: string; // ISO date 'YYYY-MM-DD'
   endDate: string;   // exclusive: start of next season or today
   isCurrent: boolean;
+  manualWins?: number; // override manuel des victoires groupe
 }
 
 export async function getImfSeasons(): Promise<ImfSeason[]> {
   const { data } = await supabase
     .from('imf_seasons')
-    .select('*')
+    .select('year, start_date, manual_wins')
     .order('year', { ascending: false });
 
   if (!data || data.length === 0) return [];
@@ -33,6 +34,7 @@ export async function getImfSeasons(): Promise<ImfSeason[]> {
       startDate: row.start_date,
       endDate,
       isCurrent,
+      manualWins: row.manual_wins ?? undefined,
     };
   });
 }
@@ -56,4 +58,8 @@ export async function upsertImfSeason(year: number, startDate: string): Promise<
 
 export async function deleteImfSeason(year: number): Promise<void> {
   await supabase.from('imf_seasons').delete().eq('year', year);
+}
+
+export async function setManualWins(year: number, wins: number | null): Promise<void> {
+  await supabase.from('imf_seasons').update({ manual_wins: wins }).eq('year', year);
 }

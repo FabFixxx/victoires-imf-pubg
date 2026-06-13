@@ -20,7 +20,7 @@ import { supabase } from '../../lib/supabase';
 import { PUBG_API_KEY } from '../../constants/config';
 import { syncData } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
-import { getImfSeasons, upsertImfSeason, deleteImfSeason, ImfSeason } from '../../lib/imf-seasons';
+import { getImfSeasons, upsertImfSeason, deleteImfSeason, setManualWins, ImfSeason } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS } from '../../constants/config';
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
@@ -34,6 +34,9 @@ export default function SettingsScreen() {
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [editYear, setEditYear] = useState('');
   const [editDate, setEditDate] = useState('');
+  const [showWinsModal, setShowWinsModal] = useState(false);
+  const [winsYear, setWinsYear] = useState(0);
+  const [winsValue, setWinsValue] = useState('');
 
   useEffect(() => {
     getCurrentPlayer().then(setPlayer);
@@ -61,6 +64,23 @@ export default function SettingsScreen() {
     setShowSeasonModal(false);
     setEditYear('');
     setEditDate('');
+    loadImfSeasons();
+  };
+
+  const handleOpenWinsModal = (season: ImfSeason) => {
+    setWinsYear(season.year);
+    setWinsValue(season.manualWins !== undefined ? String(season.manualWins) : '');
+    setShowWinsModal(true);
+  };
+
+  const handleSaveWins = async () => {
+    const wins = winsValue.trim() === '' ? null : parseInt(winsValue);
+    if (winsValue.trim() !== '' && (isNaN(wins!) || wins! < 0)) {
+      Alert.alert('Valeur invalide', 'Entrez un nombre de victoires valide');
+      return;
+    }
+    await setManualWins(winsYear, wins);
+    setShowWinsModal(false);
     loadImfSeasons();
   };
 
@@ -238,7 +258,18 @@ export default function SettingsScreen() {
                       Fin : {new Date(season.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </Text>
                   )}
+                  {season.manualWins !== undefined ? (
+                    <Text style={styles.manualWinsText}>
+                      ✎ {season.manualWins} victoires (manuel)
+                    </Text>
+                  ) : null}
                 </View>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={() => handleOpenWinsModal(season)}
+                >
+                  <Ionicons name="create-outline" size={16} color={Colors.primary} />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteBtn}
                   onPress={() => handleDeleteSeason(season.year)}
@@ -298,6 +329,40 @@ export default function SettingsScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* Modal victoires manuelles */}
+      <Modal visible={showWinsModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Victoires — Saison {winsYear}</Text>
+            <Text style={styles.modalSubtitle}>
+              Remplace le calcul automatique par le vrai nombre de victoires du groupe cette saison.
+            </Text>
+            <Text style={styles.inputLabel}>Nombre de victoires</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="ex: 12"
+              placeholderTextColor={Colors.textMuted}
+              value={winsValue}
+              onChangeText={setWinsValue}
+              keyboardType="numeric"
+              maxLength={4}
+            />
+            <Text style={styles.inputHint}>Laisser vide pour revenir au calcul automatique</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setShowWinsModal(false)}
+              >
+                <Text style={styles.cancelBtnText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.submitBtn} onPress={handleSaveWins}>
+                <Text style={styles.submitBtnText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal ajout saison */}
       <Modal visible={showSeasonModal} transparent animationType="slide">
@@ -496,6 +561,14 @@ const styles = StyleSheet.create({
   },
   currentBadgeText: { fontSize: 9, fontWeight: '800', color: Colors.primary, letterSpacing: 0.5 },
   seasonDate: { fontSize: 12, color: Colors.textMuted },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   deleteBtn: {
     width: 32,
     height: 32,
@@ -503,6 +576,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.danger + '22',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  manualWinsText: {
+    fontSize: 11,
+    color: Colors.primary,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginBottom: 8,
+    lineHeight: 18,
   },
   addSeasonBtn: {
     flexDirection: 'row',

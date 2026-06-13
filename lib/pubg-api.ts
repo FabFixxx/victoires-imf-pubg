@@ -239,7 +239,8 @@ export async function getImfSeasonHighlights(startDate: string, endDate: string)
 // en filtrant les saisons PUBG dont l'ID (format YYYY-MM) est dans la plage IMF.
 export async function getImfSeasonStatsFromSeasons(
   startDate: string,
-  endDate: string
+  endDate: string,
+  manualWins?: number
 ): Promise<SeasonHighlights> {
   const startYM = startDate.substring(0, 7); // 'YYYY-MM'
   const endYM = endDate.substring(0, 7);
@@ -276,10 +277,10 @@ export async function getImfSeasonStatsFromSeasons(
 
   const players = Object.entries(byPlayer).map(([username, s]) => ({ username, ...s }));
 
-  // Victoires groupe = moyenne des victoires des joueurs (ils jouent ensemble)
-  const totalWins = Math.round(
-    players.reduce((sum, p) => sum + p.wins, 0) / players.length
-  );
+  // Victoires groupe : override manuel si renseigné, sinon moyenne des joueurs
+  const totalWins = manualWins !== undefined
+    ? manualWins
+    : Math.round(players.reduce((sum, p) => sum + p.wins, 0) / players.length);
   const totalKills = players.reduce((sum, p) => sum + p.kills, 0);
 
   const topFragger = [...players].sort((a, b) => b.kills - a.kills)[0];

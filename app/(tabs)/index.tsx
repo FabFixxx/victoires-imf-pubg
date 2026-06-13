@@ -58,7 +58,7 @@ export default function DashboardScreen() {
       getLastSync(),
       getAllPlayersStats(),
       currentImfSeason
-        ? getImfSeasonStatsFromSeasons(currentImfSeason.startDate, currentImfSeason.endDate)
+        ? getImfSeasonStatsFromSeasons(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWins)
         : Promise.resolve(null),
     ]);
     setMonthly(m);
