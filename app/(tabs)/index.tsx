@@ -20,7 +20,7 @@ import {
   getLastMatch,
   getAllPlayersStats,
   getSeasonStats,
-  getImfSeasonStatsFromSeasons,
+  getImfSeasonHighlights,
   MonthlyStats,
   LastMatch,
   AllPlayersStats,
@@ -58,7 +58,7 @@ export default function DashboardScreen() {
       getLastSync(),
       getAllPlayersStats(),
       currentImfSeason
-        ? getImfSeasonStatsFromSeasons(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWins)
+        ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWins)
         : Promise.resolve(null),
     ]);
     setMonthly(m);
@@ -196,37 +196,52 @@ export default function DashboardScreen() {
               title={`Saison IMF ${imfSeason.year}`}
               subtitle={`Depuis le ${new Date(imfSeason.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}
             />
-            <View style={styles.row}>
-              <StatCard
-                label="Victoires IMF"
-                value={imfStats?.totalWins ?? '—'}
-                accent
-                large
-              />
-            </View>
-            <View style={styles.row}>
-              <StatCard
-                label="Top Fragger IMF"
-                value={imfStats?.topFragger?.username ?? '—'}
-                subValue={imfStats?.topFragger ? `${imfStats.topFragger.kills} kills` : undefined}
-              />
-              <StatCard
-                label="Top Assists IMF"
-                value={imfStats?.topAssist?.username ?? '—'}
-                subValue={imfStats?.topAssist ? `${imfStats.topAssist.assists} assists` : undefined}
-              />
-            </View>
-            <View style={styles.row}>
-              <StatCard
-                label="Top Dommages IMF"
-                value={imfStats?.topDamage?.username ?? '—'}
-                subValue={
-                  imfStats?.topDamage
-                    ? `${imfStats.topDamage.damage.toLocaleString('fr-FR')} dmg`
-                    : undefined
-                }
-              />
-            </View>
+            {/* Wins : manuel ou données réelles, sinon message */}
+            {imfSeason.manualWins !== undefined || (imfStats && imfStats.totalWins > 0) ? (
+              <View style={styles.row}>
+                <StatCard
+                  label={imfSeason.manualWins !== undefined ? 'Victoires IMF ✎' : 'Victoires IMF'}
+                  value={imfStats?.totalWins ?? '—'}
+                  accent
+                  large
+                />
+              </View>
+            ) : (
+              <View style={styles.emptyBanner}>
+                <Ionicons name="information-circle-outline" size={18} color={Colors.primary} />
+                <Text style={styles.emptyBannerText}>
+                  Aucune donnée — synchro en cours ou renseigne les victoires manuellement dans les réglages
+                </Text>
+              </View>
+            )}
+            {/* Top stats : uniquement si données réelles disponibles */}
+            {imfStats && (imfStats.topFragger || imfStats.topAssist) && (
+              <>
+                <View style={styles.row}>
+                  <StatCard
+                    label="Top Fragger IMF"
+                    value={imfStats.topFragger?.username ?? '—'}
+                    subValue={imfStats.topFragger ? `${imfStats.topFragger.kills} kills` : undefined}
+                  />
+                  <StatCard
+                    label="Top Assists IMF"
+                    value={imfStats.topAssist?.username ?? '—'}
+                    subValue={imfStats.topAssist ? `${imfStats.topAssist.assists} assists` : undefined}
+                  />
+                </View>
+                <View style={styles.row}>
+                  <StatCard
+                    label="Top Dommages IMF"
+                    value={imfStats.topDamage?.username ?? '—'}
+                    subValue={
+                      imfStats.topDamage
+                        ? `${imfStats.topDamage.damage.toLocaleString('fr-FR')} dmg`
+                        : undefined
+                    }
+                  />
+                </View>
+              </>
+            )}
           </>
         )}
 

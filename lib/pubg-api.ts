@@ -229,10 +229,18 @@ export async function getMonthlyStats(year: number, month: number): Promise<Seas
   return getStatsBetween(startDate, endDate);
 }
 
-export async function getImfSeasonHighlights(startDate: string, endDate: string): Promise<SeasonHighlights> {
+export async function getImfSeasonHighlights(
+  startDate: string,
+  endDate: string,
+  manualWins?: number
+): Promise<SeasonHighlights> {
   const start = new Date(startDate).toISOString();
   const end = new Date(endDate + 'T23:59:59').toISOString();
-  return getStatsBetween(start, end);
+  const stats = await getStatsBetween(start, end);
+  if (manualWins !== undefined) {
+    return { ...stats, totalWins: manualWins };
+  }
+  return stats;
 }
 
 // Agrège les stats depuis player_season_stats (données historiques complètes)
