@@ -8,7 +8,15 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, DateData } from 'react-native-calendars';
+import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+
+LocaleConfig.locales['fr'] = {
+  monthNames: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+  monthNamesShort: ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'],
+  dayNames: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
+  dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+};
+LocaleConfig.defaultLocale = 'fr';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/colors';
 import { getCurrentPlayer } from '../../lib/storage';
@@ -187,6 +195,7 @@ export default function CalendarScreen() {
           markingType="multi-dot"
           minDate={today}
           maxDate={windowEnd}
+          firstDay={1}
           enableSwipeMonths
           theme={{
             backgroundColor: 'transparent',

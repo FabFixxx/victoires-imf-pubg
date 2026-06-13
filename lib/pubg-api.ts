@@ -41,6 +41,24 @@ export async function resolvePlayerIds(): Promise<Record<string, string>> {
   return ids;
 }
 
+export const PUBG_MAPS = [
+  'Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Karakin', 'Taego', 'Deston', 'Rondo', 'Paramo',
+];
+
+const PUBG_MAP_NAMES: Record<string, string> = {
+  Baltic_Main: 'Erangel',
+  Erangel_Main: 'Erangel',
+  Desert_Main: 'Miramar',
+  Savage_Main: 'Sanhok',
+  Heaven_Main: 'Sanhok',
+  DihorOtok_Main: 'Vikendi',
+  Summerland_Main: 'Karakin',
+  Tiger_Main: 'Taego',
+  Kiki_Main: 'Deston',
+  Neon_Main: 'Rondo',
+  Chimera_Main: 'Paramo',
+};
+
 export interface MatchData {
   matchId: string;
   matchDate: string;
@@ -60,11 +78,21 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
     const res = await fetch(telemetryUrl);
     if (!res.ok) return null;
     const events: any[] = await res.json();
-    const killEvents = events.filter((e) => e._T === 'LogPlayerKill');
+    // PUBG renamed the event to LogPlayerKillV2; finisher = who finished the downed player
+    const killEvents = events.filter(
+      (e) => e._T === 'LogPlayerKillV2' || e._T === 'LogPlayerKill'
+    );
     if (killEvents.length === 0) return null;
-    killEvents.sort((a, b) => a._D.localeCompare(b._D));
-    const lastKill = killEvents[killEvents.length - 1];
-    return lastKill.killer?.name ?? null;
+    // Exclude self-kills (zone damage) where finisher === victim
+    const validKills = killEvents.filter((e) => {
+      const finisherName = e.finisher?.name ?? e.killer?.name;
+      const victimName = e.victim?.name;
+      return finisherName && finisherName !== victimName;
+    });
+    if (validKills.length === 0) return null;
+    validKills.sort((a, b) => a._D.localeCompare(b._D));
+    const lastKill = validKills[validKills.length - 1];
+    return lastKill.finisher?.name ?? lastKill.killer?.name ?? null;
   } catch {
     return null;
   }
@@ -73,15 +101,52 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
 async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
   const { data: cached } = await supabase
     .from('match_cache')
-    .select('data')
+    .select('data, map_name, finisher')
     .eq('match_id', matchId)
     .single();
 
-  if (cached) return cached.data as MatchData;
+  // Complet si map_name est renseigné ET (finisher est renseigné OU ce n'est pas une victoire)
+  if (cached?.map_name) {
+    const isWin = (cached.data as MatchData).players.some(
+      (p) => GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number]) && p.winPlace === 1
+    );
+    const groupPresent = (cached.data as MatchData).players.filter((p) =>
+      GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number])
+    ).length === GROUP_PLAYERS.length;
+    if (!groupPresent || !isWin || cached.finisher) return cached.data as MatchData;
+  }
 
   try {
     const raw = await fetchPUBG(`/matches/${matchId}`);
     const gameMode: string = raw.data.attributes.gameMode;
+    const mapName: string = raw.data.attributes.mapName ?? '';
+
+    // Déjà en cache : mettre à jour map_name et/ou finisher manquants
+    if (cached) {
+      const participants = (raw.included as any[]).filter((i) => i.type === 'participant');
+      const groupPlayers = participants.filter((p) =>
+        GROUP_PLAYERS.includes(p.attributes.stats.name as (typeof GROUP_PLAYERS)[number])
+      );
+      const isGroupWin =
+        groupPlayers.length === GROUP_PLAYERS.length &&
+        groupPlayers.some((p) => p.attributes.stats.winPlace === 1);
+
+      let finisher = cached.finisher ?? null;
+      if (isGroupWin && !finisher) {
+        const telemetryAsset = (raw.included as any[]).find(
+          (i) => i.type === 'asset' && i.attributes?.name === 'telemetry'
+        );
+        if (telemetryAsset?.attributes?.URL) {
+          finisher = await fetchFinisher(telemetryAsset.attributes.URL);
+        }
+      }
+
+      await supabase
+        .from('match_cache')
+        .update({ map_name: mapName || null, finisher })
+        .eq('match_id', matchId);
+      return cached.data as MatchData;
+    }
 
     if (!gameMode.includes('fpp')) return null;
 
@@ -124,6 +189,7 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
       match_id: matchId,
       match_date: matchData.matchDate,
       game_mode: gameMode,
+      map_name: mapName || null,
       finisher,
       data: matchData,
     });
@@ -179,11 +245,24 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
 
   const { data: cachedRows } = await supabase
     .from('match_cache')
-    .select('match_id')
+    .select('match_id, map_name, finisher')
     .in('match_id', Array.from(allMatchIds));
 
-  const cachedSet = new Set(cachedRows?.map((m) => m.match_id) ?? []);
-  const newIds = Array.from(allMatchIds).filter((id) => !cachedSet.has(id));
+  // Victoires du groupe parmi ces matchs (pour savoir si finisher est requis)
+  const { data: winRows } = await supabase
+    .from('player_match_stats')
+    .select('match_id')
+    .eq('is_win', true)
+    .in('match_id', Array.from(allMatchIds));
+  const winMatchIds = new Set(winRows?.map((r) => r.match_id) ?? []);
+
+  // Complet = a map_name ET (a finisher OU ce n'est pas une victoire groupe)
+  const cachedComplete = new Set(
+    cachedRows
+      ?.filter((m) => m.map_name && (m.finisher || !winMatchIds.has(m.match_id)))
+      .map((m) => m.match_id) ?? []
+  );
+  const newIds = Array.from(allMatchIds).filter((id) => !cachedComplete.has(id));
 
   onProgress?.(
     newIds.length > 0
@@ -204,11 +283,12 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
 
 export interface SeasonHighlights {
   totalWins: number;
+  totalMatches: number;
+  totalKills: number;
+  totalDamage: number;
   topFragger: { username: string; kills: number } | null;
   topAssist: { username: string; assists: number } | null;
   topDamage: { username: string; damage: number } | null;
-  totalMatches: number;
-  totalKills: number;
 }
 
 async function getStatsBetween(startDate: string, endDate: string): Promise<SeasonHighlights> {
@@ -219,12 +299,13 @@ async function getStatsBetween(startDate: string, endDate: string): Promise<Seas
     .lte('match_date', endDate);
 
   if (!data || data.length === 0) {
-    return { totalWins: 0, topFragger: null, topAssist: null, topDamage: null, totalMatches: 0, totalKills: 0 };
+    return { totalWins: 0, totalMatches: 0, totalKills: 0, totalDamage: 0, topFragger: null, topAssist: null, topDamage: null };
   }
 
   const winningMatches = new Set(data.filter((r) => r.is_win).map((r) => r.match_id));
   const allMatches = new Set(data.map((r) => r.match_id));
   const totalKills = data.reduce((sum: number, r: any) => sum + r.kills, 0);
+  const totalDamage = Math.round(data.reduce((sum: number, r: any) => sum + r.damage, 0));
 
   const byPlayer: Record<string, { kills: number; assists: number; damage: number }> = {};
   for (const row of data) {
@@ -245,6 +326,7 @@ async function getStatsBetween(startDate: string, endDate: string): Promise<Seas
     totalWins: winningMatches.size,
     totalMatches: allMatches.size,
     totalKills,
+    totalDamage,
     topFragger: topFragger ? { username: topFragger[0], kills: topFragger[1].kills } : null,
     topAssist: topAssist ? { username: topAssist[0], assists: topAssist[1].assists } : null,
     topDamage: topDamage ? { username: topDamage[0], damage: Math.round(topDamage[1].damage) } : null,
@@ -263,13 +345,13 @@ export async function getMonthlyStats(year: number, month: number): Promise<Seas
 export async function getImfSeasonHighlights(
   startDate: string,
   endDate: string,
-  manualWins?: number
+  manualWinsCount?: number
 ): Promise<SeasonHighlights> {
   const start = new Date(startDate).toISOString();
   const end = new Date(endDate + 'T23:59:59').toISOString();
   const stats = await getStatsBetween(start, end);
-  if (manualWins !== undefined) {
-    return { ...stats, totalWins: manualWins };
+  if (manualWinsCount !== undefined) {
+    return { ...stats, totalWins: stats.totalWins + manualWinsCount };
   }
   return stats;
 }
@@ -289,7 +371,7 @@ export async function getImfSeasonStatsFromSeasons(
     .select('username, season_id, wins, kills, assists, damage');
 
   if (!data || data.length === 0) {
-    return { totalWins: 0, topFragger: null, topAssist: null, topDamage: null, totalMatches: 0, totalKills: 0 };
+    return { totalWins: 0, totalMatches: 0, totalKills: 0, totalDamage: 0, topFragger: null, topAssist: null, topDamage: null };
   }
 
   const filtered = data.filter((row) => {
@@ -300,7 +382,7 @@ export async function getImfSeasonStatsFromSeasons(
   });
 
   if (filtered.length === 0) {
-    return { totalWins: 0, topFragger: null, topAssist: null, topDamage: null, totalMatches: 0, totalKills: 0 };
+    return { totalWins: 0, totalMatches: 0, totalKills: 0, totalDamage: 0, topFragger: null, topAssist: null, topDamage: null };
   }
 
   const byPlayer: Record<string, { wins: number; kills: number; assists: number; damage: number; matches: number }> = {};
@@ -330,6 +412,7 @@ export async function getImfSeasonStatsFromSeasons(
     totalWins,
     totalMatches: 0,
     totalKills,
+    totalDamage: 0,
     topFragger: topFragger ? { username: topFragger.username, kills: topFragger.kills } : null,
     topAssist: topAssist ? { username: topAssist.username, assists: topAssist.assists } : null,
     topDamage: topDamage ? { username: topDamage.username, damage: Math.round(topDamage.damage) } : null,
@@ -381,13 +464,16 @@ export interface LastMatch {
   matchDate: Date;
   isWin: boolean;
   finisher: string | null;
+  mapName: string | null;
+  placement: number | null;
+  totalTeams: number | null;
   players: { username: string; kills: number; assists: number; damage: number }[];
 }
 
 export async function getLastMatch(): Promise<LastMatch | null> {
   const { data } = await supabase
     .from('player_match_stats')
-    .select('match_id, match_date, is_win, kills, assists, damage, player_username')
+    .select('match_id, match_date, is_win, kills, assists, damage, player_username, win_place')
     .order('match_date', { ascending: false })
     .limit(20);
 
@@ -397,21 +483,24 @@ export async function getLastMatch(): Promise<LastMatch | null> {
   const rows = data.filter((r) => r.match_id === latestMatchId);
   const isWin = rows.some((r) => r.is_win);
 
-  let finisher: string | null = null;
-  if (isWin) {
-    const { data: cacheRow } = await supabase
-      .from('match_cache')
-      .select('finisher')
-      .eq('match_id', latestMatchId)
-      .single();
-    finisher = cacheRow?.finisher ?? null;
-  }
+  const { data: cacheRow } = await supabase
+    .from('match_cache')
+    .select('finisher, map_name, data')
+    .eq('match_id', latestMatchId)
+    .single();
+
+  const allPlayers: { winPlace: number }[] = cacheRow?.data?.players ?? [];
+  const totalTeams = allPlayers.length > 0 ? Math.max(...allPlayers.map((p) => p.winPlace)) : null;
+  const placement = rows[0]?.win_place ?? null;
 
   return {
     matchId: latestMatchId,
     matchDate: new Date(data[0].match_date),
     isWin,
-    finisher,
+    finisher: isWin ? (cacheRow?.finisher ?? null) : null,
+    mapName: cacheRow?.map_name ? (PUBG_MAP_NAMES[cacheRow.map_name] ?? cacheRow.map_name) : null,
+    placement,
+    totalTeams,
     players: rows.map((r) => ({
       username: r.player_username,
       kills: r.kills,
@@ -440,6 +529,126 @@ export async function getTopFinisher(startDate?: string, endDate?: string): Prom
 
   const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   return top ? { username: top[0], count: top[1] } : null;
+}
+
+export async function getFinisherStats(
+  startDate?: string,
+  endDate?: string,
+  manualWins?: { finisher: string | null }[]
+): Promise<{ username: string; count: number }[]> {
+  let query = supabase
+    .from('match_cache')
+    .select('finisher, match_date')
+    .not('finisher', 'is', null);
+
+  if (startDate) query = query.gte('match_date', new Date(startDate).toISOString());
+  if (endDate) query = query.lte('match_date', new Date(endDate + 'T23:59:59').toISOString());
+
+  const { data } = await query;
+
+  const counts: Record<string, number> = {};
+  for (const p of GROUP_PLAYERS) counts[p] = 0;
+
+  if (data) {
+    for (const row of data) {
+      if (row.finisher in counts) counts[row.finisher]++;
+    }
+  }
+
+  if (manualWins) {
+    for (const w of manualWins) {
+      if (w.finisher && w.finisher in counts) counts[w.finisher]++;
+    }
+  }
+
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([username, count]) => ({ username, count }));
+}
+
+export async function getTopMaps(
+  startDate: string,
+  endDate: string,
+  manualWins?: { mapName: string | null }[],
+  limit = 5
+): Promise<{ mapName: string; wins: number }[]> {
+  const start = new Date(startDate).toISOString();
+  const end = new Date(endDate + 'T23:59:59').toISOString();
+
+  const counts: Record<string, number> = {};
+
+  const { data: winRows } = await supabase
+    .from('player_match_stats')
+    .select('match_id')
+    .eq('is_win', true)
+    .gte('match_date', start)
+    .lte('match_date', end);
+
+  if (winRows && winRows.length > 0) {
+    const winMatchIds = [...new Set(winRows.map((r) => r.match_id))];
+    const { data: mapRows } = await supabase
+      .from('match_cache')
+      .select('map_name')
+      .in('match_id', winMatchIds)
+      .not('map_name', 'is', null);
+
+    for (const row of mapRows ?? []) {
+      const display = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
+      counts[display] = (counts[display] ?? 0) + 1;
+    }
+  }
+
+  if (manualWins) {
+    for (const w of manualWins) {
+      if (w.mapName) counts[w.mapName] = (counts[w.mapName] ?? 0) + 1;
+    }
+  }
+
+  if (Object.keys(counts).length === 0) return [];
+
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([mapName, wins]) => ({ mapName, wins }));
+}
+
+export async function getLastWin(): Promise<LastMatch | null> {
+  const { data } = await supabase
+    .from('player_match_stats')
+    .select('match_id, match_date, kills, assists, damage, player_username')
+    .eq('is_win', true)
+    .order('match_date', { ascending: false })
+    .limit(20);
+
+  if (!data || data.length === 0) return null;
+
+  const latestMatchId = data[0].match_id;
+  const rows = data.filter((r) => r.match_id === latestMatchId);
+
+  const { data: cacheRow } = await supabase
+    .from('match_cache')
+    .select('finisher, map_name, data')
+    .eq('match_id', latestMatchId)
+    .single();
+
+  const allPlayers: { winPlace: number }[] = cacheRow?.data?.players ?? [];
+  const totalTeams = allPlayers.length > 0 ? Math.max(...allPlayers.map((p) => p.winPlace)) : null;
+
+  return {
+    matchId: latestMatchId,
+    matchDate: new Date(data[0].match_date),
+    isWin: true,
+    finisher: cacheRow?.finisher ?? null,
+    mapName: cacheRow?.map_name ? (PUBG_MAP_NAMES[cacheRow.map_name] ?? cacheRow.map_name) : null,
+    placement: 1,
+    totalTeams,
+    players: rows.map((r) => ({
+      username: r.player_username,
+      kills: r.kills,
+      assists: r.assists,
+      damage: Math.round(r.damage),
+    })),
+  };
 }
 
 export interface AllPlayersStats {

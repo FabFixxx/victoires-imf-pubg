@@ -2,9 +2,9 @@ import { supabase } from './supabase';
 import { GROUP_PLAYERS } from '../constants/config';
 
 export const PLAYER_COLORS: Record<string, string> = {
-  FabFix: '#F5A623',
-  Nicotom: '#4FC3F7',
-  petittom: '#CE93D8',
+  FabFix: '#4FC3F7',
+  Nicotom: '#F44336',
+  petittom: '#F5A623',
   Jibby37: '#81C784',
 };
 

@@ -103,6 +103,20 @@ ALTER TABLE imf_seasons ADD COLUMN IF NOT EXISTS manual_wins INT;
 -- Finisher : joueur qui a fait le dernier kill sur les victoires
 ALTER TABLE match_cache ADD COLUMN IF NOT EXISTS finisher TEXT;
 
+-- Nom de la carte pour le top 5 maps
+ALTER TABLE match_cache ADD COLUMN IF NOT EXISTS map_name TEXT;
+
+-- Victoires manuelles détaillées par saison IMF (carte + finisher par victoire)
+CREATE TABLE IF NOT EXISTS imf_season_wins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  year INT NOT NULL,
+  map_name TEXT,
+  finisher TEXT,
+  win_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE imf_season_wins DISABLE ROW LEVEL SECURITY;
+
 -- Disable RLS for this personal app (no auth needed)
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
 ALTER TABLE match_cache DISABLE ROW LEVEL SECURITY;

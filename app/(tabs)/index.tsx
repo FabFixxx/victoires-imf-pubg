@@ -17,12 +17,12 @@ import {
   syncData,
   getMonthlyStats,
   getLastMatch,
-  getAllPlayersStats,
   getImfSeasonHighlights,
-  getTopFinisher,
+  getFinisherStats,
+  getTopMaps,
+  getLastWin,
   MonthlyStats,
   LastMatch,
-  AllPlayersStats,
 } from '../../lib/pubg-api';
 import { getLastSync, setLastSync } from '../../lib/storage';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
@@ -32,14 +32,68 @@ const MONTH_NAMES = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
+function avg(total: number, matches: number): string {
+  if (matches === 0) return '—';
+  return (total / matches).toFixed(1);
+}
+
+function MatchCard({ match, title }: { match: LastMatch; title: string }) {
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString('fr-FR', {
+      weekday: 'short', day: 'numeric', month: 'short',
+      hour: '2-digit', minute: '2-digit',
+    });
+
+  return (
+    <>
+      <SectionHeader title={title} />
+      <View style={[styles.matchCard, match.isWin && styles.matchCardWin]}>
+        <View style={styles.matchCardHeader}>
+          <View>
+            <Text style={styles.matchDate}>{formatDate(match.matchDate)}</Text>
+            {match.mapName && <Text style={styles.matchMap}>{match.mapName}</Text>}
+            {match.isWin && match.finisher && (
+              <View style={styles.finisherInline}>
+                <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                <Text style={styles.finisherText}>
+                  Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
+                </Text>
+              </View>
+            )}
+          </View>
+          <View style={[styles.badge, match.isWin ? styles.badgeWin : styles.badgeLoss]}>
+            <Text style={styles.badgeText}>
+              {match.isWin
+                ? '🏆 VICTOIRE'
+                : match.placement && match.totalTeams
+                  ? `#${match.placement}/${match.totalTeams}`
+                  : 'DÉFAITE'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.playersGrid}>
+          {match.players.map((p) => (
+            <View key={p.username} style={styles.playerStat}>
+              <Text style={styles.playerName}>{p.username}</Text>
+              <Text style={styles.playerKills}>{p.kills}K / {p.assists}A</Text>
+              <Text style={styles.playerDmg}>{p.damage.toLocaleString('fr-FR')} dmg</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </>
+  );
+}
+
 export default function DashboardScreen() {
   const now = new Date();
   const [monthly, setMonthly] = useState<MonthlyStats | null>(null);
   const [imfSeason, setImfSeason] = useState<ImfSeason | null>(null);
   const [imfStats, setImfStats] = useState<MonthlyStats | null>(null);
-  const [topFinisher, setTopFinisher] = useState<{ username: string; count: number } | null>(null);
+  const [finisherStats, setFinisherStats] = useState<{ username: string; count: number }[]>([]);
+  const [topMaps, setTopMaps] = useState<{ mapName: string; wins: number }[]>([]);
   const [lastMatch, setLastMatch] = useState<LastMatch | null>(null);
-  const [allStats, setAllStats] = useState<AllPlayersStats[]>([]);
+  const [lastWin, setLastWin] = useState<LastMatch | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
@@ -49,24 +103,28 @@ export default function DashboardScreen() {
     setLoading(true);
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
-    const [m, lm, ls, all, imf, tf] = await Promise.all([
+    const [m, lm, lw, ls, imf, fs, maps] = await Promise.all([
       getMonthlyStats(now.getFullYear(), now.getMonth() + 1),
       getLastMatch(),
+      getLastWin(),
       getLastSync(),
-      getAllPlayersStats(),
       currentImfSeason
-        ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWins)
+        ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail.length || undefined)
         : Promise.resolve(null),
       currentImfSeason
-        ? getTopFinisher(currentImfSeason.startDate, currentImfSeason.endDate)
-        : Promise.resolve(null),
+        ? getFinisherStats(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail)
+        : Promise.resolve([]),
+      currentImfSeason
+        ? getTopMaps(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail)
+        : Promise.resolve([]),
     ]);
     setMonthly(m);
     setLastMatch(lm);
+    setLastWin(lw);
     setLastSyncState(ls);
-    setAllStats(all);
     setImfStats(imf);
-    setTopFinisher(tf);
+    setFinisherStats(fs);
+    setTopMaps(maps);
     setLoading(false);
   }, []);
 
@@ -100,13 +158,7 @@ export default function DashboardScreen() {
     return `Il y a ${Math.floor(diff / 1440)}j`;
   };
 
-  const formatMatchDate = (date: Date) =>
-    date.toLocaleDateString('fr-FR', {
-      weekday: 'short', day: 'numeric', month: 'short',
-      hour: '2-digit', minute: '2-digit',
-    });
-
-  const isEmpty = !monthly?.totalWins && !monthly?.topFragger && !imfStats?.totalWins;
+  const isEmpty = !monthly?.totalWins && !imfStats?.totalWins;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -151,55 +203,42 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Monthly */}
+        {/* ── Mois en cours ── */}
         <SectionHeader title={`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`} />
 
         <View style={styles.row}>
-          <StatCard
-            label="Victoires du groupe"
-            value={monthly?.totalWins ?? '—'}
-            accent
-            large
-          />
+          <StatCard label="Victoires du groupe" value={monthly?.totalWins ?? '—'} accent large />
         </View>
 
-        <View style={styles.row}>
-          <StatCard
-            label="Top Fragger"
-            value={monthly?.topFragger?.username ?? '—'}
-            subValue={monthly?.topFragger ? `${monthly.topFragger.kills} kills` : undefined}
-          />
-          <StatCard
-            label="Top Assists"
-            value={monthly?.topAssist?.username ?? '—'}
-            subValue={monthly?.topAssist ? `${monthly.topAssist.assists} assists` : undefined}
-          />
+        <View style={styles.statsBar}>
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Matchs</Text>
+            <Text style={styles.statsBarValue}>{monthly?.totalMatches ?? '—'}</Text>
+          </View>
+          <View style={styles.statsBarDivider} />
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Frags moy.</Text>
+            <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalKills, monthly.totalMatches) : '—'}</Text>
+          </View>
+          <View style={styles.statsBarDivider} />
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Dmg moy.</Text>
+            <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalDamage, monthly.totalMatches) : '—'}</Text>
+          </View>
         </View>
 
-        <View style={styles.row}>
-          <StatCard
-            label="Top Dommages"
-            value={monthly?.topDamage?.username ?? '—'}
-            subValue={
-              monthly?.topDamage
-                ? `${monthly.topDamage.damage.toLocaleString('fr-FR')} dmg`
-                : undefined
-            }
-          />
-        </View>
-
-        {/* IMF Season */}
+        {/* ── Saison IMF ── */}
         {imfSeason && (
           <>
             <SectionHeader
               title={`Saison IMF ${imfSeason.year}`}
               subtitle={`Depuis le ${new Date(imfSeason.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}
             />
-            {/* Wins : manuel ou données réelles, sinon message */}
-            {imfSeason.manualWins !== undefined || (imfStats && imfStats.totalWins > 0) ? (
+
+            {imfSeason.manualWinsDetail.length > 0 || (imfStats && imfStats.totalWins > 0) ? (
               <View style={styles.row}>
                 <StatCard
-                  label={imfSeason.manualWins !== undefined ? 'Victoires IMF ✎' : 'Victoires IMF'}
+                  label={imfSeason.manualWinsDetail.length > 0 ? 'Victoires IMF ✎' : 'Victoires IMF'}
                   value={imfStats?.totalWins ?? '—'}
                   accent
                   large
@@ -209,127 +248,80 @@ export default function DashboardScreen() {
               <View style={styles.emptyBanner}>
                 <Ionicons name="information-circle-outline" size={18} color={Colors.primary} />
                 <Text style={styles.emptyBannerText}>
-                  Aucune donnée — synchro en cours ou renseigne les victoires manuellement dans les réglages
+                  Aucune donnée — synchro en cours ou renseigne les victoires dans les réglages
                 </Text>
               </View>
             )}
-            {/* Top stats : uniquement si données réelles disponibles */}
-            {imfStats && (imfStats.topFragger || imfStats.topAssist) && (
-              <>
-                <View style={styles.row}>
-                  <StatCard
-                    label="Top Fragger IMF"
-                    value={imfStats.topFragger?.username ?? '—'}
-                    subValue={imfStats.topFragger ? `${imfStats.topFragger.kills} kills` : undefined}
-                  />
-                  <StatCard
-                    label="Top Assists IMF"
-                    value={imfStats.topAssist?.username ?? '—'}
-                    subValue={imfStats.topAssist ? `${imfStats.topAssist.assists} assists` : undefined}
-                  />
-                </View>
-                <View style={styles.row}>
-                  <StatCard
-                    label="Top Dommages IMF"
-                    value={imfStats.topDamage?.username ?? '—'}
-                    subValue={
-                      imfStats.topDamage
-                        ? `${imfStats.topDamage.damage.toLocaleString('fr-FR')} dmg`
-                        : undefined
-                    }
-                  />
-                  {topFinisher && (
-                    <StatCard
-                      label="Top Finisher IMF"
-                      value={topFinisher.username}
-                      subValue={`${topFinisher.count} dernier${topFinisher.count > 1 ? 's' : ''} kill`}
-                    />
-                  )}
-                </View>
-              </>
-            )}
-          </>
-        )}
 
-        {/* Season stats */}
-        {/* Leaderboard */}
-        {allStats.some((s) => s.matches > 0) && (
-          <>
-            <SectionHeader title="Classement général" />
-            <View style={styles.leaderboard}>
-              {[...allStats]
-                .sort((a, b) => b.wins - a.wins)
-                .map((s, idx) => (
-                  <View key={s.username} style={styles.leaderRow}>
-                    <Text style={[styles.rank, idx === 0 && styles.rankGold]}>
-                      {idx === 0 ? '🏆' : `#${idx + 1}`}
+            <View style={styles.statsBar}>
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Matchs</Text>
+                <Text style={styles.statsBarValue}>{imfStats?.totalMatches ?? '—'}</Text>
+              </View>
+              <View style={styles.statsBarDivider} />
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Frags moy.</Text>
+                <Text style={styles.statsBarValue}>{imfStats ? avg(imfStats.totalKills, imfStats.totalMatches) : '—'}</Text>
+              </View>
+              <View style={styles.statsBarDivider} />
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Dmg moy.</Text>
+                <Text style={styles.statsBarValue}>{imfStats ? avg(imfStats.totalDamage, imfStats.totalMatches) : '—'}</Text>
+              </View>
+            </View>
+
+            {/* Top 5 cartes */}
+            <Text style={styles.listTitle}>TOP CARTES GAGNÉES</Text>
+            <View style={styles.listCard}>
+              {topMaps.length === 0 ? (
+                <View style={styles.listRow}>
+                  <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
+                </View>
+              ) : (
+                topMaps.map((m, idx) => (
+                  <View key={m.mapName} style={[styles.listRow, idx < topMaps.length - 1 && styles.listRowBorder]}>
+                    <Text style={styles.listRank}>#{idx + 1}</Text>
+                    <Text style={styles.listLabel}>{m.mapName}</Text>
+                    <Text style={styles.listValue}>
+                      {m.wins} victoire{m.wins > 1 ? 's' : ''}
                     </Text>
-                    <View style={styles.leaderAvatar}>
-                      <Text style={styles.leaderAvatarText}>
-                        {s.username[0].toUpperCase()}
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Top Finisher — 4 joueurs */}
+            <Text style={styles.listTitle}>TOP FINISHER</Text>
+            <View style={styles.listCard}>
+              {finisherStats.length === 0 ? (
+                <View style={styles.listRow}>
+                  <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
+                </View>
+              ) : (
+                finisherStats.map((f, idx) => (
+                  <View key={f.username} style={[styles.listRow, idx < finisherStats.length - 1 && styles.listRowBorder]}>
+                    <Text style={[styles.listRank, idx === 0 && f.count > 0 && styles.listRankGold]}>
+                      {idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
+                    </Text>
+                    <Text style={styles.listLabel}>{f.username}</Text>
+                    <View style={styles.listValueWrap}>
+                      <Ionicons name="skull-outline" size={12} color={f.count > 0 ? Colors.win : Colors.textMuted} />
+                      <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted]}>
+                        {f.count} dernier{f.count > 1 ? 's' : ''} kill
                       </Text>
                     </View>
-                    <Text style={styles.leaderName}>{s.username}</Text>
-                    <View style={styles.leaderStats}>
-                      <Text style={styles.leaderWins}>{s.wins}W</Text>
-                      <Text style={styles.leaderKd}>K/D {s.kd}</Text>
-                      <Text style={styles.leaderWr}>{s.winRate}%</Text>
-                    </View>
                   </View>
-                ))}
+                ))
+              )}
             </View>
           </>
         )}
 
-        {/* Last match */}
-        {lastMatch && (
-          <>
-            <SectionHeader title="Dernier match" />
-            <View
-              style={[
-                styles.lastMatchCard,
-                lastMatch.isWin && styles.lastMatchWin,
-              ]}
-            >
-              <View style={styles.lastMatchHeader}>
-                <Text style={styles.lastMatchDate}>
-                  {formatMatchDate(lastMatch.matchDate)}
-                </Text>
-                <View
-                  style={[
-                    styles.resultBadge,
-                    lastMatch.isWin ? styles.winBadge : styles.lossBadge,
-                  ]}
-                >
-                  <Text style={styles.resultBadgeText}>
-                    {lastMatch.isWin ? '🏆 VICTOIRE' : 'DÉFAITE'}
-                  </Text>
-                </View>
-              </View>
-              {lastMatch.isWin && lastMatch.finisher && (
-                <View style={styles.finisherRow}>
-                  <Ionicons name="skull-outline" size={14} color={Colors.win} />
-                  <Text style={styles.finisherText}>
-                    Dernier kill : <Text style={styles.finisherName}>{lastMatch.finisher}</Text>
-                  </Text>
-                </View>
-              )}
-              <View style={styles.playersGrid}>
-                {lastMatch.players.map((p) => (
-                  <View key={p.username} style={styles.playerStat}>
-                    <Text style={styles.playerStatName}>{p.username}</Text>
-                    <Text style={styles.playerStatKills}>
-                      {p.kills}K / {p.assists}A
-                    </Text>
-                    <Text style={styles.playerStatDmg}>
-                      {p.damage.toLocaleString('fr-FR')} dmg
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </>
-        )}
+        {/* ── Dernier match ── */}
+        {lastMatch && <MatchCard match={lastMatch} title="Dernier match" />}
+
+        {/* ── Dernière victoire ── */}
+        {lastWin && <MatchCard match={lastWin} title="Dernière victoire" />}
 
         <View style={{ height: 30 }} />
       </ScrollView>
@@ -397,7 +389,46 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
   },
   row: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  leaderboard: {
+  statsBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    marginBottom: 10,
+  },
+  statsBarItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  statsBarLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  statsBarValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.text,
+  },
+  statsBarDivider: {
+    width: 1,
+    backgroundColor: Colors.cardBorder,
+    marginVertical: 8,
+  },
+  listTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: Colors.textMuted,
+    marginBottom: 6,
+    marginTop: 2,
+  },
+  listCard: {
     backgroundColor: Colors.card,
     borderRadius: 10,
     borderWidth: 1,
@@ -405,40 +436,51 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 10,
   },
-  leaderRow: {
+  listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
     paddingHorizontal: 14,
+    paddingVertical: 11,
     gap: 10,
+  },
+  listRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.cardBorder,
   },
-  rank: {
-    width: 28,
-    fontSize: 12,
+  listRank: {
+    width: 26,
+    fontSize: 11,
     fontWeight: '800',
     color: Colors.textMuted,
     textAlign: 'center',
   },
-  rankGold: { color: Colors.primary },
-  leaderAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
+  listRankGold: { color: Colors.primary },
+  listLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
   },
-  leaderAvatarText: { fontSize: 13, fontWeight: '800', color: Colors.textSecondary },
-  leaderName: { flex: 1, fontSize: 14, fontWeight: '700', color: Colors.text },
-  leaderStats: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  leaderWins: { fontSize: 13, fontWeight: '800', color: Colors.primary },
-  leaderKd: { fontSize: 12, color: Colors.textSecondary },
-  leaderWr: { fontSize: 11, color: Colors.textMuted },
-  lastMatchCard: {
+  listValueWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  listValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  listValueMuted: {
+    color: Colors.textMuted,
+    fontWeight: '500',
+  },
+  listEmpty: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+  },
+  matchCard: {
     backgroundColor: Colors.card,
     borderRadius: 10,
     padding: 14,
@@ -446,49 +488,34 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     marginBottom: 10,
   },
-  lastMatchWin: { borderColor: Colors.win },
-  lastMatchHeader: {
+  matchCardWin: { borderColor: Colors.win },
+  matchCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  lastMatchDate: { fontSize: 12, color: Colors.textSecondary, textTransform: 'capitalize' },
-  resultBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  winBadge: {
+  matchDate: { fontSize: 12, color: Colors.textSecondary, textTransform: 'capitalize' },
+  matchMap: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  badgeWin: {
     backgroundColor: Colors.win + '22',
     borderWidth: 1,
     borderColor: Colors.win,
   },
-  lossBadge: { backgroundColor: Colors.cardBorder },
-  resultBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: 0.5,
-  },
-  playersGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  finisherRow: {
+  badgeLoss: { backgroundColor: Colors.cardBorder },
+  badgeText: { fontSize: 11, fontWeight: '800', color: Colors.text, letterSpacing: 0.5 },
+  finisherInline: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.win + '44',
+    gap: 4,
+    marginTop: 3,
   },
   finisherText: { fontSize: 12, color: Colors.textSecondary },
   finisherName: { fontWeight: '800', color: Colors.win },
+  playersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   playerStat: { flex: 1, minWidth: '40%' },
-  playerStatName: { fontSize: 13, fontWeight: '700', color: Colors.text },
-  playerStatKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
-  playerStatDmg: { fontSize: 11, color: Colors.textMuted },
+  playerName: { fontSize: 13, fontWeight: '700', color: Colors.text },
+  playerKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
+  playerDmg: { fontSize: 11, color: Colors.textMuted },
 });
