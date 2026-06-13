@@ -55,6 +55,21 @@ export interface MatchData {
   }[];
 }
 
+async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(telemetryUrl);
+    if (!res.ok) return null;
+    const events: any[] = await res.json();
+    const killEvents = events.filter((e) => e._T === 'LogPlayerKill');
+    if (killEvents.length === 0) return null;
+    killEvents.sort((a, b) => a._D.localeCompare(b._D));
+    const lastKill = killEvents[killEvents.length - 1];
+    return lastKill.killer?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
   const { data: cached } = await supabase
     .from('match_cache')
@@ -86,16 +101,32 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
       })),
     };
 
+    const groupPlayers = matchData.players.filter((p) =>
+      GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number])
+    );
+
+    const isGroupWin =
+      groupPlayers.length === GROUP_PLAYERS.length &&
+      groupPlayers.some((p) => p.winPlace === 1);
+
+    // Finisher : uniquement sur les victoires à 4 joueurs
+    let finisher: string | null = null;
+    if (isGroupWin) {
+      const telemetryAsset = (raw.included as any[]).find(
+        (i) => i.type === 'asset' && i.attributes?.name === 'telemetry'
+      );
+      if (telemetryAsset?.attributes?.URL) {
+        finisher = await fetchFinisher(telemetryAsset.attributes.URL);
+      }
+    }
+
     await supabase.from('match_cache').insert({
       match_id: matchId,
       match_date: matchData.matchDate,
       game_mode: gameMode,
+      finisher,
       data: matchData,
     });
-
-    const groupPlayers = matchData.players.filter((p) =>
-      GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number])
-    );
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
     if (groupPlayers.length === GROUP_PLAYERS.length) {
@@ -349,6 +380,7 @@ export interface LastMatch {
   matchId: string;
   matchDate: Date;
   isWin: boolean;
+  finisher: string | null;
   players: { username: string; kills: number; assists: number; damage: number }[];
 }
 
@@ -363,11 +395,23 @@ export async function getLastMatch(): Promise<LastMatch | null> {
 
   const latestMatchId = data[0].match_id;
   const rows = data.filter((r) => r.match_id === latestMatchId);
+  const isWin = rows.some((r) => r.is_win);
+
+  let finisher: string | null = null;
+  if (isWin) {
+    const { data: cacheRow } = await supabase
+      .from('match_cache')
+      .select('finisher')
+      .eq('match_id', latestMatchId)
+      .single();
+    finisher = cacheRow?.finisher ?? null;
+  }
 
   return {
     matchId: latestMatchId,
     matchDate: new Date(data[0].match_date),
-    isWin: rows.some((r) => r.is_win),
+    isWin,
+    finisher,
     players: rows.map((r) => ({
       username: r.player_username,
       kills: r.kills,
@@ -375,6 +419,27 @@ export async function getLastMatch(): Promise<LastMatch | null> {
       damage: Math.round(r.damage),
     })),
   };
+}
+
+export async function getTopFinisher(startDate?: string, endDate?: string): Promise<{ username: string; count: number } | null> {
+  let query = supabase
+    .from('match_cache')
+    .select('finisher, match_date')
+    .not('finisher', 'is', null);
+
+  if (startDate) query = query.gte('match_date', new Date(startDate).toISOString());
+  if (endDate) query = query.lte('match_date', new Date(endDate + 'T23:59:59').toISOString());
+
+  const { data } = await query;
+  if (!data || data.length === 0) return null;
+
+  const counts: Record<string, number> = {};
+  for (const row of data) {
+    counts[row.finisher] = (counts[row.finisher] ?? 0) + 1;
+  }
+
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return top ? { username: top[0], count: top[1] } : null;
 }
 
 export interface AllPlayersStats {

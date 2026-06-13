@@ -21,6 +21,7 @@ import {
   getAllPlayersStats,
   getSeasonStats,
   getImfSeasonHighlights,
+  getTopFinisher,
   MonthlyStats,
   LastMatch,
   AllPlayersStats,
@@ -40,6 +41,7 @@ export default function DashboardScreen() {
   const [seasonStats, setSeasonStats] = useState<SeasonStats[]>([]);
   const [imfSeason, setImfSeason] = useState<ImfSeason | null>(null);
   const [imfStats, setImfStats] = useState<MonthlyStats | null>(null);
+  const [topFinisher, setTopFinisher] = useState<{ username: string; count: number } | null>(null);
   const [lastMatch, setLastMatch] = useState<LastMatch | null>(null);
   const [allStats, setAllStats] = useState<AllPlayersStats[]>([]);
   const [syncing, setSyncing] = useState(false);
@@ -51,7 +53,7 @@ export default function DashboardScreen() {
     setLoading(true);
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
-    const [m, season, lm, ls, all, imf] = await Promise.all([
+    const [m, season, lm, ls, all, imf, tf] = await Promise.all([
       getMonthlyStats(now.getFullYear(), now.getMonth() + 1),
       getSeasonStats(),
       getLastMatch(),
@@ -60,6 +62,9 @@ export default function DashboardScreen() {
       currentImfSeason
         ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWins)
         : Promise.resolve(null),
+      currentImfSeason
+        ? getTopFinisher(currentImfSeason.startDate, currentImfSeason.endDate)
+        : Promise.resolve(null),
     ]);
     setMonthly(m);
     setSeasonStats(season);
@@ -67,6 +72,7 @@ export default function DashboardScreen() {
     setLastSyncState(ls);
     setAllStats(all);
     setImfStats(imf);
+    setTopFinisher(tf);
     setLoading(false);
   }, []);
 
@@ -239,6 +245,13 @@ export default function DashboardScreen() {
                         : undefined
                     }
                   />
+                  {topFinisher && (
+                    <StatCard
+                      label="Top Finisher IMF"
+                      value={topFinisher.username}
+                      subValue={`${topFinisher.count} dernier${topFinisher.count > 1 ? 's' : ''} kill`}
+                    />
+                  )}
                 </View>
               </>
             )}
@@ -328,6 +341,14 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
+              {lastMatch.isWin && lastMatch.finisher && (
+                <View style={styles.finisherRow}>
+                  <Ionicons name="skull-outline" size={14} color={Colors.win} />
+                  <Text style={styles.finisherText}>
+                    Dernier kill : <Text style={styles.finisherName}>{lastMatch.finisher}</Text>
+                  </Text>
+                </View>
+              )}
               <View style={styles.playersGrid}>
                 {lastMatch.players.map((p) => (
                   <View key={p.username} style={styles.playerStat}>
@@ -490,6 +511,17 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  finisherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.win + '44',
+  },
+  finisherText: { fontSize: 12, color: Colors.textSecondary },
+  finisherName: { fontWeight: '800', color: Colors.win },
   playerStat: { flex: 1, minWidth: '40%' },
   playerStatName: { fontSize: 13, fontWeight: '700', color: Colors.text },
   playerStatKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
