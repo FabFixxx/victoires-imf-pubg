@@ -31,10 +31,11 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
-# secrets
-constants/config.ts
+# secrets (replaced by env vars — file kept locally for fallback)
+
 
 # typescript
 *.tsbuildinfo
