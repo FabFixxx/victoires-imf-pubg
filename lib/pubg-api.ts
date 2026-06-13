@@ -606,5 +606,5 @@ export async function getCurrentSeasonStats(): Promise<SeasonStats[]> {
 }
 
 export async function getSeasonStats(): Promise<SeasonStats[]> {
-  return getAllTimeStats();
+  return getCurrentSeasonStats();
 }
