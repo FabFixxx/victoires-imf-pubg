@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "victoires-imf-pubg",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A0A0A"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.imf.victoirespubg"
@@ -36,6 +31,14 @@
         {
           "icon": "./assets/icon.png",
           "color": "#F5A623"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0A0A0A"
         }
       ]
     ],
