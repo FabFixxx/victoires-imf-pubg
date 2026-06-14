@@ -350,10 +350,10 @@ export default function CalendarScreen() {
                 </View>
                 {playersWhoResponded.has(p) ? (
                   <View style={styles.respondedBadge}>
-                    <Text style={styles.respondedBadgeText}>✓</Text>
+                    <Text style={styles.respondedBadgeText}>✓ A répondu</Text>
                   </View>
                 ) : (
-                  <Text style={styles.waitingText}>—</Text>
+                  <Text style={styles.waitingText}>En attente...</Text>
                 )}
               </View>
             ))}
