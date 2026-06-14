@@ -144,17 +144,26 @@ export default function CalendarScreen() {
     return result;
   }, [availability, currentPlayer]);
 
-  // Meilleures dates de la semaine prochaine (lundi → dimanche)
-  const upcomingBest = useMemo(() => {
+  const getWeekRange = (offsetWeeks: number) => {
     const d = new Date(today);
-    const day = d.getDay(); // 0=dim, 1=lun, ..., 6=sam
-    const daysToMonday = day === 1 ? 0 : day === 0 ? 1 : 8 - day;
+    const day = d.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
     const monday = new Date(d);
-    monday.setDate(d.getDate() + daysToMonday);
+    monday.setDate(d.getDate() + diffToMonday + offsetWeeks * 7);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    const mondayStr = monday.toISOString().split('T')[0];
-    const sundayStr = sunday.toISOString().split('T')[0];
+    return { mondayStr: monday.toISOString().split('T')[0], sundayStr: sunday.toISOString().split('T')[0] };
+  };
+
+  const bestThisWeek = useMemo(() => {
+    const { mondayStr, sundayStr } = getWeekRange(0);
+    return availability
+      .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
+      .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
+  }, [availability, today]);
+
+  const bestNextWeek = useMemo(() => {
+    const { mondayStr, sundayStr } = getWeekRange(1);
     return availability
       .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
@@ -243,12 +252,58 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* Meilleures dates */}
-        {upcomingBest.length > 0 && (
+        {/* Meilleures dates cette semaine */}
+        {bestThisWeek.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE</Text>
             <View style={styles.card}>
-              {upcomingBest.map((day) => {
+              {bestThisWeek.map((day) => {
+                const isPerfect = day.players.length >= GROUP_PLAYERS.length;
+                return (
+                  <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
+                    <View style={styles.bestDateInfo}>
+                      <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
+                        {formatDate(day.date)}
+                      </Text>
+                      <View style={styles.bestDateDots}>
+                        {GROUP_PLAYERS.map((p) => (
+                          <View
+                            key={p}
+                            style={[
+                              styles.playerDot,
+                              {
+                                backgroundColor: day.players.includes(p)
+                                  ? PLAYER_COLORS[p]
+                                  : Colors.backgroundSecondary,
+                                borderColor: PLAYER_COLORS[p],
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                    {isPerfect ? (
+                      <View style={styles.perfectBadge}>
+                        <Text style={styles.perfectBadgeText}>PARFAIT</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.countBadge}>
+                        <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Meilleures dates semaine prochaine */}
+        {bestNextWeek.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE</Text>
+            <View style={styles.card}>
+              {bestNextWeek.map((day) => {
                 const isPerfect = day.players.length >= GROUP_PLAYERS.length;
                 return (
                   <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
