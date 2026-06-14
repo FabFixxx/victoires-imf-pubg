@@ -44,6 +44,8 @@ export default function SettingsScreen() {
   // Modal victoires manuelles
   const [winsSeasonYear, setWinsSeasonYear] = useState<number | null>(null);
   const [showWinsModal, setShowWinsModal] = useState(false);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
 
   // Modal ajout d'une victoire individuelle
   const [showAddWinModal, setShowAddWinModal] = useState(false);
@@ -96,7 +98,23 @@ export default function SettingsScreen() {
 
   const handleOpenWinsModal = (year: number) => {
     setWinsSeasonYear(year);
+    const season = imfSeasons.find((s) => s.year === year);
+    setEditStartDate(season?.startDate ?? '');
     setShowWinsModal(true);
+  };
+
+  const handleSaveStartDate = async () => {
+    if (!winsSeasonYear) return;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(editStartDate)) {
+      Alert.alert('Date invalide', 'Format attendu : AAAA-MM-JJ (ex: 2026-01-13)');
+      return;
+    }
+    setSavingDate(true);
+    await upsertImfSeason(winsSeasonYear, editStartDate);
+    await loadImfSeasons();
+    setSavingDate(false);
+    Alert.alert('Sauvegardé', 'Date de début mise à jour.');
   };
 
   const handleDeleteWin = (win: ManualWin) => {
@@ -392,6 +410,33 @@ export default function SettingsScreen() {
               <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
               <Text style={styles.addWinBtnText}>Ajouter une victoire</Text>
             </TouchableOpacity>
+
+            <View style={styles.startDateSection}>
+              <Text style={styles.startDateLabel}>DATE DE DÉBUT DE SAISON</Text>
+              <View style={styles.startDateRow}>
+                <TextInput
+                  style={styles.startDateInput}
+                  placeholder="AAAA-MM-JJ"
+                  placeholderTextColor={Colors.textMuted}
+                  value={editStartDate}
+                  onChangeText={setEditStartDate}
+                  maxLength={10}
+                />
+                <TouchableOpacity
+                  style={[styles.startDateBtn, savingDate && { opacity: 0.5 }]}
+                  onPress={handleSaveStartDate}
+                  disabled={savingDate}
+                >
+                  {savingDate
+                    ? <ActivityIndicator size="small" color={Colors.background} />
+                    : <Text style={styles.startDateBtnText}>Enregistrer</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.startDateHint}>
+                La fin de la saison précédente sera ajustée automatiquement.
+              </Text>
+            </View>
           </View>
         </View>
       </Modal>
@@ -649,6 +694,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: Colors.cardBorder,
   },
   addWinBtnText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+  startDateSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.cardBorder,
+  },
+  startDateLabel: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 1.5,
+    color: Colors.textMuted, marginBottom: 10,
+  },
+  startDateRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  startDateInput: {
+    flex: 1,
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1, borderColor: Colors.cardBorder,
+    borderRadius: 8, padding: 10, fontSize: 15, color: Colors.text,
+  },
+  startDateBtn: {
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8,
+    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  startDateBtnText: { fontSize: 13, fontWeight: '800', color: Colors.background },
+  startDateHint: { fontSize: 11, color: Colors.textMuted, marginTop: 6, fontStyle: 'italic' },
   selectorLabel: {
     fontSize: 10, fontWeight: '800', letterSpacing: 1.5,
     color: Colors.textMuted, marginBottom: 8, marginTop: 12,
