@@ -44,6 +44,10 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
       hour: '2-digit', minute: '2-digit',
     });
 
+  const totalKills = match.players.reduce((s, p) => s + p.kills, 0);
+  const totalAssists = match.players.reduce((s, p) => s + p.assists, 0);
+  const totalDmg = match.players.reduce((s, p) => s + p.damage, 0);
+
   return (
     <>
       <SectionHeader title={title} />
@@ -60,6 +64,10 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
                 </Text>
               </View>
             )}
+          </View>
+          <View style={styles.teamTotals}>
+            <Text style={styles.teamTotalsKA}>{totalKills}K / {totalAssists}A</Text>
+            <Text style={styles.teamTotalsDmg}>{Math.round(totalDmg).toLocaleString('fr-FR')} dmg</Text>
           </View>
           <View style={[styles.badge, match.isWin ? styles.badgeWin : styles.badgeLoss]}>
             <Text style={styles.badgeText}>
@@ -505,6 +513,21 @@ const styles = StyleSheet.create({
   },
   badgeLoss: { backgroundColor: Colors.cardBorder },
   badgeText: { fontSize: 11, fontWeight: '800', color: Colors.text, letterSpacing: 0.5 },
+  teamTotals: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  teamTotalsKA: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: 0.5,
+  },
+  teamTotalsDmg: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
   finisherInline: {
     flexDirection: 'row',
     alignItems: 'center',
