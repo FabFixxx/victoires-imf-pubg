@@ -233,7 +233,9 @@ export default function CalendarScreen() {
             todayTextColor: Colors.primary,
             todayBackgroundColor: Colors.primary + '22',
             dotColor: Colors.primary,
-            textSectionTitleColor: Colors.textSecondary,
+            textSectionTitleColor: Colors.text,
+            textDayHeaderFontSize: 13,
+            textDayHeaderFontWeight: '800',
             textMonthFontWeight: '800',
             textDayFontWeight: '600',
           }}
