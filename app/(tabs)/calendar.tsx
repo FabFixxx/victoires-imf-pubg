@@ -144,13 +144,20 @@ export default function CalendarScreen() {
     return result;
   }, [availability, currentPlayer]);
 
-  // Meilleures dates dans les 30 prochains jours (2+ joueurs)
+  // Meilleures dates de la semaine courante (lundi → dimanche)
   const upcomingBest = useMemo(() => {
-    const in30 = addDays(today, 30);
+    const d = new Date(today);
+    const day = d.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diffToMonday);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const mondayStr = monday.toISOString().split('T')[0];
+    const sundayStr = sunday.toISOString().split('T')[0];
     return availability
-      .filter((d) => d.date >= today && d.date <= in30 && d.players.length >= 2)
-      .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date))
-      .slice(0, 8);
+      .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
+      .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
   }, [availability, today]);
 
   // Dispos de chaque joueur dans les 7 prochains jours
@@ -239,7 +246,7 @@ export default function CalendarScreen() {
         {/* Meilleures dates */}
         {upcomingBest.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEILLEURES DATES (30 JOURS)</Text>
+            <Text style={styles.sectionTitle}>MEILLEURES DATES (CETTE SEMAINE)</Text>
             <View style={styles.card}>
               {upcomingBest.map((day) => {
                 const isPerfect = day.players.length >= GROUP_PLAYERS.length;
