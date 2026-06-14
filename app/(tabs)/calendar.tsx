@@ -293,16 +293,6 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* Légende joueurs */}
-        <View style={styles.legend}>
-          {GROUP_PLAYERS.map((p) => (
-            <View key={p} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: PLAYER_COLORS[p] }]} />
-              <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{p}</Text>
-            </View>
-          ))}
-        </View>
-
         <View style={styles.calendarHint}>
           <Text style={styles.calendarHintText}>
             Appuie sur un jour pour marquer ta dispo
@@ -337,6 +327,16 @@ export default function CalendarScreen() {
           }}
           style={styles.calendar}
         />
+
+        {/* Légende joueurs */}
+        <View style={styles.legend}>
+          {GROUP_PLAYERS.map((p) => (
+            <View key={p} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: PLAYER_COLORS[p] }]} />
+              <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{p}</Text>
+            </View>
+          ))}
+        </View>
 
         {/* Statut réponses semaine */}
         <View style={styles.section}>
