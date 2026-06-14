@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { Colors } from '../../constants/colors';
 import { SectionHeader } from '../../components/SectionHeader';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../../lib/storage';
@@ -348,7 +349,7 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           {[
             ['Application', 'Victoires IMF PUBG'],
-            ['Version', '1.0.0'],
+            ['Version', Constants.expoConfig?.version ?? '1.0.0'],
             ['Source stats', 'API PUBG officielle'],
             ['Mode de jeu', 'FPP uniquement'],
           ].map(([label, value]) => (
