@@ -261,96 +261,100 @@ export default function CalendarScreen() {
         </View>
 
         {/* Meilleures dates cette semaine */}
-        {bestThisWeek.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE ({thisWeekRange.label})</Text>
-            <View style={styles.card}>
-              {bestThisWeek.map((day) => {
-                const isPerfect = day.players.length >= GROUP_PLAYERS.length;
-                return (
-                  <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
-                    <View style={styles.bestDateInfo}>
-                      <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
-                        {formatDate(day.date)}
-                      </Text>
-                      <View style={styles.bestDateDots}>
-                        {GROUP_PLAYERS.map((p) => (
-                          <View
-                            key={p}
-                            style={[
-                              styles.playerDot,
-                              {
-                                backgroundColor: day.players.includes(p)
-                                  ? PLAYER_COLORS[p]
-                                  : Colors.backgroundSecondary,
-                                borderColor: PLAYER_COLORS[p],
-                              },
-                            ]}
-                          />
-                        ))}
-                      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE ({thisWeekRange.label})</Text>
+          <View style={styles.card}>
+            {bestThisWeek.length === 0 ? (
+              <View style={styles.emptyRow}>
+                <Text style={styles.emptyText}>Aucune disponibilité commune pour le moment</Text>
+              </View>
+            ) : bestThisWeek.map((day) => {
+              const isPerfect = day.players.length >= GROUP_PLAYERS.length;
+              return (
+                <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
+                  <View style={styles.bestDateInfo}>
+                    <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
+                      {formatDate(day.date)}
+                    </Text>
+                    <View style={styles.bestDateDots}>
+                      {GROUP_PLAYERS.map((p) => (
+                        <View
+                          key={p}
+                          style={[
+                            styles.playerDot,
+                            {
+                              backgroundColor: day.players.includes(p)
+                                ? PLAYER_COLORS[p]
+                                : Colors.backgroundSecondary,
+                              borderColor: PLAYER_COLORS[p],
+                            },
+                          ]}
+                        />
+                      ))}
                     </View>
-                    {isPerfect ? (
-                      <View style={styles.perfectBadge}>
-                        <Text style={styles.perfectBadgeText}>PARFAIT</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.countBadge}>
-                        <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
-                      </View>
-                    )}
                   </View>
-                );
-              })}
-            </View>
+                  {isPerfect ? (
+                    <View style={styles.perfectBadge}>
+                      <Text style={styles.perfectBadgeText}>PARFAIT</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
-        )}
+        </View>
 
         {/* Meilleures dates semaine prochaine */}
-        {bestNextWeek.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE ({nextWeekRange.label})</Text>
-            <View style={styles.card}>
-              {bestNextWeek.map((day) => {
-                const isPerfect = day.players.length >= GROUP_PLAYERS.length;
-                return (
-                  <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
-                    <View style={styles.bestDateInfo}>
-                      <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
-                        {formatDate(day.date)}
-                      </Text>
-                      <View style={styles.bestDateDots}>
-                        {GROUP_PLAYERS.map((p) => (
-                          <View
-                            key={p}
-                            style={[
-                              styles.playerDot,
-                              {
-                                backgroundColor: day.players.includes(p)
-                                  ? PLAYER_COLORS[p]
-                                  : Colors.backgroundSecondary,
-                                borderColor: PLAYER_COLORS[p],
-                              },
-                            ]}
-                          />
-                        ))}
-                      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE ({nextWeekRange.label})</Text>
+          <View style={styles.card}>
+            {bestNextWeek.length === 0 ? (
+              <View style={styles.emptyRow}>
+                <Text style={styles.emptyText}>Aucune disponibilité commune pour le moment</Text>
+              </View>
+            ) : bestNextWeek.map((day) => {
+              const isPerfect = day.players.length >= GROUP_PLAYERS.length;
+              return (
+                <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
+                  <View style={styles.bestDateInfo}>
+                    <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
+                      {formatDate(day.date)}
+                    </Text>
+                    <View style={styles.bestDateDots}>
+                      {GROUP_PLAYERS.map((p) => (
+                        <View
+                          key={p}
+                          style={[
+                            styles.playerDot,
+                            {
+                              backgroundColor: day.players.includes(p)
+                                ? PLAYER_COLORS[p]
+                                : Colors.backgroundSecondary,
+                              borderColor: PLAYER_COLORS[p],
+                            },
+                          ]}
+                        />
+                      ))}
                     </View>
-                    {isPerfect ? (
-                      <View style={styles.perfectBadge}>
-                        <Text style={styles.perfectBadgeText}>PARFAIT</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.countBadge}>
-                        <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
-                      </View>
-                    )}
                   </View>
-                );
-              })}
-            </View>
+                  {isPerfect ? (
+                    <View style={styles.perfectBadge}>
+                      <Text style={styles.perfectBadgeText}>PARFAIT</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
-        )}
+        </View>
 
         <View style={{ height: 30 }} />
       </ScrollView>
@@ -471,4 +475,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   countBadgeText: { fontSize: 11, fontWeight: '800', color: Colors.primary },
+  emptyRow: { padding: 16, alignItems: 'center' },
+  emptyText: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
 });
