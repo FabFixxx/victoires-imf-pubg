@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
@@ -15,6 +17,7 @@ import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '..
 import { GROUP_PLAYERS } from '../constants/players';
 import { registerPushToken, scheduleSundayReminder } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
+import { checkForUpdate } from '../lib/update-check';
 
 type InitState = 'loading' | 'select' | 'ready';
 
@@ -36,6 +39,20 @@ export default function RootLayout() {
           setInitState('ready');
           scheduleSundayReminder();
           triggerAutoSync();
+          checkForUpdate().then((info) => {
+            if (!info) return;
+            Alert.alert(
+              '🆕 Mise à jour disponible',
+              `La version ${info.version} est disponible.\n\nTu peux continuer à utiliser l'app ou installer la mise à jour maintenant.`,
+              [
+                { text: 'Plus tard', style: 'cancel' },
+                {
+                  text: 'Mettre à jour',
+                  onPress: () => Linking.openURL(info.downloadUrl),
+                },
+              ]
+            );
+          });
         }
       } catch {
         clearTimeout(timeout);
