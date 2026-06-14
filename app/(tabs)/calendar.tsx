@@ -144,13 +144,13 @@ export default function CalendarScreen() {
     return result;
   }, [availability, currentPlayer]);
 
-  // Meilleures dates de la semaine courante (lundi → dimanche)
+  // Meilleures dates de la semaine prochaine (lundi → dimanche)
   const upcomingBest = useMemo(() => {
     const d = new Date(today);
-    const day = d.getDay();
-    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const day = d.getDay(); // 0=dim, 1=lun, ..., 6=sam
+    const daysToMonday = day === 1 ? 0 : day === 0 ? 1 : 8 - day;
     const monday = new Date(d);
-    monday.setDate(d.getDate() + diffToMonday);
+    monday.setDate(d.getDate() + daysToMonday);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     const mondayStr = monday.toISOString().split('T')[0];
