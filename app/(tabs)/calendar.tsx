@@ -246,7 +246,7 @@ export default function CalendarScreen() {
         {/* Meilleures dates */}
         {upcomingBest.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEILLEURES DATES (CETTE SEMAINE)</Text>
+            <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE</Text>
             <View style={styles.card}>
               {upcomingBest.map((day) => {
                 const isPerfect = day.players.length >= GROUP_PLAYERS.length;
