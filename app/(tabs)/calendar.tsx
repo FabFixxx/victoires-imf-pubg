@@ -144,6 +144,8 @@ export default function CalendarScreen() {
     return result;
   }, [availability, currentPlayer]);
 
+  const MONTHS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+
   const getWeekRange = (offsetWeeks: number) => {
     const d = new Date(today);
     const day = d.getDay();
@@ -152,18 +154,24 @@ export default function CalendarScreen() {
     monday.setDate(d.getDate() + diffToMonday + offsetWeeks * 7);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    return { mondayStr: monday.toISOString().split('T')[0], sundayStr: sunday.toISOString().split('T')[0] };
+    const mondayStr = monday.toISOString().split('T')[0];
+    const sundayStr = sunday.toISOString().split('T')[0];
+    const label = `du ${monday.getDate()} au ${sunday.getDate()} ${MONTHS_FR[sunday.getMonth()]} ${sunday.getFullYear()}`;
+    return { mondayStr, sundayStr, label };
   };
 
+  const thisWeekRange = getWeekRange(0);
+  const nextWeekRange = getWeekRange(1);
+
   const bestThisWeek = useMemo(() => {
-    const { mondayStr, sundayStr } = getWeekRange(0);
+    const { mondayStr, sundayStr } = thisWeekRange;
     return availability
       .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
   }, [availability, today]);
 
   const bestNextWeek = useMemo(() => {
-    const { mondayStr, sundayStr } = getWeekRange(1);
+    const { mondayStr, sundayStr } = nextWeekRange;
     return availability
       .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
@@ -255,7 +263,7 @@ export default function CalendarScreen() {
         {/* Meilleures dates cette semaine */}
         {bestThisWeek.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE</Text>
+            <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE ({thisWeekRange.label})</Text>
             <View style={styles.card}>
               {bestThisWeek.map((day) => {
                 const isPerfect = day.players.length >= GROUP_PLAYERS.length;
@@ -301,7 +309,7 @@ export default function CalendarScreen() {
         {/* Meilleures dates semaine prochaine */}
         {bestNextWeek.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE</Text>
+            <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE ({nextWeekRange.label})</Text>
             <View style={styles.card}>
               {bestNextWeek.map((day) => {
                 const isPerfect = day.players.length >= GROUP_PLAYERS.length;
