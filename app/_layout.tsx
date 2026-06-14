@@ -46,6 +46,8 @@ export default function RootLayout() {
   }, []);
 
   const triggerAutoSync = async () => {
+    const last = await getLastSync();
+    if (last && Date.now() - last.getTime() < 24 * 60 * 60 * 1000) return;
     setSyncing(true);
     try {
       await syncData();
