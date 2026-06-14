@@ -197,71 +197,6 @@ export default function CalendarScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={loadAvailability} tintColor={Colors.primary} />
         }
       >
-        {/* Légende joueurs */}
-        <View style={styles.legend}>
-          {GROUP_PLAYERS.map((p) => (
-            <View key={p} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: PLAYER_COLORS[p] }]} />
-              <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{p}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.calendarHint}>
-          <Text style={styles.calendarHintText}>
-            Appuie sur un jour pour marquer ta dispo
-          </Text>
-        </View>
-
-        <Calendar
-          onDayPress={handleDayPress}
-          markedDates={markedDates}
-          markingType="multi-dot"
-          minDate={today}
-          maxDate={windowEnd}
-          firstDay={1}
-          enableSwipeMonths
-          theme={{
-            backgroundColor: 'transparent',
-            calendarBackground: Colors.backgroundSecondary,
-            dayTextColor: Colors.text,
-            textDisabledColor: Colors.textMuted,
-            monthTextColor: Colors.text,
-            arrowColor: Colors.primary,
-            selectedDayBackgroundColor: Colors.primary,
-            selectedDayTextColor: '#000',
-            todayTextColor: Colors.primary,
-            todayBackgroundColor: Colors.primary + '22',
-            dotColor: Colors.primary,
-            textSectionTitleColor: Colors.text,
-            textDayHeaderFontSize: 13,
-            textDayHeaderFontWeight: '800',
-            textMonthFontWeight: '800',
-            textDayFontWeight: '600',
-          }}
-          style={styles.calendar}
-        />
-
-        {/* Statut réponses semaine */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CETTE SEMAINE</Text>
-          <View style={styles.card}>
-            {GROUP_PLAYERS.map((p) => (
-              <View key={p} style={styles.playerStatusRow}>
-                <View style={[styles.statusDot, { backgroundColor: PLAYER_COLORS[p] }]} />
-                <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{p}</Text>
-                {playersWhoResponded.has(p) ? (
-                  <View style={styles.respondedBadge}>
-                    <Text style={styles.respondedBadgeText}>✓ A répondu</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.waitingText}>En attente...</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-
         {/* Meilleures dates cette semaine */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE ({thisWeekRange.label})</Text>
@@ -358,6 +293,73 @@ export default function CalendarScreen() {
           </View>
         </View>
 
+        {/* Légende joueurs */}
+        <View style={styles.legend}>
+          {GROUP_PLAYERS.map((p) => (
+            <View key={p} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: PLAYER_COLORS[p] }]} />
+              <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{p}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.calendarHint}>
+          <Text style={styles.calendarHintText}>
+            Appuie sur un jour pour marquer ta dispo
+          </Text>
+        </View>
+
+        <Calendar
+          onDayPress={handleDayPress}
+          markedDates={markedDates}
+          markingType="multi-dot"
+          minDate={today}
+          maxDate={windowEnd}
+          firstDay={1}
+          enableSwipeMonths
+          theme={{
+            backgroundColor: 'transparent',
+            calendarBackground: Colors.backgroundSecondary,
+            dayTextColor: Colors.text,
+            textDisabledColor: Colors.textMuted,
+            monthTextColor: Colors.text,
+            arrowColor: Colors.primary,
+            selectedDayBackgroundColor: Colors.primary,
+            selectedDayTextColor: '#000',
+            todayTextColor: Colors.primary,
+            todayBackgroundColor: Colors.primary + '22',
+            dotColor: Colors.primary,
+            textSectionTitleColor: Colors.text,
+            textDayHeaderFontSize: 13,
+            textDayHeaderFontWeight: '800',
+            textMonthFontWeight: '800',
+            textDayFontWeight: '600',
+          }}
+          style={styles.calendar}
+        />
+
+        {/* Statut réponses semaine */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>CETTE SEMAINE</Text>
+          <View style={[styles.card, styles.statusGrid]}>
+            {GROUP_PLAYERS.map((p) => (
+              <View key={p} style={styles.statusCell}>
+                <View style={styles.statusCellLeft}>
+                  <View style={[styles.statusDot, { backgroundColor: PLAYER_COLORS[p] }]} />
+                  <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{p}</Text>
+                </View>
+                {playersWhoResponded.has(p) ? (
+                  <View style={styles.respondedBadge}>
+                    <Text style={styles.respondedBadgeText}>✓</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.waitingText}>—</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
+
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
@@ -410,17 +412,23 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     overflow: 'hidden',
   },
-  playerStatusRow: {
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  statusCell: {
+    width: '50%',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    justifyContent: 'space-between',
+    padding: 10,
     paddingHorizontal: 14,
-    gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.cardBorder,
   },
+  statusCellLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusName: { flex: 1, fontSize: 14, color: Colors.textSecondary, fontWeight: '600' },
+  statusName: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   statusNameMe: { color: Colors.text },
   respondedBadge: {
     backgroundColor: Colors.win + '22',
