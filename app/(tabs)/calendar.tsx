@@ -320,12 +320,10 @@ export default function CalendarScreen() {
             todayBackgroundColor: Colors.primary + '22',
             dotColor: Colors.primary,
             textSectionTitleColor: Colors.text,
-            textDayHeaderFontSize: 12,
+            textDayHeaderFontSize: 13,
             textDayHeaderFontWeight: '800',
             textMonthFontWeight: '800',
-            textDayFontSize: 13,
             textDayFontWeight: '600',
-            textMonthFontSize: 14,
           }}
           style={styles.calendar}
         />
