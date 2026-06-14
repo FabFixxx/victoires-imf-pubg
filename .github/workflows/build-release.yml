@@ -1,0 +1,48 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r '.expo.version' app.json)" >> $GITHUB_OUTPUT
+
+      - name: Build APK
+        id: build
+        run: |
+          OUTPUT=$(eas build --platform android --profile preview --non-interactive --wait --json 2>/dev/null)
+          echo "artifact_url=$(echo $OUTPUT | jq -r '.[0].artifacts.buildUrl')" >> $GITHUB_OUTPUT
+
+      - name: Download APK
+        run: |
+          curl -L "${{ steps.build.outputs.artifact_url }}" \
+            -o "victoires-imf-v${{ steps.version.outputs.version }}.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: "Version ${{ steps.version.outputs.version }}"
+          files: victoires-imf-v${{ steps.version.outputs.version }}.apk
+          body: |
+            Installe l'APK directement sur Android.
