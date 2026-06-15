@@ -82,8 +82,8 @@ async function sendToAll(supabase: ReturnType<typeof createClient>, title: strin
 Deno.serve(async (req) => {
   try {
     const payload = await req.json()
-    const record = payload.record
-    if (!record) return new Response('no record', { status: 400 })
+    const record = payload.record ?? payload
+    if (!record || !record.date) return new Response('no record', { status: 400 })
 
     const date: string = typeof record.date === 'string' ? record.date.split('T')[0] : String(record.date)
 
