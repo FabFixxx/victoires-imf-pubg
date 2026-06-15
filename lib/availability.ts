@@ -83,10 +83,10 @@ export async function checkWeekAllResponded(): Promise<{
     const allResponded = (GROUP_PLAYERS as readonly string[]).every((p) => respondedPlayers.has(p));
 
     if (allResponded) {
-      const bestDates = avail
-        .filter((d) => d.players.length >= 2)
-        .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date))
-        .slice(0, 3);
+      const fourVotes = avail.filter((d) => d.players.length === 4).sort((a, b) => a.date.localeCompare(b.date));
+      const threeVotes = avail.filter((d) => d.players.length === 3).sort((a, b) => a.date.localeCompare(b.date));
+      const bestDates = fourVotes.length > 0 ? fourVotes : threeVotes;
+      if (bestDates.length === 0) continue;
       return { found: true, weekStart: startStr, bestDates };
     }
   }
