@@ -232,16 +232,18 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
 
   const allMatchIds = new Set<string>();
 
-  for (const [username, accountId] of Object.entries(accountIds)) {
-    onProgress?.(`Récupération des matchs de ${username}...`);
-    try {
-      const data = await fetchPUBG(`/players/${accountId}`);
-      const matchIds: string[] = data.data.relationships.matches.data.map((m: any) => m.id);
-      matchIds.forEach((id) => allMatchIds.add(id));
-      await sleep(RATE_LIMIT_DELAY);
-    } catch {
-      onProgress?.(`Erreur pour ${username}, on continue...`);
-    }
+  // Un seul joueur suffit : tous les matchs IMF ont les 4 membres
+  const referencePlayer = GROUP_PLAYERS[0];
+  const referenceId = accountIds[referencePlayer];
+  onProgress?.('Récupération des matchs IMF...');
+  try {
+    const data = await fetchPUBG(`/players/${referenceId}`);
+    const matchIds: string[] = data.data.relationships.matches.data.map((m: any) => m.id);
+    matchIds.forEach((id) => allMatchIds.add(id));
+    await sleep(RATE_LIMIT_DELAY);
+  } catch (e: any) {
+    onProgress?.(`Erreur récupération matchs IMF: ${e?.message ?? 'inconnue'}`);
+    throw e;
   }
 
   const { data: cachedRows } = await supabase
