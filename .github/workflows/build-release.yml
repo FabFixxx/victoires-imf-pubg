@@ -29,6 +29,15 @@ jobs:
         id: version
         run: echo "version=$(jq -r '.expo.version' app.json)" >> $GITHUB_OUTPUT
 
+      - name: Check tag matches version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "Tag v$TAG does not match app.json version $VERSION — skipping build."
+            exit 1
+          fi
+
       - name: Build APK
         id: build
         run: |
