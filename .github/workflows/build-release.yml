@@ -61,6 +61,3 @@ jobs:
             - 📅 Rappel dimanche 19h pour les utilisateurs iOS (PWA)
             - 📋 Historique des versions dans les paramètres (appuie sur le numéro de version)
             - ⚡ Synchronisation 3x plus rapide (un seul appel API au lieu de 4)
-
-            ---
-            Installe l'APK directement sur Android.
