@@ -37,6 +37,11 @@ export default function SettingsScreen() {
   const [syncMsg, setSyncMsg] = useState('');
   const [imfSeasons, setImfSeasons] = useState<ImfSeason[]>([]);
 
+  // Modal changelog
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
+  const [releases, setReleases] = useState<{ version: string; date: string; notes: string }[]>([]);
+  const [loadingReleases, setLoadingReleases] = useState(false);
+
   // Modal ajout saison
   const [showSeasonModal, setShowSeasonModal] = useState(false);
   const [editYear, setEditYear] = useState('');
@@ -211,6 +216,24 @@ export default function SettingsScreen() {
     Alert.alert('Diagnostic', results.join('\n\n'));
   };
 
+  const handleOpenChangelog = async () => {
+    setShowChangelogModal(true);
+    if (releases.length > 0) return;
+    setLoadingReleases(true);
+    try {
+      const res = await fetch('https://api.github.com/repos/FabFixxx/victoires-imf-pubg/releases');
+      const data = await res.json();
+      setReleases((data ?? []).map((r: any) => ({
+        version: r.tag_name ?? '',
+        date: r.published_at ? new Date(r.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '',
+        notes: r.body ?? '',
+      })));
+    } catch {
+      setReleases([]);
+    }
+    setLoadingReleases(false);
+  };
+
   const openTracker = (username: string) => {
     Linking.openURL(`${TRACKER_BASE}/${username}/overview?mode=fpp`);
   };
@@ -349,7 +372,6 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           {[
             ['Application', 'Victoires IMF PUBG'],
-            ['Version', Constants.expoConfig?.version ?? '1.0.0'],
             ['Source stats', 'API PUBG officielle'],
             ['Mode de jeu', 'FPP uniquement'],
           ].map(([label, value]) => (
@@ -358,10 +380,48 @@ export default function SettingsScreen() {
               <Text style={styles.infoValue}>{value}</Text>
             </View>
           ))}
+          <TouchableOpacity style={styles.infoRow} onPress={handleOpenChangelog}>
+            <Text style={styles.infoLabel}>Version</Text>
+            <View style={styles.versionRow}>
+              <Text style={styles.infoValue}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>
+              <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* ── Modal changelog ── */}
+      <Modal visible={showChangelogModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Historique des versions</Text>
+              <TouchableOpacity onPress={() => setShowChangelogModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {loadingReleases ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginVertical: 24 }} />
+            ) : releases.length === 0 ? (
+              <Text style={styles.emptyWins}>Aucune version disponible</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {releases.map((r, i) => (
+                  <View key={r.version} style={[styles.changelogItem, i < releases.length - 1 && styles.changelogBorder]}>
+                    <View style={styles.changelogHeader}>
+                      <Text style={styles.changelogVersion}>{r.version}</Text>
+                      {r.date ? <Text style={styles.changelogDate}>{r.date}</Text> : null}
+                    </View>
+                    {r.notes ? <Text style={styles.changelogNotes}>{r.notes}</Text> : null}
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide">
@@ -746,4 +806,11 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
+  versionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  changelogItem: { paddingVertical: 14 },
+  changelogBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  changelogHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  changelogVersion: { fontSize: 15, fontWeight: '800', color: Colors.primary },
+  changelogDate: { fontSize: 12, color: Colors.textMuted },
+  changelogNotes: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
 });
