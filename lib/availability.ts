@@ -55,7 +55,7 @@ export async function toggleAvailability(username: string, date: string): Promis
   }
 }
 
-// Vérifie si les 4 joueurs ont au moins 1 dispo dans les 7 prochains jours
+// Vérifie si les 4 joueurs ont au moins 1 dispo dans les 60 prochains jours
 export async function checkAllRespondedNextWeek(): Promise<{
   allResponded: boolean;
   bestDates: DayAvailability[];
@@ -63,7 +63,7 @@ export async function checkAllRespondedNextWeek(): Promise<{
   const today = new Date();
   const startDate = today.toISOString().split('T')[0];
   const end = new Date(today);
-  end.setDate(today.getDate() + 7);
+  end.setDate(today.getDate() + 60);
   const endDate = end.toISOString().split('T')[0];
 
   const avail = await getAvailability(startDate, endDate);
@@ -73,7 +73,10 @@ export async function checkAllRespondedNextWeek(): Promise<{
   if (!allResponded) return { allResponded: false, bestDates: [] };
 
   const maxCount = Math.max(...avail.map((d) => d.players.length), 0);
-  const bestDates = avail.filter((d) => d.players.length === maxCount).sort((a, b) => a.date.localeCompare(b.date));
+  const bestDates = avail
+    .filter((d) => d.players.length >= 2)
+    .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date))
+    .slice(0, 5);
 
   return { allResponded, bestDates };
 }
