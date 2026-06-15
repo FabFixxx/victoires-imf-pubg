@@ -223,11 +223,20 @@ export default function SettingsScreen() {
     try {
       const res = await fetch('https://api.github.com/repos/FabFixxx/victoires-imf-pubg/releases');
       const data = await res.json();
-      setReleases((data ?? []).map((r: any) => ({
+      const parsed = (data ?? []).map((r: any) => ({
         version: r.tag_name ?? '',
         date: r.published_at ? new Date(r.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '',
         notes: r.body ?? '',
-      })));
+      }));
+      parsed.sort((a, b) => {
+        const va = a.version.replace(/^v/, '').split('.').map(Number);
+        const vb = b.version.replace(/^v/, '').split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+          if ((vb[i] ?? 0) !== (va[i] ?? 0)) return (vb[i] ?? 0) - (va[i] ?? 0);
+        }
+        return 0;
+      });
+      setReleases(parsed);
     } catch {
       setReleases([]);
     }
