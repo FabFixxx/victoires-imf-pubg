@@ -24,7 +24,6 @@ import { GROUP_PLAYERS } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,
-  checkAllRespondedNextWeek,
   PLAYER_COLORS,
   DayAvailability,
 } from '../../lib/availability';
@@ -108,15 +107,22 @@ export default function CalendarScreen() {
 
     const isNowAvailable = await toggleAvailability(currentPlayer, day.dateString);
 
-    // Si on vient d'ajouter une dispo, vérifier si tous les 4 ont répondu
+    // Si on vient d'ajouter une dispo, vérifier si cette date a maintenant 4 votes
     if (isNowAvailable) {
-      const { allResponded, bestDates } = await checkAllRespondedNextWeek();
-      if (allResponded) {
-        const weekKey = getWeekKey();
-        const alreadyNotified = await AsyncStorage.getItem(weekKey);
+      const { data: dayRows } = await (await import('../../lib/supabase')).supabase
+        .from('player_availability')
+        .select('player_username')
+        .eq('date', day.dateString);
+
+      const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username);
+      const allFour = (GROUP_PLAYERS as readonly string[]).every((p) => playersOnDay.includes(p));
+
+      if (allFour) {
+        const dateKey = `notified_date_${day.dateString}`;
+        const alreadyNotified = await AsyncStorage.getItem(dateKey);
         if (!alreadyNotified) {
-          await AsyncStorage.setItem(weekKey, '1');
-          await notifyAllAvailabilityFilled(bestDates);
+          await AsyncStorage.setItem(dateKey, '1');
+          await notifyAllAvailabilityFilled([{ date: day.dateString, players: playersOnDay }]);
         }
       }
     }

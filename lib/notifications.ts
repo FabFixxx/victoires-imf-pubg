@@ -101,8 +101,6 @@ export async function scheduleSundayReminder(): Promise<void> {
 export async function notifyAllAvailabilityFilled(
   bestDates: Array<{ date: string; players: string[] }>
 ): Promise<void> {
-  if (isExpoGo || !Notifications) return;
-
   const dateStr = bestDates
     .slice(0, 3)
     .map((d) =>
@@ -110,31 +108,40 @@ export async function notifyAllAvailabilityFilled(
     )
     .join(', ');
 
-  const { data: players } = await supabase
-    .from('players')
-    .select('expo_push_token')
-    .not('expo_push_token', 'is', null);
+  const title = '✅ Tout le monde a répondu !';
+  const body = `Meilleure(s) date(s) : ${dateStr}`;
 
-  const tokens = (players ?? []).map((p) => p.expo_push_token).filter(Boolean);
-  if (tokens.length === 0) return;
-
-  try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        tokens.map((token) => ({
-          to: token,
-          title: '✅ Tout le monde a répondu !',
-          body: `Meilleure(s) date(s) : ${dateStr}`,
-          data: { type: 'all_responded' },
-          channelId: 'sessions',
-        }))
-      ),
-    });
-  } catch (e) {
-    console.warn('Failed to send all-responded notification:', e);
+  // Expo push (Android)
+  if (!isExpoGo && Notifications) {
+    const { data: players } = await supabase
+      .from('players')
+      .select('expo_push_token')
+      .not('expo_push_token', 'is', null);
+    const tokens = (players ?? []).map((p) => p.expo_push_token).filter(Boolean);
+    if (tokens.length > 0) {
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            tokens.map((token) => ({
+              to: token,
+              title,
+              body,
+              data: { type: 'all_responded' },
+              channelId: 'sessions',
+            }))
+          ),
+        });
+      } catch (e) {
+        console.warn('Failed to send expo push notification:', e);
+      }
+    }
   }
+
+  // Web push (iOS PWA)
+  const { sendWebPush } = await import('./web-push-client');
+  await sendWebPush(title, body);
 }
 
 export async function sendSessionProposalNotification(

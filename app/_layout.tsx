@@ -18,6 +18,7 @@ import { GROUP_PLAYERS } from '../constants/players';
 import { registerPushToken, scheduleSundayReminder } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 import { checkForUpdate } from '../lib/update-check';
+import { registerWebPush } from '../lib/web-push-client';
 
 type InitState = 'loading' | 'select' | 'ready';
 
@@ -38,6 +39,7 @@ export default function RootLayout() {
           setPlayer(player);
           setInitState('ready');
           scheduleSundayReminder();
+          registerWebPush(player);
           triggerAutoSync();
           checkForUpdate().then((info) => {
             if (!info) return;
@@ -80,6 +82,7 @@ export default function RootLayout() {
     setPlayer(name);
     setInitState('ready');
     registerPushToken(name).then(() => scheduleSundayReminder());
+    registerWebPush(name);
     triggerAutoSync();
   };
 
