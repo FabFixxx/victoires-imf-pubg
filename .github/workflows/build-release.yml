@@ -47,4 +47,9 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
+            ## Nouveautés
+            - 🔔 Notifications serveur : fonctionne aussi depuis le site web iOS
+            - 📅 Rappel dimanche 19h pour les utilisateurs iOS (PWA)
+
+            ---
             Installe l'APK directement sur Android.
