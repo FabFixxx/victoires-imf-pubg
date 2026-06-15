@@ -55,28 +55,41 @@ export async function toggleAvailability(username: string, date: string): Promis
   }
 }
 
-// Vérifie si les 4 joueurs ont au moins 1 dispo dans les 60 prochains jours
-export async function checkAllRespondedNextWeek(): Promise<{
-  allResponded: boolean;
+// Vérifie si les 4 joueurs ont au moins 1 dispo sur une même semaine (lun-dim)
+// Cherche dans les 4 prochaines semaines, retourne la première semaine complète trouvée
+export async function checkWeekAllResponded(): Promise<{
+  found: boolean;
+  weekStart: string;
   bestDates: DayAvailability[];
 }> {
   const today = new Date();
-  const startDate = today.toISOString().split('T')[0];
-  const end = new Date(today);
-  end.setDate(today.getDate() + 60);
-  const endDate = end.toISOString().split('T')[0];
+  // Lundi de la semaine courante
+  const dayOfWeek = today.getDay(); // 0=dim
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysToMonday);
 
-  const avail = await getAvailability(startDate, endDate);
-  const respondedPlayers = new Set(avail.flatMap((d) => d.players));
-  const allResponded = (GROUP_PLAYERS as readonly string[]).every((p) => respondedPlayers.has(p));
+  for (let w = 0; w < 4; w++) {
+    const weekStart = new Date(monday);
+    weekStart.setDate(monday.getDate() + w * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
 
-  if (!allResponded) return { allResponded: false, bestDates: [] };
+    const startStr = weekStart.toISOString().split('T')[0];
+    const endStr = weekEnd.toISOString().split('T')[0];
 
-  const maxCount = Math.max(...avail.map((d) => d.players.length), 0);
-  const bestDates = avail
-    .filter((d) => d.players.length >= 2)
-    .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date))
-    .slice(0, 5);
+    const avail = await getAvailability(startStr, endStr);
+    const respondedPlayers = new Set(avail.flatMap((d) => d.players));
+    const allResponded = (GROUP_PLAYERS as readonly string[]).every((p) => respondedPlayers.has(p));
 
-  return { allResponded, bestDates };
+    if (allResponded) {
+      const bestDates = avail
+        .filter((d) => d.players.length >= 2)
+        .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date))
+        .slice(0, 3);
+      return { found: true, weekStart: startStr, bestDates };
+    }
+  }
+
+  return { found: false, weekStart: '', bestDates: [] };
 }

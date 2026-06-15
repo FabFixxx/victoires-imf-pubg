@@ -24,7 +24,7 @@ import { GROUP_PLAYERS } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,
-  checkAllRespondedNextWeek,
+  checkWeekAllResponded,
   PLAYER_COLORS,
   DayAvailability,
 } from '../../lib/availability';
@@ -44,15 +44,6 @@ function addMonths(date: string, months: number): string {
   const d = new Date(date);
   d.setMonth(d.getMonth() + months);
   return d.toISOString().split('T')[0];
-}
-
-function getWeekKey(): string {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d);
-  monday.setDate(diff);
-  return `notified_week_${monday.toISOString().split('T')[0]}`;
 }
 
 function formatDate(dateStr: string): string {
@@ -127,10 +118,10 @@ export default function CalendarScreen() {
         }
       }
 
-      // Check 2 : tous les 4 joueurs ont-ils au moins une dispo ?
-      const { allResponded, bestDates } = await checkAllRespondedNextWeek();
-      if (allResponded) {
-        const weekKey = getWeekKey();
+      // Check 2 : les 4 ont-ils tous répondu sur une même semaine (lun-dim) ?
+      const { found, weekStart, bestDates } = await checkWeekAllResponded();
+      if (found) {
+        const weekKey = `notified_week_${weekStart}`;
         const alreadyNotified = await AsyncStorage.getItem(weekKey);
         if (!alreadyNotified) {
           await AsyncStorage.setItem(weekKey, '1');
