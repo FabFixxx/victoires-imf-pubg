@@ -117,6 +117,27 @@ CREATE TABLE IF NOT EXISTS imf_season_wins (
 );
 ALTER TABLE imf_season_wins DISABLE ROW LEVEL SECURITY;
 
+-- Web push subscriptions (iOS PWA)
+CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_username TEXT NOT NULL,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE web_push_subscriptions DISABLE ROW LEVEL SECURITY;
+
+-- Dédup notifications (évite d'envoyer 2x la même notif)
+CREATE TABLE IF NOT EXISTS notification_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL,
+  key TEXT NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(type, key)
+);
+ALTER TABLE notification_log DISABLE ROW LEVEL SECURITY;
+
 -- Disable RLS for this personal app (no auth needed)
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
 ALTER TABLE match_cache DISABLE ROW LEVEL SECURITY;

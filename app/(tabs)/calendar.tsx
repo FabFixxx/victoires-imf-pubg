@@ -17,18 +17,15 @@ LocaleConfig.locales['fr'] = {
   dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
 };
 LocaleConfig.defaultLocale = 'fr';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/colors';
 import { getCurrentPlayer } from '../../lib/storage';
 import { GROUP_PLAYERS } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,
-  checkWeekAllResponded,
   PLAYER_COLORS,
   DayAvailability,
 } from '../../lib/availability';
-import { notifyAllAvailabilityFilled } from '../../lib/notifications';
 
 function getToday(): string {
   return new Date().toISOString().split('T')[0];
@@ -97,38 +94,8 @@ export default function CalendarScreen() {
       }
     });
 
-    const isNowAvailable = await toggleAvailability(currentPlayer, day.dateString);
-
-    if (isNowAvailable) {
-      // Check 1 : cette date a-t-elle maintenant 4 votes ?
-      const { data: dayRows } = await (await import('../../lib/supabase')).supabase
-        .from('player_availability')
-        .select('player_username')
-        .eq('date', day.dateString);
-
-      const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username);
-      const allFour = (GROUP_PLAYERS as readonly string[]).every((p) => playersOnDay.includes(p));
-
-      if (allFour) {
-        const dateKey = `notified_date_${day.dateString}`;
-        const alreadyNotified = await AsyncStorage.getItem(dateKey);
-        if (!alreadyNotified) {
-          await AsyncStorage.setItem(dateKey, '1');
-          await notifyAllAvailabilityFilled([{ date: day.dateString, players: playersOnDay }]);
-        }
-      }
-
-      // Check 2 : les 4 ont-ils tous répondu sur une même semaine (lun-dim) ?
-      const { found, weekStart, bestDates } = await checkWeekAllResponded();
-      if (found) {
-        const weekKey = `notified_week_${weekStart}`;
-        const alreadyNotified = await AsyncStorage.getItem(weekKey);
-        if (!alreadyNotified) {
-          await AsyncStorage.setItem(weekKey, '1');
-          await notifyAllAvailabilityFilled(bestDates);
-        }
-      }
-    }
+    await toggleAvailability(currentPlayer, day.dateString);
+    // Les notifications sont gérées côté serveur (Supabase Edge Function)
 
     setToggling(null);
   };
