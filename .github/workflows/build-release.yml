@@ -13,18 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Get version
         id: version
         run: echo "version=$(jq -r '.expo.version' app.json)" >> $GITHUB_OUTPUT
@@ -37,6 +25,18 @@ jobs:
             echo "Tag v$TAG does not match app.json version $VERSION — skipping build."
             exit 1
           fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build APK
         id: build
