@@ -47,7 +47,8 @@ export default function StatsScreen() {
         .limit(15),
     ]);
     setStats((prev) => ({ ...prev, [username]: s }));
-    setRecent(recentMatches ?? []);
+    const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+    setRecent(sorted);
     setLoading(false);
   }, []);
 
@@ -74,7 +75,7 @@ export default function StatsScreen() {
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('fr-FR', {
-      day: 'numeric', month: 'short',
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
     });
 
   return (
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
   tabInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tabDot: { width: 7, height: 7, borderRadius: 3.5 },
   tabText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: Colors.textMuted,
   },
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
   },
   matchWin: { backgroundColor: Colors.win },
   matchLoss: { backgroundColor: Colors.textMuted },
-  matchInfo: { width: 80 },
+  matchInfo: { width: 110 },
   matchDate: { fontSize: 12, color: Colors.textSecondary },
   matchResult: { fontSize: 13, fontWeight: '800', marginTop: 2 },
   matchResultWin: { color: Colors.win },
