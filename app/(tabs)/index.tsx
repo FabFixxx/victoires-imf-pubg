@@ -159,7 +159,7 @@ export default function DashboardScreen() {
       .select('match_id, match_date, kills, assists, damage, win_place, is_win')
       .in('player_username', GROUP_PLAYERS as unknown as string[])
       .order('match_date', { ascending: false })
-      .limit(80);
+      .limit(40);
 
     const matchMap = new Map<string, TeamMatch>();
     for (const row of rawMatches ?? []) {
@@ -188,7 +188,7 @@ export default function DashboardScreen() {
     }
     const sorted = Array.from(matchMap.values())
       .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
-      .slice(0, 15)
+      .slice(0, 10)
       .map((m) => ({ ...m, mapName: mapNameById[m.match_id] }));
     setRecentTeamMatches(sorted);
 
