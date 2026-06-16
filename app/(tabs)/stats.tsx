@@ -45,7 +45,7 @@ export default function StatsScreen() {
         .select('*')
         .eq('player_username', username)
         .order('match_date', { ascending: false })
-        .limit(15),
+        .limit(10),
     ]);
     setStats((prev) => ({ ...prev, [username]: s }));
     const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
