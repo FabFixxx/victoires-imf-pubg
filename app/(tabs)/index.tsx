@@ -25,6 +25,7 @@ import {
   LastMatch,
 } from '../../lib/pubg-api';
 import { getLastSync, setLastSync } from '../../lib/storage';
+import { GROUP_PLAYERS } from '../../constants/players';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
 
 const MONTH_NAMES = [
@@ -80,7 +81,7 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
           </View>
         </View>
         <View style={styles.playersGrid}>
-          {match.players.map((p) => (
+          {[...match.players].sort((a, b) => GROUP_PLAYERS.indexOf(a.username as any) - GROUP_PLAYERS.indexOf(b.username as any)).map((p) => (
             <View key={p.username} style={styles.playerStat}>
               <Text style={styles.playerName}>{p.username}</Text>
               <Text style={styles.playerKills}>{p.kills}K / {p.assists}A</Text>
@@ -246,7 +247,7 @@ export default function DashboardScreen() {
             {imfSeason.manualWinsDetail.length > 0 || (imfStats && imfStats.totalWins > 0) ? (
               <View style={styles.row}>
                 <StatCard
-                  label={imfSeason.manualWinsDetail.length > 0 ? 'Victoires IMF ✎' : 'Victoires IMF'}
+                  label="Victoires IMF"
                   value={imfStats?.totalWins ?? '—'}
                   accent
                   large

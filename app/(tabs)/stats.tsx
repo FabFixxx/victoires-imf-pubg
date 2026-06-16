@@ -15,6 +15,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { getPlayerStats, PlayerStats } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { GROUP_PLAYERS, PlayerName } from '../../constants/players';
+import { getCurrentPlayer } from '../../lib/storage';
 
 interface RecentMatch {
   match_id: string;
@@ -55,6 +56,14 @@ export default function StatsScreen() {
     await loadPlayer(selected);
     setRefreshing(false);
   };
+
+  useEffect(() => {
+    getCurrentPlayer().then((player) => {
+      if (player && GROUP_PLAYERS.includes(player as PlayerName)) {
+        setSelected(player as PlayerName);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     loadPlayer(selected);
