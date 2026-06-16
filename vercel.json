@@ -7,8 +7,12 @@
   ],
   "crons": [
     {
-      "path": "/api/cron-sunday-reminder",
-      "schedule": "0 17 * * 0"
+      "path": "/api/cron-daily-reminder",
+      "schedule": "0 15 * * 0-5"
+    },
+    {
+      "path": "/api/cron-game-day",
+      "schedule": "0 16 * * *"
     }
   ]
 }

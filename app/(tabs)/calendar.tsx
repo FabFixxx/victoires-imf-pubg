@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+import { Ionicons } from '@expo/vector-icons';
 
 LocaleConfig.locales['fr'] = {
   monthNames: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
@@ -23,18 +25,17 @@ import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,
+  toggleNoAvailability,
+  getNoAvailability,
+  getChosenDate,
+  setChosenDate,
   PLAYER_COLORS,
   DayAvailability,
+  ChosenDate,
 } from '../../lib/availability';
 
 function getToday(): string {
   return new Date().toISOString().split('T')[0];
-}
-
-function addDays(date: string, days: number): string {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
 }
 
 function addMonths(date: string, months: number): string {
@@ -49,40 +50,61 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function getMondayOf(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d.toISOString().split('T')[0];
+}
+
+function addDaysToStr(dateStr: string, days: number): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
 export default function CalendarScreen() {
   const today = getToday();
   const windowEnd = addMonths(today, 3);
+  const currentWeekMonday = getMondayOf(today);
+  const nextWeekMonday = addDaysToStr(currentWeekMonday, 7);
+  const nextWeekSunday = addDaysToStr(nextWeekMonday, 6);
+  const thisWeekSunday = addDaysToStr(currentWeekMonday, 6);
 
   const [currentPlayer, setCurrentPlayer_] = useState<string | null>(null);
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
+  const [noAvailPlayers, setNoAvailPlayers] = useState<string[]>([]);
+  const [chosenDate, setChosenDateState] = useState<ChosenDate | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [togglingNoAvail, setTogglingNoAvail] = useState(false);
 
   useEffect(() => {
     getCurrentPlayer().then(setCurrentPlayer_);
-    loadAvailability();
+    loadAll();
   }, []);
 
-  const loadAvailability = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setRefreshing(true);
-    // Charger depuis le lundi de la semaine courante pour afficher les votes passés de la semaine
-    const d = new Date(today);
-    const day = d.getDay();
-    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-    const weekMonday = d.toISOString().split('T')[0];
-    const data = await getAvailability(weekMonday, windowEnd);
+    const weekMonday = getMondayOf(getToday());
+    const [data, noAvail, chosen] = await Promise.all([
+      getAvailability(weekMonday, addMonths(getToday(), 3)),
+      getNoAvailability(nextWeekMonday),
+      getChosenDate(nextWeekMonday),
+    ]);
     setAvailability(data);
+    setNoAvailPlayers(noAvail);
+    setChosenDateState(chosen);
     setRefreshing(false);
   }, []);
 
   const handleDayPress = async (day: DateData) => {
     if (!currentPlayer) return;
-    if (day.dateString < today) return; // pas de modif dans le passé
+    if (day.dateString < today) return;
     if (toggling) return;
 
     setToggling(day.dateString);
 
-    // Optimistic update
     setAvailability((prev) => {
       const existing = prev.find((d) => d.date === day.dateString);
       if (existing) {
@@ -100,9 +122,40 @@ export default function CalendarScreen() {
     });
 
     await toggleAvailability(currentPlayer, day.dateString);
-    // Les notifications sont gérées côté serveur (Supabase Edge Function)
-
     setToggling(null);
+  };
+
+  const handleNoAvail = async () => {
+    if (!currentPlayer || togglingNoAvail) return;
+    setTogglingNoAvail(true);
+    const hasIt = noAvailPlayers.includes(currentPlayer);
+    if (hasIt) {
+      setNoAvailPlayers((prev) => prev.filter((p) => p !== currentPlayer));
+    } else {
+      Alert.alert(
+        'Aucune dispo cette semaine',
+        `Confirmer que tu n'es pas disponible la semaine du ${formatDate(nextWeekMonday)} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`,
+        [
+          { text: 'Annuler', style: 'cancel', onPress: () => setTogglingNoAvail(false) },
+          {
+            text: 'Confirmer',
+            onPress: async () => {
+              setNoAvailPlayers((prev) => [...prev, currentPlayer]);
+              await toggleNoAvailability(currentPlayer, nextWeekMonday);
+              setTogglingNoAvail(false);
+            },
+          },
+        ]
+      );
+      return;
+    }
+    await toggleNoAvailability(currentPlayer, nextWeekMonday);
+    setTogglingNoAvail(false);
+  };
+
+  const handleChooseDate = async (date: string) => {
+    await setChosenDate(nextWeekMonday, date);
+    setChosenDateState({ weekStart: nextWeekMonday, chosenDate: date, isManual: true });
   };
 
   const markedDates = useMemo(() => {
@@ -110,6 +163,7 @@ export default function CalendarScreen() {
     for (const day of availability) {
       const isAllFour = day.players.length >= GROUP_PLAYERS.length;
       const isMine = day.players.includes(currentPlayer ?? '');
+      const isChosen = chosenDate?.chosenDate === day.date;
       result[day.date] = {
         dots: day.players.map((p) => ({
           key: p,
@@ -117,54 +171,51 @@ export default function CalendarScreen() {
           selectedDotColor: PLAYER_COLORS[p] ?? Colors.textMuted,
         })),
         marked: true,
-        selected: isAllFour || isMine,
-        selectedColor: isAllFour ? '#4CAF5066' : Colors.primary + '33',
+        selected: isAllFour || isMine || isChosen,
+        selectedColor: isChosen ? '#FFD700' + '55' : isAllFour ? '#4CAF5066' : Colors.primary + '33',
         selectedTextColor: Colors.text,
       };
     }
     return result;
-  }, [availability, currentPlayer]);
+  }, [availability, currentPlayer, chosenDate]);
 
   const MONTHS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
 
-  const getWeekRange = (offsetWeeks: number) => {
-    const d = new Date(today);
-    const day = d.getDay();
-    const diffToMonday = day === 0 ? -6 : 1 - day;
-    const monday = new Date(d);
-    monday.setDate(d.getDate() + diffToMonday + offsetWeeks * 7);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    const mondayStr = monday.toISOString().split('T')[0];
-    const sundayStr = sunday.toISOString().split('T')[0];
-    const label = `du ${monday.getDate()} au ${sunday.getDate()} ${MONTHS_FR[sunday.getMonth()]} ${sunday.getFullYear()}`;
-    return { mondayStr, sundayStr, label };
+  const getWeekLabel = (mondayStr: string, sundayStr: string) => {
+    const mon = new Date(mondayStr + 'T12:00:00');
+    const sun = new Date(sundayStr + 'T12:00:00');
+    return `du ${mon.getDate()} au ${sun.getDate()} ${MONTHS_FR[sun.getMonth()]} ${sun.getFullYear()}`;
   };
 
-  const thisWeekRange = getWeekRange(0);
-  const nextWeekRange = getWeekRange(1);
+  const thisWeekLabel = getWeekLabel(currentWeekMonday, thisWeekSunday);
+  const nextWeekLabel = getWeekLabel(nextWeekMonday, nextWeekSunday);
 
   const bestThisWeek = useMemo(() => {
-    const { mondayStr, sundayStr } = thisWeekRange;
     return availability
-      .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
+      .filter((d) => d.date >= currentWeekMonday && d.date <= thisWeekSunday && d.players.length >= 2)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
-  }, [availability, today]);
+  }, [availability]);
 
   const bestNextWeek = useMemo(() => {
-    const { mondayStr, sundayStr } = nextWeekRange;
     return availability
-      .filter((d) => d.date >= mondayStr && d.date <= sundayStr && d.players.length >= 2)
+      .filter((d) => d.date >= nextWeekMonday && d.date <= nextWeekSunday && d.players.length >= 2)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
-  }, [availability, today]);
+  }, [availability]);
 
-  // Dispos de chaque joueur dans les 7 prochains jours
-  const nextWeekEnd = addDays(today, 7);
-  const nextWeekAvail = useMemo(() =>
-    availability.filter((d) => d.date >= today && d.date <= nextWeekEnd),
-    [availability, today, nextWeekEnd]
-  );
-  const playersWhoResponded = new Set(nextWeekAvail.flatMap((d) => d.players));
+  // Dates avec 4 votes semaine prochaine (pour sélection date retenue)
+  const fourVoteDatesNextWeek = useMemo(() => {
+    return bestNextWeek.filter((d) => d.players.length >= GROUP_PLAYERS.length).sort((a, b) => a.date.localeCompare(b.date));
+  }, [bestNextWeek]);
+
+  // Qui a répondu pour la semaine PROCHAINE (dispo ou aucune dispo)
+  const playersWithNextWeekAvail = useMemo(() => {
+    const withDispo = new Set(
+      availability.filter((d) => d.date >= nextWeekMonday && d.date <= nextWeekSunday).flatMap((d) => d.players)
+    );
+    return withDispo;
+  }, [availability]);
+
+  const myNoAvail = currentPlayer ? noAvailPlayers.includes(currentPlayer) : false;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -175,12 +226,12 @@ export default function CalendarScreen() {
       <ScrollView
         style={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={loadAvailability} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={loadAll} tintColor={Colors.primary} />
         }
       >
         {/* Meilleures dates cette semaine */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE ({thisWeekRange.label})</Text>
+          <Text style={styles.sectionTitle}>MEILLEURES DATES CETTE SEMAINE ({thisWeekLabel})</Text>
           <View style={styles.card}>
             {bestThisWeek.length === 0 ? (
               <View style={styles.emptyRow}>
@@ -188,37 +239,28 @@ export default function CalendarScreen() {
               </View>
             ) : bestThisWeek.map((day) => {
               const isPerfect = day.players.length >= GROUP_PLAYERS.length;
+              const isRetenue = chosenDate?.chosenDate === day.date;
               return (
-                <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
+                <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenue && styles.bestDateRowChosen]}>
                   <View style={styles.bestDateInfo}>
-                    <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
-                      {formatDate(day.date)}
-                    </Text>
+                    <View style={styles.bestDateTitleRow}>
+                      {isRetenue && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
+                      <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
+                        {formatDate(day.date)}
+                      </Text>
+                    </View>
                     <View style={styles.bestDateDots}>
                       {GROUP_PLAYERS.map((p) => (
-                        <View
-                          key={p}
-                          style={[
-                            styles.playerDot,
-                            {
-                              backgroundColor: day.players.includes(p)
-                                ? PLAYER_COLORS[p]
-                                : Colors.backgroundSecondary,
-                              borderColor: PLAYER_COLORS[p],
-                            },
-                          ]}
-                        />
+                        <View key={p} style={[styles.playerDot, { backgroundColor: day.players.includes(p) ? PLAYER_COLORS[p] : Colors.backgroundSecondary, borderColor: PLAYER_COLORS[p] }]} />
                       ))}
                     </View>
                   </View>
-                  {isPerfect ? (
-                    <View style={styles.perfectBadge}>
-                      <Text style={styles.perfectBadgeText}>PARFAIT</Text>
-                    </View>
+                  {isRetenue ? (
+                    <View style={styles.retenubadge}><Text style={styles.retenuBadgeText}>RETENUE</Text></View>
+                  ) : isPerfect ? (
+                    <View style={styles.perfectBadge}><Text style={styles.perfectBadgeText}>PARFAIT</Text></View>
                   ) : (
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
-                    </View>
+                    <View style={styles.countBadge}><Text style={styles.countBadgeText}>{day.players.length}/4</Text></View>
                   )}
                 </View>
               );
@@ -228,7 +270,7 @@ export default function CalendarScreen() {
 
         {/* Meilleures dates semaine prochaine */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE ({nextWeekRange.label})</Text>
+          <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE ({nextWeekLabel})</Text>
           <View style={styles.card}>
             {bestNextWeek.length === 0 ? (
               <View style={styles.emptyRow}>
@@ -236,41 +278,43 @@ export default function CalendarScreen() {
               </View>
             ) : bestNextWeek.map((day) => {
               const isPerfect = day.players.length >= GROUP_PLAYERS.length;
+              const isRetenue = chosenDate?.chosenDate === day.date;
               return (
-                <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect]}>
+                <TouchableOpacity
+                  key={day.date}
+                  style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenue && styles.bestDateRowChosen]}
+                  onPress={isPerfect ? () => handleChooseDate(day.date) : undefined}
+                  activeOpacity={isPerfect ? 0.7 : 1}
+                >
                   <View style={styles.bestDateInfo}>
-                    <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
-                      {formatDate(day.date)}
-                    </Text>
+                    <View style={styles.bestDateTitleRow}>
+                      {isRetenue && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
+                      <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
+                        {formatDate(day.date)}
+                      </Text>
+                    </View>
                     <View style={styles.bestDateDots}>
                       {GROUP_PLAYERS.map((p) => (
-                        <View
-                          key={p}
-                          style={[
-                            styles.playerDot,
-                            {
-                              backgroundColor: day.players.includes(p)
-                                ? PLAYER_COLORS[p]
-                                : Colors.backgroundSecondary,
-                              borderColor: PLAYER_COLORS[p],
-                            },
-                          ]}
-                        />
+                        <View key={p} style={[styles.playerDot, { backgroundColor: day.players.includes(p) ? PLAYER_COLORS[p] : Colors.backgroundSecondary, borderColor: PLAYER_COLORS[p] }]} />
                       ))}
                     </View>
                   </View>
-                  {isPerfect ? (
-                    <View style={styles.perfectBadge}>
-                      <Text style={styles.perfectBadgeText}>PARFAIT</Text>
-                    </View>
+                  {isRetenue ? (
+                    <View style={styles.retenubadge}><Text style={styles.retenuBadgeText}>RETENUE</Text></View>
+                  ) : isPerfect ? (
+                    <View style={styles.perfectBadge}><Text style={styles.perfectBadgeText}>PARFAIT</Text></View>
                   ) : (
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countBadgeText}>{day.players.length}/4</Text>
-                    </View>
+                    <View style={styles.countBadge}><Text style={styles.countBadgeText}>{day.players.length}/4</Text></View>
                   )}
-                </View>
+                </TouchableOpacity>
               );
             })}
+            {fourVoteDatesNextWeek.length > 1 && (
+              <View style={styles.chosenHint}>
+                <Ionicons name="information-circle-outline" size={13} color={Colors.textMuted} />
+                <Text style={styles.chosenHintText}>Appuie sur une date PARFAIT pour la retenir</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -313,26 +357,49 @@ export default function CalendarScreen() {
           ))}
         </View>
 
-        {/* Statut réponses semaine */}
+        {/* DISPO SEMAINE PROCHAINE */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DISPO SEMAINE PROCHAINE</Text>
+          <Text style={styles.sectionTitle}>DISPO SEMAINE PROCHAINE ({nextWeekLabel})</Text>
           <View style={[styles.card, styles.statusGrid]}>
-            {GROUP_PLAYERS.map((p) => (
-              <View key={p} style={styles.statusCell}>
-                <View style={styles.statusCellLeft}>
-                  <View style={[styles.statusDot, { backgroundColor: PLAYER_COLORS[p] }]} />
-                  <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{getDisplayName(p)}</Text>
-                </View>
-                {playersWhoResponded.has(p) ? (
-                  <View style={styles.respondedBadge}>
-                    <Text style={styles.respondedBadgeText}>✓ A répondu</Text>
+            {GROUP_PLAYERS.map((p) => {
+              const hasNoAvail = noAvailPlayers.includes(p);
+              const hasAvail = playersWithNextWeekAvail.has(p);
+              const responded = hasAvail || hasNoAvail;
+              return (
+                <View key={p} style={styles.statusCell}>
+                  <View style={styles.statusCellLeft}>
+                    <View style={[styles.statusDot, { backgroundColor: PLAYER_COLORS[p] }]} />
+                    <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{getDisplayName(p)}</Text>
                   </View>
-                ) : (
-                  <Text style={styles.waitingText}>En attente...</Text>
-                )}
-              </View>
-            ))}
+                  {responded ? (
+                    <View style={[styles.respondedBadge, hasNoAvail && styles.noAvailBadge]}>
+                      <Text style={[styles.respondedBadgeText, hasNoAvail && styles.noAvailBadgeText]}>
+                        {hasNoAvail ? '✗ Aucune dispo' : '✓ A répondu'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.waitingText}>En attente...</Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
+
+          {/* Bouton Aucune dispo */}
+          <TouchableOpacity
+            style={[styles.noAvailBtn, myNoAvail && styles.noAvailBtnActive]}
+            onPress={handleNoAvail}
+            disabled={togglingNoAvail}
+          >
+            <Ionicons
+              name={myNoAvail ? 'close-circle' : 'ban-outline'}
+              size={16}
+              color={myNoAvail ? Colors.danger : Colors.textMuted}
+            />
+            <Text style={[styles.noAvailBtnText, myNoAvail && styles.noAvailBtnTextActive]}>
+              {myNoAvail ? 'Annuler "Aucune dispo"' : 'Aucune dispo cette semaine'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ height: 30 }} />
@@ -343,11 +410,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 8,
-  },
+  header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 },
   title: { fontSize: 22, fontWeight: '900', color: Colors.text, letterSpacing: 3 },
   content: { flex: 1 },
   legend: {
@@ -363,8 +426,6 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendName: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
   legendNameMe: { color: Colors.text, fontWeight: '800' },
-  calendarHint: { paddingHorizontal: 16, paddingVertical: 8 },
-  calendarHintText: { fontSize: 12, color: Colors.textMuted, textAlign: 'center' },
   calendar: {
     marginHorizontal: 12,
     borderRadius: 10,
@@ -374,11 +435,8 @@ const styles = StyleSheet.create({
   },
   section: { paddingHorizontal: 16, marginTop: 16 },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 2.5,
-    marginBottom: 10,
+    fontSize: 11, fontWeight: '800', color: Colors.primary,
+    letterSpacing: 2.5, marginBottom: 10,
   },
   card: {
     backgroundColor: Colors.card,
@@ -387,79 +445,67 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     overflow: 'hidden',
   },
-  statusGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statusCell: {
-    width: '50%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    width: '50%', flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', padding: 10, paddingHorizontal: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.cardBorder,
   },
   statusCellLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusName: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   statusNameMe: { color: Colors.text },
   respondedBadge: {
-    backgroundColor: Colors.win + '22',
-    borderWidth: 1,
-    borderColor: Colors.win,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: Colors.win + '22', borderWidth: 1, borderColor: Colors.win,
+    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3,
   },
-  respondedBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.win },
+  respondedBadgeText: { fontSize: 10, fontWeight: '700', color: Colors.win },
+  noAvailBadge: { backgroundColor: Colors.danger + '22', borderColor: Colors.danger },
+  noAvailBadgeText: { color: Colors.danger },
   waitingText: { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
+  noAvailBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 10, padding: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: Colors.cardBorder,
+    backgroundColor: Colors.card,
+  },
+  noAvailBtnActive: { borderColor: Colors.danger, backgroundColor: Colors.danger + '11' },
+  noAvailBtnText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
+  noAvailBtnTextActive: { color: Colors.danger },
   bestDateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    padding: 12, paddingHorizontal: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.cardBorder, gap: 10,
   },
-  bestDateRowPerfect: {
-    backgroundColor: '#4CAF5011',
-  },
+  bestDateRowPerfect: { backgroundColor: '#4CAF5011' },
+  bestDateRowChosen: { backgroundColor: '#FFD70011' },
   bestDateInfo: { flex: 1, gap: 6 },
-  bestDateLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text,
-    textTransform: 'capitalize',
-  },
+  bestDateTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  bestDateLabel: { fontSize: 13, fontWeight: '600', color: Colors.text, textTransform: 'capitalize' },
   bestDateLabelPerfect: { color: Colors.win },
   bestDateDots: { flexDirection: 'row', gap: 4 },
-  playerDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1.5,
-  },
+  playerDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5 },
   perfectBadge: {
-    backgroundColor: Colors.win + '22',
-    borderWidth: 1,
-    borderColor: Colors.win,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: Colors.win + '22', borderWidth: 1, borderColor: Colors.win,
+    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
   perfectBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.win, letterSpacing: 0.5 },
+  retenubadge: {
+    backgroundColor: '#FFD700' + '33', borderWidth: 1, borderColor: '#FFD700',
+    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  retenuBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFD700', letterSpacing: 0.5 },
   countBadge: {
-    backgroundColor: Colors.primary + '22',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: Colors.primary + '22', borderWidth: 1, borderColor: Colors.primary,
+    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
   countBadgeText: { fontSize: 11, fontWeight: '800', color: Colors.primary },
+  chosenHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: Colors.cardBorder,
+  },
+  chosenHintText: { fontSize: 12, color: Colors.textMuted },
   emptyRow: { padding: 16, alignItems: 'center' },
   emptyText: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
 });

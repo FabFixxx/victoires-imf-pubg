@@ -1,11 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push'
 
-const GROUP_PLAYERS = ['FabFix', 'Nicotom', 'petittom', 'Jibby37']
+const GROUP_PLAYERS = ['petittom', 'Nicotom', 'FabFix', 'Jibby37']
 
 function getWeekStart(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00Z')
-  const day = d.getUTCDay() // 0=dim, 1=lun...
+  const day = d.getUTCDay()
   const daysToMonday = day === 0 ? -6 : 1 - day
   d.setUTCDate(d.getUTCDate() + daysToMonday)
   return d.toISOString().split('T')[0]
@@ -34,7 +34,6 @@ function groupByDate(rows: { player_username: string; date: string }[]) {
 }
 
 async function sendToAll(supabase: ReturnType<typeof createClient>, title: string, body: string) {
-  // Expo push (Android)
   const { data: players } = await supabase
     .from('players')
     .select('expo_push_token')
@@ -58,12 +57,10 @@ async function sendToAll(supabase: ReturnType<typeof createClient>, title: strin
     })
   }
 
-  // Web push (iOS PWA)
   const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')
   const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')
   if (vapidPublic && vapidPrivate) {
     webpush.setVapidDetails('mailto:fabien.wagner@gmail.com', vapidPublic, vapidPrivate)
-
     const { data: subs } = await supabase.from('web_push_subscriptions').select('*')
     for (const sub of subs ?? []) {
       try {
@@ -72,11 +69,43 @@ async function sendToAll(supabase: ReturnType<typeof createClient>, title: strin
           JSON.stringify({ title, body })
         )
       } catch {
-        // Subscription expirée — on la supprime
         await supabase.from('web_push_subscriptions').delete().eq('endpoint', sub.endpoint)
       }
     }
   }
+}
+
+// Définit la date retenue pour une semaine (auto, ne pas écraser une sélection manuelle)
+async function setChosenDateAuto(supabase: ReturnType<typeof createClient>, weekStart: string, chosenDate: string) {
+  const { data: existing } = await supabase
+    .from('chosen_dates')
+    .select('is_manual')
+    .eq('week_start', weekStart)
+    .maybeSingle()
+
+  if (existing?.is_manual) return // Ne pas écraser un choix manuel
+
+  await supabase.from('chosen_dates').upsert(
+    { week_start: weekStart, chosen_date: chosenDate, is_manual: false },
+    { onConflict: 'week_start' }
+  )
+}
+
+// Construit le texte de notification des meilleures dates
+function buildBestDatesBody(fourVote: string[], threeVote: string[]): string {
+  if (fourVote.length > 0) {
+    const main = formatDate(fourVote[0])
+    const others = fourVote.slice(1)
+    let body = `Date retenue : ${main}.`
+    if (others.length > 0) {
+      body += ` Autres dispos éventuelles : ${others.map(formatDate).join(', ')}.`
+    }
+    return body
+  }
+  if (threeVote.length > 0) {
+    return `Aucune date avec 4 disponibilités. 3 dispos : ${threeVote.map(formatDate).join(', ')}.`
+  }
+  return 'Aucune date commune trouvée.'
 }
 
 Deno.serve(async (req) => {
@@ -92,6 +121,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    const weekStart = getWeekStart(date)
+    const weekEnd = getWeekEnd(weekStart)
+
     // --- Check 1 : cette date a-t-elle maintenant 4 votes ? ---
     const { data: dayRows } = await supabase
       .from('player_availability')
@@ -105,43 +137,77 @@ Deno.serve(async (req) => {
       const { error } = await supabase
         .from('notification_log')
         .insert({ type: 'date_4votes', key: date })
+
       if (!error) {
-        await sendToAll(supabase, '🎮 Session confirmée !', `Les 4 sont dispo le ${formatDate(date)} !`)
-        return new Response('ok - date notif sent')
+        // Chercher d'autres dates 4 votes dans la semaine
+        const { data: weekRows } = await supabase
+          .from('player_availability')
+          .select('player_username, date')
+          .gte('date', weekStart)
+          .lte('date', weekEnd)
+
+        const weekAvail = groupByDate(weekRows ?? [])
+        const allFourDates = weekAvail
+          .filter((d) => d.players.length === 4)
+          .map((d) => d.date)
+          .sort()
+
+        // Date retenue = la plus proche parmi les dates à 4 votes
+        const retenue = allFourDates[0] ?? date
+        await setChosenDateAuto(supabase, weekStart, retenue)
+
+        const body = buildBestDatesBody(allFourDates, [])
+        await sendToAll(supabase, '🎮 Session confirmée !', body)
+        return new Response('ok - date_4votes notif sent')
       }
+      return new Response('ok - already notified for this date')
     }
 
-    // --- Check 2 : les 4 ont-ils tous répondu dans cette semaine (lun-dim) ? ---
-    const weekStart = getWeekStart(date)
-    const weekEnd = getWeekEnd(weekStart)
-
+    // --- Check 2 : les 4 ont-ils tous répondu cette semaine (dispos ou aucune dispo) ? ---
     const { data: weekRows } = await supabase
       .from('player_availability')
       .select('player_username, date')
       .gte('date', weekStart)
       .lte('date', weekEnd)
 
-    const respondedInWeek = new Set((weekRows ?? []).map((r: any) => r.player_username))
-    const allFourInWeek = GROUP_PLAYERS.every((p) => respondedInWeek.has(p))
+    const { data: noAvailRows } = await supabase
+      .from('week_no_availability')
+      .select('player_username')
+      .eq('week_start', weekStart)
 
-    if (allFourInWeek) {
-      const { error } = await supabase
-        .from('notification_log')
-        .insert({ type: 'week_complete', key: weekStart })
-      if (!error) {
-        const weekAvail = groupByDate(weekRows ?? [])
-        const fourVote = weekAvail
-          .filter((d) => d.players.length === 4)
-          .sort((a, b) => a.date.localeCompare(b.date))
-        const threeVote = weekAvail
-          .filter((d) => d.players.length === 3)
-          .sort((a, b) => a.date.localeCompare(b.date))
-        const bestDates = fourVote.length > 0 ? fourVote : threeVote
-        if (bestDates.length > 0) {
-          const dateStr = bestDates.map((d) => formatDate(d.date)).join(', ')
-          await sendToAll(supabase, '✅ Tout le monde a répondu !', `Meilleure(s) date(s) : ${dateStr}`)
-        }
+    const respondedInWeek = new Set((weekRows ?? []).map((r: any) => r.player_username))
+    const noAvailInWeek = new Set((noAvailRows ?? []).map((r: any) => r.player_username))
+    const allResponded = GROUP_PLAYERS.every((p) => respondedInWeek.has(p) || noAvailInWeek.has(p))
+
+    if (!allResponded) return new Response('ok - not all responded yet')
+
+    // Vérifier qu'une notif date_4votes n'a pas déjà été envoyée cette semaine
+    const { data: weekNotifs } = await supabase
+      .from('notification_log')
+      .select('key')
+      .eq('type', 'date_4votes')
+      .gte('key', weekStart)
+      .lte('key', weekEnd)
+
+    if (weekNotifs && weekNotifs.length > 0) {
+      return new Response('ok - date_4votes already notified this week')
+    }
+
+    const { error } = await supabase
+      .from('notification_log')
+      .insert({ type: 'week_complete', key: weekStart })
+
+    if (!error) {
+      const weekAvail = groupByDate(weekRows ?? [])
+      const fourVote = weekAvail.filter((d) => d.players.length === 4).map((d) => d.date).sort()
+      const threeVote = weekAvail.filter((d) => d.players.length === 3).map((d) => d.date).sort()
+
+      if (fourVote.length > 0) {
+        await setChosenDateAuto(supabase, weekStart, fourVote[0])
       }
+
+      const body = buildBestDatesBody(fourVote, threeVote)
+      await sendToAll(supabase, '✅ Tout le monde a répondu !', body)
     }
 
     return new Response('ok')

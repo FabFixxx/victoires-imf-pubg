@@ -27,7 +27,7 @@ import {
   ImfSeason, ManualWin,
 } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
-import { PLAYER_COLORS } from '../../lib/availability';
+import { PLAYER_COLORS, getNotificationPrefs, saveNotificationPrefs, NotificationPrefs } from '../../lib/availability';
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
 
@@ -37,6 +37,9 @@ export default function SettingsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [imfSeasons, setImfSeasons] = useState<ImfSeason[]>([]);
+
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>({ reminderHour: 17, gameDayHour: 18 });
+  const [savingNotif, setSavingNotif] = useState(false);
 
   // Modal changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
@@ -61,7 +64,13 @@ export default function SettingsScreen() {
   const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
-    getCurrentPlayer().then(setPlayer);
+    getCurrentPlayer().then(async (player) => {
+      setPlayer(player);
+      if (player) {
+        const prefs = await getNotificationPrefs(player);
+        setNotifPrefs(prefs);
+      }
+    });
     getLastSync().then(setLastSyncState);
     loadImfSeasons();
   }, []);
@@ -179,6 +188,13 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleSaveNotifPrefs = async (prefs: NotificationPrefs) => {
+    if (!currentPlayer) return;
+    setSavingNotif(true);
+    await saveNotificationPrefs(currentPlayer, prefs);
+    setSavingNotif(false);
+  };
+
   const handleManualSync = async () => {
     setSyncing(true);
     setSyncMsg('Démarrage...');
@@ -275,6 +291,85 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Notification preferences */}
+        {currentPlayer && (
+          <>
+            <SectionHeader title="Notifications" />
+            <View style={styles.card}>
+              <View style={styles.notifRow}>
+                <View style={styles.notifInfo}>
+                  <Ionicons name="notifications-outline" size={16} color={Colors.textMuted} />
+                  <View>
+                    <Text style={styles.notifLabel}>Rappel dispo</Text>
+                    <Text style={styles.notifSub}>Dim–Ven si pas encore répondu</Text>
+                  </View>
+                </View>
+                <View style={styles.hourPicker}>
+                  <TouchableOpacity
+                    style={styles.hourBtn}
+                    onPress={() => {
+                      const next = { ...notifPrefs, reminderHour: Math.max(8, notifPrefs.reminderHour - 1) };
+                      setNotifPrefs(next);
+                      handleSaveNotifPrefs(next);
+                    }}
+                  >
+                    <Ionicons name="remove" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.hourValue}>{notifPrefs.reminderHour}h</Text>
+                  <TouchableOpacity
+                    style={styles.hourBtn}
+                    onPress={() => {
+                      const next = { ...notifPrefs, reminderHour: Math.min(22, notifPrefs.reminderHour + 1) };
+                      setNotifPrefs(next);
+                      handleSaveNotifPrefs(next);
+                    }}
+                  >
+                    <Ionicons name="add" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={[styles.notifRow, { borderTopWidth: 1, borderTopColor: Colors.cardBorder }]}>
+                <View style={styles.notifInfo}>
+                  <Ionicons name="game-controller-outline" size={16} color={Colors.textMuted} />
+                  <View>
+                    <Text style={styles.notifLabel}>Rappel soir de session</Text>
+                    <Text style={styles.notifSub}>Le jour de la date retenue</Text>
+                  </View>
+                </View>
+                <View style={styles.hourPicker}>
+                  <TouchableOpacity
+                    style={styles.hourBtn}
+                    onPress={() => {
+                      const next = { ...notifPrefs, gameDayHour: Math.max(8, notifPrefs.gameDayHour - 1) };
+                      setNotifPrefs(next);
+                      handleSaveNotifPrefs(next);
+                    }}
+                  >
+                    <Ionicons name="remove" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.hourValue}>{notifPrefs.gameDayHour}h</Text>
+                  <TouchableOpacity
+                    style={styles.hourBtn}
+                    onPress={() => {
+                      const next = { ...notifPrefs, gameDayHour: Math.min(22, notifPrefs.gameDayHour + 1) };
+                      setNotifPrefs(next);
+                      handleSaveNotifPrefs(next);
+                    }}
+                  >
+                    <Ionicons name="add" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {savingNotif && (
+                <View style={styles.notifSaving}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.notifSavingText}>Sauvegarde...</Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
 
         {/* Sync */}
         <SectionHeader title="Synchronisation" />
@@ -814,6 +909,20 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
+  notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
+  notifInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  notifLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  notifSub: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+  hourPicker: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  hourBtn: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: Colors.primary + '22',
+    borderWidth: 1, borderColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  hourValue: { fontSize: 16, fontWeight: '800', color: Colors.primary, minWidth: 32, textAlign: 'center' },
+  notifSaving: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingBottom: 10 },
+  notifSavingText: { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
   versionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   changelogItem: { paddingVertical: 14 },
   changelogBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },

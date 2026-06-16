@@ -138,6 +138,33 @@ CREATE TABLE IF NOT EXISTS notification_log (
 );
 ALTER TABLE notification_log DISABLE ROW LEVEL SECURITY;
 
+-- Aucune dispo par semaine (joueur indique qu'il n'est pas disponible cette semaine-là)
+CREATE TABLE IF NOT EXISTS week_no_availability (
+  player_username TEXT NOT NULL,
+  week_start DATE NOT NULL, -- toujours un lundi
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (player_username, week_start)
+);
+ALTER TABLE week_no_availability DISABLE ROW LEVEL SECURITY;
+
+-- Date retenue par semaine (auto ou manuelle)
+CREATE TABLE IF NOT EXISTS chosen_dates (
+  week_start DATE PRIMARY KEY, -- toujours un lundi
+  chosen_date DATE NOT NULL,
+  is_manual BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE chosen_dates DISABLE ROW LEVEL SECURITY;
+
+-- Préférences de notifications par joueur
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  player_username TEXT PRIMARY KEY,
+  reminder_hour INTEGER DEFAULT 17, -- heure locale française
+  game_day_hour INTEGER DEFAULT 18, -- heure locale française
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE notification_preferences DISABLE ROW LEVEL SECURITY;
+
 -- Disable RLS for this personal app (no auth needed)
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
 ALTER TABLE match_cache DISABLE ROW LEVEL SECURITY;

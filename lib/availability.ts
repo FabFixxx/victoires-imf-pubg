@@ -55,6 +55,83 @@ export async function toggleAvailability(username: string, date: string): Promis
   }
 }
 
+// ── Aucune dispo ──
+
+export async function toggleNoAvailability(username: string, weekStart: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('week_no_availability')
+    .select('player_username')
+    .eq('player_username', username)
+    .eq('week_start', weekStart)
+    .maybeSingle();
+
+  if (data) {
+    await supabase.from('week_no_availability').delete()
+      .eq('player_username', username)
+      .eq('week_start', weekStart);
+    return false; // retiré
+  } else {
+    await supabase.from('week_no_availability').insert({ player_username: username, week_start: weekStart });
+    return true; // ajouté
+  }
+}
+
+export async function getNoAvailability(weekStart: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('week_no_availability')
+    .select('player_username')
+    .eq('week_start', weekStart);
+  return (data ?? []).map((r: any) => r.player_username);
+}
+
+// ── Date retenue ──
+
+export interface ChosenDate {
+  weekStart: string;
+  chosenDate: string;
+  isManual: boolean;
+}
+
+export async function getChosenDate(weekStart: string): Promise<ChosenDate | null> {
+  const { data } = await supabase
+    .from('chosen_dates')
+    .select('week_start, chosen_date, is_manual')
+    .eq('week_start', weekStart)
+    .maybeSingle();
+  if (!data) return null;
+  return { weekStart: data.week_start, chosenDate: data.chosen_date, isManual: data.is_manual };
+}
+
+export async function setChosenDate(weekStart: string, chosenDate: string): Promise<void> {
+  await supabase.from('chosen_dates').upsert(
+    { week_start: weekStart, chosen_date: chosenDate, is_manual: true },
+    { onConflict: 'week_start' }
+  );
+}
+
+// ── Préférences de notifications ──
+
+export interface NotificationPrefs {
+  reminderHour: number;
+  gameDayHour: number;
+}
+
+export async function getNotificationPrefs(username: string): Promise<NotificationPrefs> {
+  const { data } = await supabase
+    .from('notification_preferences')
+    .select('reminder_hour, game_day_hour')
+    .eq('player_username', username)
+    .maybeSingle();
+  return { reminderHour: data?.reminder_hour ?? 17, gameDayHour: data?.game_day_hour ?? 18 };
+}
+
+export async function saveNotificationPrefs(username: string, prefs: NotificationPrefs): Promise<void> {
+  await supabase.from('notification_preferences').upsert(
+    { player_username: username, reminder_hour: prefs.reminderHour, game_day_hour: prefs.gameDayHour, updated_at: new Date().toISOString() },
+    { onConflict: 'player_username' }
+  );
+}
+
 // Vérifie si les 4 joueurs ont au moins 1 dispo sur une même semaine (lun-dim)
 // Cherche dans les 4 prochaines semaines, retourne la première semaine complète trouvée
 export async function checkWeekAllResponded(): Promise<{
