@@ -397,7 +397,7 @@ export default function CalendarScreen() {
               color={myNoAvail ? '#fff' : Colors.danger}
             />
             <Text style={[styles.noAvailBtnText, myNoAvail && styles.noAvailBtnTextActive]}>
-              {myNoAvail ? `Annuler "Aucune dispo"` : `Aucune dispo du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s\d{4}$/, '')} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+              {myNoAvail ? `Annuler "Aucune dispo"` : `Je ne suis pas dispo du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s\d{4}$/, '')} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
             </Text>
           </TouchableOpacity>
         </View>
