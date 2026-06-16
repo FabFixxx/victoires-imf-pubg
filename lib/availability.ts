@@ -2,10 +2,10 @@ import { supabase } from './supabase';
 import { GROUP_PLAYERS } from '../constants/players';
 
 export const PLAYER_COLORS: Record<string, string> = {
-  FabFix: '#4FC3F7',
-  Nicotom: '#F44336',
-  petittom: '#F5A623',
-  Jibby37: '#81C784',
+  FabFix: '#359bcf',
+  Nicotom: '#db7334',
+  petittom: '#e2e127',
+  Jibby37: '#4ba157',
 };
 
 export interface DayAvailability {
