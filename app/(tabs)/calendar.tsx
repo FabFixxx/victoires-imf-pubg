@@ -124,6 +124,16 @@ export default function CalendarScreen() {
     });
 
     await toggleAvailability(currentPlayer, day.dateString);
+
+    // Si le joueur ajoute une dispo sur la semaine prochaine, retirer "Aucune dispo"
+    if (day.dateString >= nextWeekMonday && day.dateString <= nextWeekSunday) {
+      const isAdding = !availability.find((d) => d.date === day.dateString)?.players.includes(currentPlayer);
+      if (isAdding && noAvailPlayers.includes(currentPlayer)) {
+        setNoAvailPlayers((prev) => prev.filter((p) => p !== currentPlayer));
+        await removeNoAvailability(currentPlayer, nextWeekMonday);
+      }
+    }
+
     setToggling(null);
   };
 
