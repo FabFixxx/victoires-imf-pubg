@@ -45,7 +45,7 @@ export default function RootLayout() {
             if (!info) return;
             Alert.alert(
               '🆕 Mise à jour disponible',
-              `La version ${info.version} est disponible.\n\n${info.releaseNotes ? info.releaseNotes + '\n\n' : ''}Tu peux continuer à utiliser l'app ou installer la mise à jour maintenant.`,
+              `La version ${info.version} est disponible. Tu peux voir les nouveautés dans les Réglages.`,
               [
                 { text: 'Plus tard', style: 'cancel' },
                 {
