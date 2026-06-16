@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
-import { getPlayerStats, PlayerStats } from '../../lib/pubg-api';
+import { getPlayerStats, PlayerStats, PUBG_MAP_NAMES } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
@@ -26,6 +26,7 @@ interface RecentMatch {
   damage: number;
   win_place: number;
   is_win: boolean;
+  mapName?: string;
 }
 
 export default function StatsScreen() {
@@ -48,7 +49,16 @@ export default function StatsScreen() {
     ]);
     setStats((prev) => ({ ...prev, [username]: s }));
     const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
-    setRecent(sorted);
+    const matchIds = sorted.map((m) => m.match_id);
+    const { data: cacheRows } = await supabase
+      .from('match_cache')
+      .select('match_id, map_name')
+      .in('match_id', matchIds);
+    const mapNameById: Record<string, string> = {};
+    for (const row of cacheRows ?? []) {
+      if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
+    }
+    setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id] })));
     setLoading(false);
   }, []);
 
@@ -173,7 +183,7 @@ export default function StatsScreen() {
                         ]}
                       />
                       <View style={styles.matchInfo}>
-                        <Text style={styles.matchDate}>{formatDate(match.match_date)}</Text>
+                        <Text style={styles.matchDate}>{formatDate(match.match_date)}{match.mapName ? ` · ${match.mapName}` : ''}</Text>
                         <Text
                           style={[
                             styles.matchResult,

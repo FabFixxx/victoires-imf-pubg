@@ -21,6 +21,7 @@ import {
   getFinisherStats,
   getTopMaps,
   getLastWin,
+  PUBG_MAP_NAMES,
   MonthlyStats,
   LastMatch,
 } from '../../lib/pubg-api';
@@ -38,6 +39,7 @@ interface TeamMatch {
   kills: number;
   assists: number;
   damage: number;
+  mapName?: string;
 }
 
 const MONTH_NAMES = [
@@ -174,9 +176,19 @@ export default function DashboardScreen() {
       m2.assists += row.assists;
       m2.damage += row.damage;
     }
+    const matchIds = Array.from(matchMap.keys());
+    const { data: cacheRows } = await supabase
+      .from('match_cache')
+      .select('match_id, map_name')
+      .in('match_id', matchIds);
+    const mapNameById: Record<string, string> = {};
+    for (const row of cacheRows ?? []) {
+      if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
+    }
     const sorted = Array.from(matchMap.values())
       .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
-      .slice(0, 15);
+      .slice(0, 15)
+      .map((m) => ({ ...m, mapName: mapNameById[m.match_id] }));
     setRecentTeamMatches(sorted);
 
     setLoading(false);
@@ -391,6 +403,7 @@ export default function DashboardScreen() {
                   <View style={styles.teamMatchInfo}>
                     <Text style={styles.teamMatchDate}>
                       {(() => { const d = new Date(match.match_date); return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`; })()}
+                      {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
                     <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
                       {match.is_win ? '#1 🏆' : `#${match.win_place}`}

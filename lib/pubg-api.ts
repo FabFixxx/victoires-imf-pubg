@@ -46,7 +46,7 @@ export const PUBG_MAPS = [
   'Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Karakin', 'Taego', 'Deston', 'Rondo', 'Paramo',
 ];
 
-const PUBG_MAP_NAMES: Record<string, string> = {
+export const PUBG_MAP_NAMES: Record<string, string> = {
   Baltic_Main: 'Erangel',
   Erangel_Main: 'Erangel',
   Desert_Main: 'Miramar',
