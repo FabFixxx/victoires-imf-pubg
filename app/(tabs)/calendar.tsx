@@ -393,11 +393,11 @@ export default function CalendarScreen() {
           >
             <Ionicons
               name={myNoAvail ? 'close-circle' : 'ban-outline'}
-              size={16}
-              color={myNoAvail ? Colors.danger : Colors.textMuted}
+              size={18}
+              color={myNoAvail ? '#fff' : Colors.danger}
             />
             <Text style={[styles.noAvailBtnText, myNoAvail && styles.noAvailBtnTextActive]}>
-              {myNoAvail ? 'Annuler "Aucune dispo"' : 'Aucune dispo cette semaine'}
+              {myNoAvail ? 'Annuler "Aucune dispo"' : 'Je ne suis pas dispo cette semaine'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -464,14 +464,14 @@ const styles = StyleSheet.create({
   noAvailBadgeText: { color: Colors.danger },
   waitingText: { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
   noAvailBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginTop: 10, padding: 12, borderRadius: 10,
-    borderWidth: 1, borderColor: Colors.cardBorder,
-    backgroundColor: Colors.card,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 10, padding: 14, borderRadius: 10,
+    borderWidth: 1.5, borderColor: Colors.danger,
+    backgroundColor: Colors.danger + '18',
   },
-  noAvailBtnActive: { borderColor: Colors.danger, backgroundColor: Colors.danger + '11' },
-  noAvailBtnText: { fontSize: 13, fontWeight: '600', color: Colors.textMuted },
-  noAvailBtnTextActive: { color: Colors.danger },
+  noAvailBtnActive: { backgroundColor: Colors.danger, borderColor: Colors.danger },
+  noAvailBtnText: { fontSize: 14, fontWeight: '700', color: Colors.danger },
+  noAvailBtnTextActive: { color: '#fff' },
   bestDateRow: {
     flexDirection: 'row', alignItems: 'center',
     padding: 12, paddingHorizontal: 14,
