@@ -73,10 +73,12 @@ export default function StatsScreen() {
 
   const current = stats[selected];
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('fr-FR', {
-      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-    });
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const date = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${date} ${time}`;
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
