@@ -550,11 +550,17 @@ export async function getFinisherStats(
   const { data } = await query;
 
   const counts: Record<string, number> = {};
+  const lastDate: Record<string, string> = {};
   for (const p of GROUP_PLAYERS) counts[p] = 0;
 
   if (data) {
     for (const row of data) {
-      if (row.finisher in counts) counts[row.finisher]++;
+      if (row.finisher in counts) {
+        counts[row.finisher]++;
+        if (!lastDate[row.finisher] || row.match_date > lastDate[row.finisher]) {
+          lastDate[row.finisher] = row.match_date;
+        }
+      }
     }
   }
 
@@ -565,7 +571,10 @@ export async function getFinisherStats(
   }
 
   return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return (lastDate[b[0]] ?? '') > (lastDate[a[0]] ?? '') ? 1 : -1;
+    })
     .map(([username, count]) => ({ username, count }));
 }
 

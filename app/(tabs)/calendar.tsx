@@ -65,7 +65,12 @@ export default function CalendarScreen() {
 
   const loadAvailability = useCallback(async () => {
     setRefreshing(true);
-    const data = await getAvailability(today, windowEnd);
+    // Charger depuis le lundi de la semaine courante pour afficher les votes passés de la semaine
+    const d = new Date(today);
+    const day = d.getDay();
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+    const weekMonday = d.toISOString().split('T')[0];
+    const data = await getAvailability(weekMonday, windowEnd);
     setAvailability(data);
     setRefreshing(false);
   }, []);
@@ -267,12 +272,6 @@ export default function CalendarScreen() {
               );
             })}
           </View>
-        </View>
-
-        <View style={styles.calendarHint}>
-          <Text style={styles.calendarHintText}>
-            Appuie sur un jour pour marquer ta dispo
-          </Text>
         </View>
 
         <Calendar
