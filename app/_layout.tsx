@@ -45,7 +45,7 @@ export default function RootLayout() {
             if (!info) return;
             Alert.alert(
               '🆕 Mise à jour disponible',
-              `La version ${info.version} est disponible. Tu peux voir les nouveautés dans les Réglages.`,
+              `La version ${info.version} est disponible. Tu peux voir les nouveautés dans Réglages → Version.`,
               [
                 { text: 'Plus tard', style: 'cancel' },
                 {
