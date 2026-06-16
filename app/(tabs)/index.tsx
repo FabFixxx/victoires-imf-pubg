@@ -28,6 +28,17 @@ import { getLastSync, setLastSync } from '../../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
+import { supabase } from '../../lib/supabase';
+
+interface TeamMatch {
+  match_id: string;
+  match_date: string;
+  win_place: number;
+  is_win: boolean;
+  kills: number;
+  assists: number;
+  damage: number;
+}
 
 const MONTH_NAMES = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -107,6 +118,7 @@ export default function DashboardScreen() {
   const [topMaps, setTopMaps] = useState<{ mapName: string; wins: number }[]>([]);
   const [lastMatch, setLastMatch] = useState<LastMatch | null>(null);
   const [lastWin, setLastWin] = useState<LastMatch | null>(null);
+  const [recentTeamMatches, setRecentTeamMatches] = useState<TeamMatch[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
@@ -138,6 +150,35 @@ export default function DashboardScreen() {
     setImfStats(imf);
     setFinisherStats(fs);
     setTopMaps(maps);
+
+    const { data: rawMatches } = await supabase
+      .from('player_match_stats')
+      .select('match_id, match_date, kills, assists, damage, win_place, is_win')
+      .in('player_username', GROUP_PLAYERS as unknown as string[])
+      .order('match_date', { ascending: false })
+      .limit(80);
+
+    const matchMap = new Map<string, TeamMatch>();
+    for (const row of rawMatches ?? []) {
+      if (!matchMap.has(row.match_id)) {
+        matchMap.set(row.match_id, {
+          match_id: row.match_id,
+          match_date: row.match_date,
+          win_place: row.win_place,
+          is_win: row.is_win,
+          kills: 0, assists: 0, damage: 0,
+        });
+      }
+      const m2 = matchMap.get(row.match_id)!;
+      m2.kills += row.kills;
+      m2.assists += row.assists;
+      m2.damage += row.damage;
+    }
+    const sorted = Array.from(matchMap.values())
+      .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
+      .slice(0, 15);
+    setRecentTeamMatches(sorted);
+
     setLoading(false);
   }, []);
 
@@ -338,6 +379,32 @@ export default function DashboardScreen() {
 
         {/* ── Dernière victoire ── */}
         {lastWin && <MatchCard match={lastWin} title="Dernière victoire" />}
+
+        {/* ── Matchs récents IMF ── */}
+        {recentTeamMatches.length > 0 && (
+          <>
+            <SectionHeader title="Matchs récents IMF" />
+            <View style={styles.matchList}>
+              {recentTeamMatches.map((match) => (
+                <View key={match.match_id} style={styles.teamMatchRow}>
+                  <View style={[styles.teamMatchIndicator, match.is_win ? styles.teamMatchWin : styles.teamMatchLoss]} />
+                  <View style={styles.teamMatchInfo}>
+                    <Text style={styles.teamMatchDate}>
+                      {new Date(match.match_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
+                      {match.is_win ? '#1 🏆' : `#${match.win_place}`}
+                    </Text>
+                  </View>
+                  <View style={styles.teamMatchStats}>
+                    <Text style={styles.teamMatchKills}>{match.kills}K / {match.assists}A</Text>
+                    <Text style={styles.teamMatchDmg}>{Math.round(match.damage).toLocaleString('fr-FR')} dmg</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         <View style={{ height: 30 }} />
       </ScrollView>
@@ -543,6 +610,33 @@ const styles = StyleSheet.create({
   },
   finisherText: { fontSize: 12, color: Colors.textSecondary },
   finisherName: { fontWeight: '800', color: Colors.win },
+  matchList: {
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  teamMatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+    gap: 10,
+  },
+  teamMatchIndicator: { width: 4, height: 36, borderRadius: 2 },
+  teamMatchWin: { backgroundColor: Colors.win },
+  teamMatchLoss: { backgroundColor: Colors.textMuted },
+  teamMatchInfo: { width: 110 },
+  teamMatchDate: { fontSize: 12, color: Colors.textSecondary },
+  teamMatchResult: { fontSize: 13, fontWeight: '800', marginTop: 2 },
+  teamMatchResultWin: { color: Colors.win },
+  teamMatchResultLoss: { color: Colors.textMuted },
+  teamMatchStats: { flex: 1, alignItems: 'flex-end' },
+  teamMatchKills: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  teamMatchDmg: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
   playersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   playerStat: { flex: 1, minWidth: '40%' },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
