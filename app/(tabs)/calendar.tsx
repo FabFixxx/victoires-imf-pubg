@@ -316,7 +316,7 @@ export default function CalendarScreen() {
 
         {/* Statut réponses semaine */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CETTE SEMAINE</Text>
+          <Text style={styles.sectionTitle}>DISPO SEMAINE PROCHAINE</Text>
           <View style={[styles.card, styles.statusGrid]}>
             {GROUP_PLAYERS.map((p) => (
               <View key={p} style={styles.statusCell}>
