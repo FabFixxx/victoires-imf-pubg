@@ -413,7 +413,7 @@ export default function CalendarScreen() {
           <View style={styles.confirmBox}>
             <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
             <Text style={styles.confirmText}>
-              {`Tu confirmes ne pas être disponible du ${formatDate(nextWeekMonday)} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
+              {`Tu confirmes ne pas être disponible du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
             </Text>
             <Text style={styles.confirmSub}>Tes dispos déjà saisies sur cette semaine seront supprimées.</Text>
             <View style={styles.confirmButtons}>
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   confirmBox: { backgroundColor: Colors.card, borderRadius: 14, padding: 24, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: Colors.cardBorder },
   confirmTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: 10 },
-  confirmText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, textTransform: 'capitalize' },
+  confirmText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
   confirmSub: { fontSize: 12, color: Colors.danger, marginTop: 8, fontStyle: 'italic' },
   confirmButtons: { flexDirection: 'row', gap: 10, marginTop: 20 },
   confirmCancel: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: Colors.cardBorder, alignItems: 'center' },
