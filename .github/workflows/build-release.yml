@@ -57,7 +57,10 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             ## Nouveautés
-            - 🔔 Notifications serveur : fonctionne aussi depuis le site web iOS
-            - 📅 Rappel dimanche 19h pour les utilisateurs iOS (PWA)
-            - 📋 Historique des versions dans les paramètres (appuie sur le numéro de version)
-            - ⚡ Synchronisation 3x plus rapide (un seul appel API au lieu de 4)
+            - 📅 Page Sessions entièrement refaite : meilleures dates cette semaine et semaine prochaine
+            - ✅ Statut "A répondu / En attente" par joueur pour la semaine prochaine
+            - 🚫 Bouton "Je ne suis pas dispo" pour signaler une semaine sans disponibilité
+            - ⭐ Date retenue : sélectionnable manuellement quand plusieurs dates ont 4 votes
+            - 🔔 Rappel quotidien (dim–ven 17h) uniquement aux joueurs n'ayant pas encore répondu
+            - 🎮 Notification le soir de la session à 18h sur la date retenue
+            - ⚙️ Réglages notifications dans les paramètres (heure rappel + heure soir de session)
