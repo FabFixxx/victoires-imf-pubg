@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
@@ -79,7 +79,7 @@ export default function CalendarScreen() {
   const [chosenDate, setChosenDateState] = useState<ChosenDate | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
-  const [togglingNoAvail, setTogglingNoAvail] = useState(false);
+  const [showNoAvailConfirm, setShowNoAvailConfirm] = useState(false);
 
   useEffect(() => {
     getCurrentPlayer().then(setCurrentPlayer_);
@@ -128,42 +128,34 @@ export default function CalendarScreen() {
   };
 
   const handleNoAvail = async () => {
-    if (!currentPlayer || togglingNoAvail) return;
+    if (!currentPlayer) return;
     const player = currentPlayer;
     const hasIt = noAvailPlayers.includes(player);
 
     if (hasIt) {
-      // Annuler "aucune dispo"
       setNoAvailPlayers((prev) => prev.filter((p) => p !== player));
       await removeNoAvailability(player, nextWeekMonday);
     } else {
-      Alert.alert(
-        'Aucune dispo cette semaine',
-        `Confirmer que tu n'es pas disponible du ${formatDate(nextWeekMonday)} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?\n\nTes dispos déjà saisies sur cette semaine seront supprimées.`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Confirmer',
-            onPress: async () => {
-              // Mise à jour optimiste : statut + suppression dispo dans l'état local
-              setNoAvailPlayers((prev) => [...prev, player]);
-              setAvailability((prev) =>
-                prev.map((d) =>
-                  d.date >= nextWeekMonday && d.date <= nextWeekSunday
-                    ? { ...d, players: d.players.filter((p) => p !== player) }
-                    : d
-                ).filter((d) => d.players.length > 0)
-              );
-              // Persister en DB
-              await Promise.all([
-                addNoAvailability(player, nextWeekMonday),
-                deleteAvailabilityForWeek(player, nextWeekMonday, nextWeekSunday),
-              ]);
-            },
-          },
-        ]
-      );
+      setShowNoAvailConfirm(true);
     }
+  };
+
+  const confirmNoAvail = async () => {
+    if (!currentPlayer) return;
+    const player = currentPlayer;
+    setShowNoAvailConfirm(false);
+    setNoAvailPlayers((prev) => [...prev, player]);
+    setAvailability((prev) =>
+      prev.map((d) =>
+        d.date >= nextWeekMonday && d.date <= nextWeekSunday
+          ? { ...d, players: d.players.filter((p) => p !== player) }
+          : d
+      ).filter((d) => d.players.length > 0)
+    );
+    await Promise.all([
+      addNoAvailability(player, nextWeekMonday),
+      deleteAvailabilityForWeek(player, nextWeekMonday, nextWeekSunday),
+    ]);
   };
 
   const handleChooseDate = async (date: string) => {
@@ -402,7 +394,6 @@ export default function CalendarScreen() {
           <TouchableOpacity
             style={[styles.noAvailBtn, myNoAvail && styles.noAvailBtnActive]}
             onPress={handleNoAvail}
-            disabled={togglingNoAvail}
           >
             <Ionicons
               name={myNoAvail ? 'close-circle' : 'ban-outline'}
@@ -417,6 +408,25 @@ export default function CalendarScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+      <Modal visible={showNoAvailConfirm} transparent animationType="fade">
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
+            <Text style={styles.confirmText}>
+              {`Tu confirmes ne pas être disponible du ${formatDate(nextWeekMonday)} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
+            </Text>
+            <Text style={styles.confirmSub}>Tes dispos déjà saisies sur cette semaine seront supprimées.</Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity style={styles.confirmCancel} onPress={() => setShowNoAvailConfirm(false)}>
+                <Text style={styles.confirmCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmOk} onPress={confirmNoAvail}>
+                <Text style={styles.confirmOkText}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -521,4 +531,14 @@ const styles = StyleSheet.create({
   chosenHintText: { fontSize: 12, color: Colors.textMuted },
   emptyRow: { padding: 16, alignItems: 'center' },
   emptyText: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  confirmBox: { backgroundColor: Colors.card, borderRadius: 14, padding: 24, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: Colors.cardBorder },
+  confirmTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: 10 },
+  confirmText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, textTransform: 'capitalize' },
+  confirmSub: { fontSize: 12, color: Colors.danger, marginTop: 8, fontStyle: 'italic' },
+  confirmButtons: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  confirmCancel: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: Colors.cardBorder, alignItems: 'center' },
+  confirmCancelText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  confirmOk: { flex: 1, padding: 12, borderRadius: 10, backgroundColor: Colors.danger, alignItems: 'center' },
+  confirmOkText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });
