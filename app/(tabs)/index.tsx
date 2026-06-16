@@ -69,8 +69,9 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
       <View style={[styles.matchCard, match.isWin && styles.matchCardWin]}>
         <View style={styles.matchCardHeader}>
           <View>
-            <Text style={styles.matchDate}>{formatDate(match.matchDate)}</Text>
-            {match.mapName && <Text style={styles.matchMap}>{match.mapName}</Text>}
+            <Text style={styles.matchDate}>
+                {formatDate(match.matchDate)}{match.mapName ? ` · ${match.mapName}` : ''}
+              </Text>
             {match.isWin && match.finisher && (
               <View style={styles.finisherInline}>
                 <Ionicons name="skull-outline" size={12} color={Colors.win} />
