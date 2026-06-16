@@ -19,7 +19,7 @@ LocaleConfig.locales['fr'] = {
 LocaleConfig.defaultLocale = 'fr';
 import { Colors } from '../../constants/colors';
 import { getCurrentPlayer } from '../../lib/storage';
-import { GROUP_PLAYERS } from '../../constants/players';
+import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,
@@ -309,7 +309,7 @@ export default function CalendarScreen() {
           {GROUP_PLAYERS.map((p) => (
             <View key={p} style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: PLAYER_COLORS[p] }]} />
-              <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{p}</Text>
+              <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{getDisplayName(p)}</Text>
             </View>
           ))}
         </View>
@@ -322,7 +322,7 @@ export default function CalendarScreen() {
               <View key={p} style={styles.statusCell}>
                 <View style={styles.statusCellLeft}>
                   <View style={[styles.statusDot, { backgroundColor: PLAYER_COLORS[p] }]} />
-                  <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{p}</Text>
+                  <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{getDisplayName(p)}</Text>
                 </View>
                 {playersWhoResponded.has(p) ? (
                   <View style={styles.respondedBadge}>

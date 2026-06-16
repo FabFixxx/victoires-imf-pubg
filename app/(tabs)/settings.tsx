@@ -26,7 +26,8 @@ import {
   addManualWin, deleteManualWin,
   ImfSeason, ManualWin,
 } from '../../lib/imf-seasons';
-import { GROUP_PLAYERS } from '../../constants/players';
+import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
+import { PLAYER_COLORS } from '../../lib/availability';
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
 
@@ -168,7 +169,7 @@ export default function SettingsScreen() {
       'Changer de joueur',
       'Qui es-tu ?',
       GROUP_PLAYERS.map((name) => ({
-        text: name,
+        text: getDisplayName(name),
         onPress: async () => {
           await setCurrentPlayer(name);
           setPlayer(name);
@@ -260,13 +261,13 @@ export default function SettingsScreen() {
         <SectionHeader title="Mon profil" />
         <View style={styles.card}>
           <View style={styles.playerRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
+            <View style={[styles.avatar, currentPlayer ? { borderColor: PLAYER_COLORS[currentPlayer] ?? Colors.primary, backgroundColor: (PLAYER_COLORS[currentPlayer] ?? Colors.primary) + '33' } : {}]}>
+              <Text style={[styles.avatarText, currentPlayer ? { color: PLAYER_COLORS[currentPlayer] ?? Colors.primary } : {}]}>
                 {currentPlayer ? currentPlayer[0].toUpperCase() : '?'}
               </Text>
             </View>
             <View style={styles.playerInfo}>
-              <Text style={styles.playerName}>{currentPlayer ?? '—'}</Text>
+              <Text style={styles.playerName}>{currentPlayer ? getDisplayName(currentPlayer) : '—'}</Text>
               <Text style={styles.playerHint}>Joueur actuel</Text>
             </View>
             <TouchableOpacity style={styles.changeBtn} onPress={handleChangePlayer}>
@@ -367,10 +368,8 @@ export default function SettingsScreen() {
               style={styles.trackerRow}
               onPress={() => openTracker(name)}
             >
-              <View style={styles.trackerAvatar}>
-                <Text style={styles.trackerAvatarText}>{name[0].toUpperCase()}</Text>
-              </View>
-              <Text style={styles.trackerName}>{name}</Text>
+              <View style={[styles.trackerDot, { backgroundColor: PLAYER_COLORS[name] }]} />
+              <Text style={styles.trackerName}>{getDisplayName(name)}</Text>
               <Ionicons name="open-outline" size={16} color={Colors.textMuted} />
             </TouchableOpacity>
           ))}
@@ -556,9 +555,12 @@ export default function SettingsScreen() {
                   style={[styles.chip, selectedFinisher === player && styles.chipSelected]}
                   onPress={() => setSelectedFinisher(player === selectedFinisher ? null : player)}
                 >
-                  <Text style={[styles.chipText, selectedFinisher === player && styles.chipTextSelected]}>
-                    {player}
-                  </Text>
+                  <View style={styles.chipInner}>
+                    <View style={[styles.chipDot, { backgroundColor: PLAYER_COLORS[player] }]} />
+                    <Text style={[styles.chipText, selectedFinisher === player && styles.chipTextSelected]}>
+                      {getDisplayName(player)}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -679,12 +681,7 @@ const styles = StyleSheet.create({
     padding: 12, paddingHorizontal: 14, gap: 12,
     borderBottomWidth: 1, borderBottomColor: Colors.cardBorder,
   },
-  trackerAvatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  trackerAvatarText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+  trackerDot: { width: 10, height: 10, borderRadius: 5 },
   trackerName: { flex: 1, fontSize: 14, color: Colors.text, fontWeight: '600' },
   infoRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -792,6 +789,8 @@ const styles = StyleSheet.create({
     color: Colors.textMuted, marginBottom: 8, marginTop: 12,
   },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  chipInner: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  chipDot: { width: 7, height: 7, borderRadius: 3.5 },
   chip: {
     paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 20, borderWidth: 1, borderColor: Colors.cardBorder,

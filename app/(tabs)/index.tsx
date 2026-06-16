@@ -25,7 +25,8 @@ import {
   LastMatch,
 } from '../../lib/pubg-api';
 import { getLastSync, setLastSync } from '../../lib/storage';
-import { GROUP_PLAYERS } from '../../constants/players';
+import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
+import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
 
 const MONTH_NAMES = [
@@ -83,7 +84,10 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
         <View style={styles.playersGrid}>
           {[...match.players].sort((a, b) => GROUP_PLAYERS.indexOf(a.username as any) - GROUP_PLAYERS.indexOf(b.username as any)).map((p) => (
             <View key={p.username} style={styles.playerStat}>
-              <Text style={styles.playerName}>{p.username}</Text>
+              <View style={styles.playerNameRow}>
+                <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[p.username] ?? Colors.textMuted }]} />
+                <Text style={styles.playerName}>{getDisplayName(p.username)}</Text>
+              </View>
               <Text style={styles.playerKills}>{p.kills}K / {p.assists}A</Text>
               <Text style={styles.playerDmg}>{p.damage.toLocaleString('fr-FR')} dmg</Text>
             </View>
@@ -312,7 +316,10 @@ export default function DashboardScreen() {
                     <Text style={[styles.listRank, idx === 0 && f.count > 0 && styles.listRankGold]}>
                       {idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
                     </Text>
-                    <Text style={styles.listLabel}>{f.username}</Text>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
+                      <Text style={styles.listLabel}>{getDisplayName(f.username)}</Text>
+                    </View>
                     <View style={styles.listValueWrap}>
                       <Ionicons name="skull-outline" size={12} color={f.count > 0 ? Colors.win : Colors.textMuted} />
                       <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted]}>
@@ -465,7 +472,6 @@ const styles = StyleSheet.create({
   },
   listRankGold: { color: Colors.primary },
   listLabel: {
-    flex: 1,
     fontSize: 14,
     fontWeight: '700',
     color: Colors.text,
@@ -539,6 +545,8 @@ const styles = StyleSheet.create({
   finisherName: { fontWeight: '800', color: Colors.win },
   playersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   playerStat: { flex: 1, minWidth: '40%' },
+  playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  playerDot: { width: 8, height: 8, borderRadius: 4 },
   playerName: { fontSize: 13, fontWeight: '700', color: Colors.text },
   playerKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
   playerDmg: { fontSize: 11, color: Colors.textMuted },

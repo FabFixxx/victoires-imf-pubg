@@ -14,7 +14,8 @@ import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
 import { getPlayerStats, PlayerStats } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
-import { GROUP_PLAYERS, PlayerName } from '../../constants/players';
+import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/players';
+import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentPlayer } from '../../lib/storage';
 
 interface RecentMatch {
@@ -90,9 +91,12 @@ export default function StatsScreen() {
             style={[styles.tab, selected === name && styles.tabActive]}
             onPress={() => setSelected(name)}
           >
-            <Text style={[styles.tabText, selected === name && styles.tabTextActive]}>
-              {name}
-            </Text>
+            <View style={styles.tabInner}>
+              <View style={[styles.tabDot, { backgroundColor: PLAYER_COLORS[name] }]} />
+              <Text style={[styles.tabText, selected === name && styles.tabTextActive]}>
+                {getDisplayName(name)}
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -111,7 +115,7 @@ export default function StatsScreen() {
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
         ) : !current || current.matches === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Aucune donnée pour {selected}</Text>
+            <Text style={styles.emptyText}>Aucune donnée pour {getDisplayName(selected)}</Text>
             <Text style={styles.emptyHint}>
               Lance une sync depuis l'accueil ou les réglages
             </Text>
@@ -120,11 +124,11 @@ export default function StatsScreen() {
           <>
             {/* Hero card */}
             <View style={styles.heroCard}>
-              <View style={styles.heroAvatar}>
-                <Text style={styles.heroAvatarText}>{selected[0].toUpperCase()}</Text>
+              <View style={[styles.heroAvatar, { borderColor: PLAYER_COLORS[selected] ?? Colors.primary, backgroundColor: (PLAYER_COLORS[selected] ?? Colors.primary) + '33' }]}>
+                <Text style={[styles.heroAvatarText, { color: PLAYER_COLORS[selected] ?? Colors.primary }]}>{selected[0].toUpperCase()}</Text>
               </View>
               <View style={styles.heroInfo}>
-                <Text style={styles.heroName}>{selected}</Text>
+                <Text style={styles.heroName}>{getDisplayName(selected)}</Text>
                 <Text style={styles.heroMatches}>{current.matches} matchs FPP</Text>
               </View>
               <View style={styles.heroWins}>
@@ -229,6 +233,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary + '22',
     borderColor: Colors.primary,
   },
+  tabInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  tabDot: { width: 7, height: 7, borderRadius: 3.5 },
   tabText: {
     fontSize: 10,
     fontWeight: '700',
