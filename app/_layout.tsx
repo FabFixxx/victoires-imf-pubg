@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
-import { GROUP_PLAYERS } from '../constants/players';
+import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
 import { registerPushToken, scheduleSundayReminder } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 import { checkForUpdate } from '../lib/update-check';
@@ -116,7 +116,7 @@ export default function RootLayout() {
               <View style={styles.playerBtnAvatar}>
                 <Text style={styles.playerBtnAvatarText}>{name[0].toUpperCase()}</Text>
               </View>
-              <Text style={styles.playerBtnText}>{name}</Text>
+              <Text style={styles.playerBtnText}>{getDisplayName(name)}</Text>
             </TouchableOpacity>
           ))}
         </View>
