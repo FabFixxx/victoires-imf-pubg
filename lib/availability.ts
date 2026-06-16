@@ -57,23 +57,24 @@ export async function toggleAvailability(username: string, date: string): Promis
 
 // ── Aucune dispo ──
 
-export async function toggleNoAvailability(username: string, weekStart: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('week_no_availability')
-    .select('player_username')
-    .eq('player_username', username)
-    .eq('week_start', weekStart)
-    .maybeSingle();
+export async function addNoAvailability(username: string, weekStart: string): Promise<void> {
+  await supabase.from('week_no_availability').upsert(
+    { player_username: username, week_start: weekStart },
+    { onConflict: 'player_username,week_start' }
+  );
+}
 
-  if (data) {
-    await supabase.from('week_no_availability').delete()
-      .eq('player_username', username)
-      .eq('week_start', weekStart);
-    return false; // retiré
-  } else {
-    await supabase.from('week_no_availability').insert({ player_username: username, week_start: weekStart });
-    return true; // ajouté
-  }
+export async function removeNoAvailability(username: string, weekStart: string): Promise<void> {
+  await supabase.from('week_no_availability').delete()
+    .eq('player_username', username)
+    .eq('week_start', weekStart);
+}
+
+export async function deleteAvailabilityForWeek(username: string, weekStart: string, weekEnd: string): Promise<void> {
+  await supabase.from('player_availability').delete()
+    .eq('player_username', username)
+    .gte('date', weekStart)
+    .lte('date', weekEnd);
 }
 
 export async function getNoAvailability(weekStart: string): Promise<string[]> {

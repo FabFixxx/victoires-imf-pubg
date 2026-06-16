@@ -25,7 +25,9 @@ import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import {
   getAvailability,
   toggleAvailability,
-  toggleNoAvailability,
+  addNoAvailability,
+  removeNoAvailability,
+  deleteAvailabilityForWeek,
   getNoAvailability,
   getChosenDate,
   setChosenDate,
@@ -127,30 +129,41 @@ export default function CalendarScreen() {
 
   const handleNoAvail = async () => {
     if (!currentPlayer || togglingNoAvail) return;
-    setTogglingNoAvail(true);
-    const hasIt = noAvailPlayers.includes(currentPlayer);
+    const player = currentPlayer;
+    const hasIt = noAvailPlayers.includes(player);
+
     if (hasIt) {
-      setNoAvailPlayers((prev) => prev.filter((p) => p !== currentPlayer));
+      // Annuler "aucune dispo"
+      setNoAvailPlayers((prev) => prev.filter((p) => p !== player));
+      await removeNoAvailability(player, nextWeekMonday);
     } else {
       Alert.alert(
         'Aucune dispo cette semaine',
-        `Confirmer que tu n'es pas disponible la semaine du ${formatDate(nextWeekMonday)} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`,
+        `Confirmer que tu n'es pas disponible du ${formatDate(nextWeekMonday)} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?\n\nTes dispos déjà saisies sur cette semaine seront supprimées.`,
         [
-          { text: 'Annuler', style: 'cancel', onPress: () => setTogglingNoAvail(false) },
+          { text: 'Annuler', style: 'cancel' },
           {
             text: 'Confirmer',
             onPress: async () => {
-              setNoAvailPlayers((prev) => [...prev, currentPlayer]);
-              await toggleNoAvailability(currentPlayer, nextWeekMonday);
-              setTogglingNoAvail(false);
+              // Mise à jour optimiste : statut + suppression dispo dans l'état local
+              setNoAvailPlayers((prev) => [...prev, player]);
+              setAvailability((prev) =>
+                prev.map((d) =>
+                  d.date >= nextWeekMonday && d.date <= nextWeekSunday
+                    ? { ...d, players: d.players.filter((p) => p !== player) }
+                    : d
+                ).filter((d) => d.players.length > 0)
+              );
+              // Persister en DB
+              await Promise.all([
+                addNoAvailability(player, nextWeekMonday),
+                deleteAvailabilityForWeek(player, nextWeekMonday, nextWeekSunday),
+              ]);
             },
           },
         ]
       );
-      return;
     }
-    await toggleNoAvailability(currentPlayer, nextWeekMonday);
-    setTogglingNoAvail(false);
   };
 
   const handleChooseDate = async (date: string) => {
