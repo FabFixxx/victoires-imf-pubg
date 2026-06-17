@@ -230,7 +230,7 @@ export default function SettingsScreen() {
     try {
       const { data, error } = await supabase.from('players').select('username').limit(1);
       if (error) results.push(`Supabase ❌ ${error.message}`);
-      else results.push(`Supabase ✓ (${data?.length ?? 0} lignes)`);
+      else results.push(`Supabase ✓`);
     } catch (e: any) {
       results.push(`Supabase ❌ ${e?.message}`);
     }
@@ -239,7 +239,7 @@ export default function SettingsScreen() {
         'https://api.pubg.com/shards/steam/players?filter[playerNames]=FabFix',
         { headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: 'application/vnd.api+json' } }
       );
-      if (res.ok) results.push(`PUBG API ✓ (${res.status})`);
+      if (res.ok) results.push(`PUBG API ✓`);
       else results.push(`PUBG API ❌ HTTP ${res.status}`);
     } catch (e: any) {
       results.push(`PUBG API ❌ ${e?.message}`);
