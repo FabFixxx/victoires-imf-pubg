@@ -23,7 +23,7 @@ import { syncData, PUBG_MAPS } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
   getImfSeasons, upsertImfSeason,
-  addManualWin, deleteManualWin,
+  addManualWin, updateManualWin, deleteManualWin,
   ImfSeason, ManualWin,
 } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
@@ -57,8 +57,9 @@ export default function SettingsScreen() {
   const [editStartDate, setEditStartDate] = useState('');
   const [savingDate, setSavingDate] = useState(false);
 
-  // Modal ajout d'une victoire individuelle
+  // Modal ajout/édition d'une victoire individuelle
   const [showAddWinModal, setShowAddWinModal] = useState(false);
+  const [editingWin, setEditingWin] = useState<ManualWin | null>(null);
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [selectedFinisher, setSelectedFinisher] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
@@ -135,9 +136,18 @@ export default function SettingsScreen() {
   };
 
   const handleOpenAddWin = () => {
+    setEditingWin(null);
     setSelectedMap(null);
     setSelectedFinisher(null);
     setSelectedDate('');
+    setShowAddWinModal(true);
+  };
+
+  const handleOpenEditWin = (win: ManualWin) => {
+    setEditingWin(win);
+    setSelectedMap(win.mapName);
+    setSelectedFinisher(win.finisher);
+    setSelectedDate(win.winDate ?? '');
     setShowAddWinModal(true);
   };
 
@@ -148,7 +158,11 @@ export default function SettingsScreen() {
       Alert.alert('Date invalide', 'Format attendu : AAAA-MM-JJ (ex: 2025-03-15)');
       return;
     }
-    await addManualWin(winsSeasonYear, selectedMap, selectedFinisher, selectedDate || null);
+    if (editingWin) {
+      await updateManualWin(editingWin.id, selectedMap, selectedFinisher, selectedDate || null);
+    } else {
+      await addManualWin(winsSeasonYear, selectedMap, selectedFinisher, selectedDate || null);
+    }
     setShowAddWinModal(false);
     loadImfSeasons();
   };
@@ -541,6 +555,12 @@ export default function SettingsScreen() {
                       )}
                     </View>
                     <TouchableOpacity
+                      style={styles.editWinBtn}
+                      onPress={() => handleOpenEditWin(win)}
+                    >
+                      <Ionicons name="create-outline" size={15} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={styles.deleteWinBtn}
                       onPress={() => handleDeleteWin(win)}
                     >
@@ -591,7 +611,7 @@ export default function SettingsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nouvelle victoire</Text>
+              <Text style={styles.modalTitle}>{editingWin ? 'Modifier la victoire' : 'Nouvelle victoire'}</Text>
               <TouchableOpacity onPress={() => setShowAddWinModal(false)}>
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
@@ -821,6 +841,12 @@ const styles = StyleSheet.create({
   winDate: { fontSize: 11, color: Colors.textMuted },
   winFinisher: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   winFinisherText: { fontSize: 12, color: Colors.win, fontWeight: '600' },
+  editWinBtn: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: Colors.primary + '22',
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 6,
+  },
   deleteWinBtn: {
     width: 30, height: 30, borderRadius: 15,
     backgroundColor: Colors.danger + '22',

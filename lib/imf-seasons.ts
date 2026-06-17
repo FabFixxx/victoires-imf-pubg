@@ -96,3 +96,16 @@ export async function addManualWin(
 export async function deleteManualWin(id: string): Promise<void> {
   await supabase.from('imf_season_wins').delete().eq('id', id);
 }
+
+export async function updateManualWin(
+  id: string,
+  mapName: string | null,
+  finisher: string | null,
+  winDate: string | null
+): Promise<void> {
+  await supabase.from('imf_season_wins').update({
+    map_name: mapName,
+    finisher,
+    win_date: winDate,
+  }).eq('id', id);
+}
