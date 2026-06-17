@@ -400,7 +400,7 @@ export default function DashboardScreen() {
                   <View style={[styles.teamMatchIndicator, match.is_win ? styles.teamMatchWin : styles.teamMatchLoss]} />
                   <View style={styles.teamMatchInfo}>
                     <Text style={styles.teamMatchDate}>
-                      {(() => { const d = new Date(match.match_date); return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`; })()}
+                      {(() => { const d = new Date(match.match_date); return `${d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`; })()}
                       {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
                     <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
