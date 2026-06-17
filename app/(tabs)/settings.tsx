@@ -22,7 +22,7 @@ import { PUBG_API_KEY } from '../../constants/config';
 import { syncData, PUBG_MAPS } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
-  getImfSeasons, upsertImfSeason, deleteImfSeason,
+  getImfSeasons, upsertImfSeason,
   addManualWin, deleteManualWin,
   ImfSeason, ManualWin,
 } from '../../lib/imf-seasons';
@@ -98,19 +98,6 @@ export default function SettingsScreen() {
     loadImfSeasons();
   };
 
-  const handleDeleteSeason = (year: number) => {
-    Alert.alert(
-      'Supprimer la saison',
-      `Supprimer la saison IMF ${year} ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: async () => {
-          await deleteImfSeason(year);
-          loadImfSeasons();
-        }},
-      ]
-    );
-  };
 
   const handleOpenWinsModal = (year: number) => {
     setWinsSeasonYear(year);
@@ -435,12 +422,6 @@ export default function SettingsScreen() {
                   onPress={() => handleOpenWinsModal(season.year)}
                 >
                   <Ionicons name="create-outline" size={16} color={Colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDeleteSeason(season.year)}
-                >
-                  <Ionicons name="trash-outline" size={16} color={Colors.danger} />
                 </TouchableOpacity>
               </View>
             ))
@@ -804,11 +785,6 @@ const styles = StyleSheet.create({
   editBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: Colors.primary + '22',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  deleteBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.danger + '22',
     alignItems: 'center', justifyContent: 'center',
   },
   manualWinsText: { fontSize: 11, color: Colors.primary, fontWeight: '600', marginTop: 3 },
