@@ -47,9 +47,11 @@ function addMonths(date: string, months: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  });
+  const d = new Date(dateStr + 'T12:00:00');
+  const weekday = d.toLocaleDateString('fr-FR', { weekday: 'long' });
+  const day = d.getDate();
+  const month = d.toLocaleDateString('fr-FR', { month: 'long' }).toLowerCase();
+  return `${weekday} ${day} ${month}`;
 }
 
 function getMondayOf(dateStr: string): string {
