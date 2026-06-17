@@ -57,8 +57,9 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
     const weekday = date.toLocaleDateString('fr-FR', { weekday: 'short' });
     const day = date.getDate();
     const month = date.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase();
-    const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${weekday} ${day} ${month} ${time}`;
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    return `${weekday} ${day} ${month} ${h}:${m}`;
   };
 
   const totalKills = match.players.reduce((s, p) => s + p.kills, 0);
@@ -405,7 +406,7 @@ export default function DashboardScreen() {
                   <View style={[styles.teamMatchIndicator, match.is_win ? styles.teamMatchWin : styles.teamMatchLoss]} />
                   <View style={styles.teamMatchInfo}>
                     <Text style={styles.teamMatchDate}>
-                      {(() => { const d = new Date(match.match_date); const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }); const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase(); const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); return `${weekday} ${d.getDate()} ${month} ${time}`; })()}
+                      {(() => { const d = new Date(match.match_date); const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }); const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase(); const h = String(d.getHours()).padStart(2, '0'); const m = String(d.getMinutes()).padStart(2, '0'); return `${weekday} ${d.getDate()} ${month} ${h}:${m}`; })()}
                       {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
                     <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>

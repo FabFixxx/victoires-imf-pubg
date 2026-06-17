@@ -88,8 +88,9 @@ export default function StatsScreen() {
     const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' });
     const day = d.getDate();
     const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase();
-    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${weekday} ${day} ${month} ${time}`;
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${weekday} ${day} ${month} ${h}:${min}`;
   };
 
   return (
