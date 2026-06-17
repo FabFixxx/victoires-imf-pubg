@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
@@ -42,7 +43,7 @@ export default function RootLayout() {
           registerWebPush(player);
           triggerAutoSync();
           checkForUpdate().then((info) => {
-            if (!info) return;
+            if (!info || Platform.OS === 'web') return;
             Alert.alert(
               '🆕 Mise à jour disponible',
               `La version ${info.version} est disponible. Tu peux voir les nouveautés dans Réglages → Version.`,

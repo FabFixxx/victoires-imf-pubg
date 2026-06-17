@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Linking,
   ActivityIndicator,
   TextInput,
@@ -61,6 +60,18 @@ export default function SettingsScreen() {
   const [diagResult, setDiagResult] = useState<string[]>([]);
   const [showDiagModal, setShowDiagModal] = useState(false);
 
+  // Modal changer de joueur
+  const [showPlayerModal, setShowPlayerModal] = useState(false);
+
+  // Modal supprimer victoire
+  const [winToDelete, setWinToDelete] = useState<ManualWin | null>(null);
+
+  // Erreurs inline dans les modals
+  const [seasonFormError, setSeasonFormError] = useState('');
+  const [startDateError, setStartDateError] = useState('');
+  const [startDateSaved, setStartDateSaved] = useState(false);
+  const [winFormError, setWinFormError] = useState('');
+
   // Modal ajout/édition d'une victoire individuelle
   const [showAddWinModal, setShowAddWinModal] = useState(false);
   const [editingWin, setEditingWin] = useState<ManualWin | null>(null);
@@ -88,14 +99,15 @@ export default function SettingsScreen() {
   const handleAddSeason = async () => {
     const year = parseInt(editYear);
     if (!year || year < 2020 || year > 2030) {
-      Alert.alert('Année invalide', 'Entrez une année entre 2020 et 2030');
+      setSeasonFormError('Année invalide (entre 2020 et 2030)');
       return;
     }
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(editDate)) {
-      Alert.alert('Date invalide', 'Format attendu : YYYY-MM-DD (ex: 2026-01-13)');
+      setSeasonFormError('Date invalide — format attendu : AAAA-MM-JJ');
       return;
     }
+    setSeasonFormError('');
     await upsertImfSeason(year, editDate);
     setShowSeasonModal(false);
     setEditYear('');
@@ -115,28 +127,27 @@ export default function SettingsScreen() {
     if (!winsSeasonYear) return;
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(editStartDate)) {
-      Alert.alert('Date invalide', 'Format attendu : AAAA-MM-JJ (ex: 2026-01-13)');
+      setStartDateError('Date invalide — format attendu : AAAA-MM-JJ');
       return;
     }
+    setStartDateError('');
     setSavingDate(true);
     await upsertImfSeason(winsSeasonYear, editStartDate);
     await loadImfSeasons();
     setSavingDate(false);
-    Alert.alert('Sauvegardé', 'Date de début mise à jour.');
+    setStartDateSaved(true);
+    setTimeout(() => setStartDateSaved(false), 2000);
   };
 
   const handleDeleteWin = (win: ManualWin) => {
-    Alert.alert(
-      'Supprimer cette victoire ?',
-      `${win.mapName ?? 'Carte inconnue'} — Finisher : ${win.finisher ?? '—'}`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: async () => {
-          await deleteManualWin(win.id);
-          loadImfSeasons();
-        }},
-      ]
-    );
+    setWinToDelete(win);
+  };
+
+  const confirmDeleteWin = async () => {
+    if (!winToDelete) return;
+    await deleteManualWin(winToDelete.id);
+    setWinToDelete(null);
+    loadImfSeasons();
   };
 
   const handleOpenAddWin = () => {
@@ -159,9 +170,10 @@ export default function SettingsScreen() {
     if (!winsSeasonYear) return;
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (selectedDate && !dateRegex.test(selectedDate)) {
-      Alert.alert('Date invalide', 'Format attendu : AAAA-MM-JJ (ex: 2025-03-15)');
+      setWinFormError('Date invalide — format attendu : AAAA-MM-JJ');
       return;
     }
+    setWinFormError('');
     if (editingWin) {
       await updateManualWin(editingWin.id, selectedMap, selectedFinisher, selectedDate || null);
     } else {
@@ -179,18 +191,16 @@ export default function SettingsScreen() {
   };
 
   const handleChangePlayer = () => {
-    Alert.alert(
-      'Changer de joueur',
-      'Qui es-tu ?',
-      GROUP_PLAYERS.map((name) => ({
-        text: getDisplayName(name),
-        onPress: async () => {
-          await setCurrentPlayer(name);
-          setPlayer(name);
-          registerPushToken(name);
-        },
-      }))
-    );
+    setShowPlayerModal(true);
+  };
+
+  const selectPlayer = async (name: string) => {
+    await setCurrentPlayer(name);
+    setPlayer(name);
+    registerPushToken(name);
+    const prefs = await getNotificationPrefs(name);
+    setNotifPrefs(prefs);
+    setShowPlayerModal(false);
   };
 
   const handleSaveNotifPrefs = async (prefs: NotificationPrefs) => {
@@ -211,7 +221,6 @@ export default function SettingsScreen() {
     } catch (e: any) {
       const msg = e?.message ?? String(e) ?? 'Erreur inconnue';
       setSyncMsg(`Erreur: ${msg}`);
-      Alert.alert('Erreur de sync', msg);
     }
     setSyncing(false);
   };
@@ -603,6 +612,8 @@ export default function SettingsScreen() {
                   }
                 </TouchableOpacity>
               </View>
+              {startDateError ? <Text style={styles.formError}>{startDateError}</Text> : null}
+              {startDateSaved ? <Text style={styles.formSuccess}>✓ Date de début mise à jour</Text> : null}
               <Text style={styles.startDateHint}>
                 La fin de la saison précédente sera ajustée automatiquement.
               </Text>
@@ -647,6 +658,7 @@ export default function SettingsScreen() {
               maxLength={10}
             />
             <Text style={styles.inputHint}>Format : AAAA-MM-JJ</Text>
+            {winFormError ? <Text style={styles.formError}>{winFormError}</Text> : null}
 
             <Text style={styles.selectorLabel}>FINISHER</Text>
             <View style={styles.chipGrid}>
@@ -708,16 +720,64 @@ export default function SettingsScreen() {
               maxLength={10}
             />
             <Text style={styles.inputHint}>Format : AAAA-MM-JJ</Text>
+            {seasonFormError ? <Text style={styles.formError}>{seasonFormError}</Text> : null}
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); }}
+                onPress={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); setSeasonFormError(''); }}
               >
                 <Text style={styles.cancelBtnText}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.submitBtn} onPress={handleAddSeason}>
                 <Text style={styles.submitBtnText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal changer de joueur ── */}
+      <Modal visible={showPlayerModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Qui es-tu ?</Text>
+              <TouchableOpacity onPress={() => setShowPlayerModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {GROUP_PLAYERS.map((name) => (
+              <TouchableOpacity
+                key={name}
+                style={[styles.playerPickRow, currentPlayer === name && styles.playerPickRowActive]}
+                onPress={() => selectPlayer(name)}
+              >
+                <View style={[styles.playerPickDot, { backgroundColor: PLAYER_COLORS[name] }]} />
+                <Text style={[styles.playerPickName, currentPlayer === name && styles.playerPickNameActive]}>
+                  {getDisplayName(name)}
+                </Text>
+                {currentPlayer === name && <Ionicons name="checkmark" size={18} color={Colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal supprimer victoire ── */}
+      <Modal visible={!!winToDelete} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Supprimer cette victoire ?</Text>
+            <Text style={[styles.infoValue, { marginVertical: 12 }]}>
+              {winToDelete?.mapName ?? 'Carte inconnue'}{winToDelete?.finisher ? ` — ${getDisplayName(winToDelete.finisher)}` : ''}
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setWinToDelete(null)}>
+                <Text style={styles.cancelBtnText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.submitBtn, { backgroundColor: Colors.danger }]} onPress={confirmDeleteWin}>
+                <Text style={styles.submitBtnText}>Supprimer</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -940,6 +1000,18 @@ const styles = StyleSheet.create({
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
   diagResultLine: { fontSize: 14, lineHeight: 22, marginBottom: 4 },
+  formError: { fontSize: 12, color: Colors.danger, marginTop: 6, fontStyle: 'italic' },
+  formSuccess: { fontSize: 12, color: Colors.win, marginTop: 6, fontWeight: '600' },
+  playerPickRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 14, borderRadius: 10, marginBottom: 6,
+    borderWidth: 1, borderColor: Colors.cardBorder,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  playerPickRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + '11' },
+  playerPickDot: { width: 12, height: 12, borderRadius: 6 },
+  playerPickName: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  playerPickNameActive: { color: Colors.text, fontWeight: '800' },
   notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
   notifInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   notifLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
