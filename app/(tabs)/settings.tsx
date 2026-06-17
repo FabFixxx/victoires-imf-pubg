@@ -30,17 +30,17 @@ import { PLAYER_COLORS, getNotificationPrefs, saveNotificationPrefs, Notificatio
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
 
-// Converts YYYY-MM-DD (ISO/DB) to DD-MM-YYYY (display)
+// Converts YYYY-MM-DD (ISO/DB) to DD/MM/YYYY (display)
 const toDisplayDate = (iso: string) => {
   if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
   const [y, m, d] = iso.split('-');
-  return `${d}-${m}-${y}`;
+  return `${d}/${m}/${y}`;
 };
 
-// Converts DD-MM-YYYY (user input) to YYYY-MM-DD (ISO/DB)
+// Converts DD/MM/YYYY (user input) to YYYY-MM-DD (ISO/DB)
 const toIsoDate = (display: string) => {
-  if (!display || !/^\d{2}-\d{2}-\d{4}$/.test(display)) return display;
-  const [d, m, y] = display.split('-');
+  if (!display || !/^\d{2}\/\d{2}\/\d{4}$/.test(display)) return display;
+  const [d, m, y] = display.split('/');
   return `${y}-${m}-${d}`;
 };
 
@@ -116,9 +116,9 @@ export default function SettingsScreen() {
       setSeasonFormError('Année invalide (entre 2020 et 2030)');
       return;
     }
-    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(editDate)) {
-      setSeasonFormError('Date invalide — format attendu : JJ-MM-AAAA');
+      setSeasonFormError('Date invalide — format attendu : JJ/MM/AAAA');
       return;
     }
     setSeasonFormError('');
@@ -139,9 +139,9 @@ export default function SettingsScreen() {
 
   const handleSaveStartDate = async () => {
     if (!winsSeasonYear) return;
-    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (!dateRegex.test(editStartDate)) {
-      setStartDateError('Date invalide — format attendu : JJ-MM-AAAA');
+      setStartDateError('Date invalide — format attendu : JJ/MM/AAAA');
       return;
     }
     setStartDateError('');
@@ -182,9 +182,9 @@ export default function SettingsScreen() {
 
   const handleSaveWin = async () => {
     if (!winsSeasonYear) return;
-    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
     if (selectedDate && !dateRegex.test(selectedDate)) {
-      setWinFormError('Date invalide — format attendu : JJ-MM-AAAA');
+      setWinFormError('Date invalide — format attendu : JJ/MM/AAAA');
       return;
     }
     setWinFormError('');
@@ -610,7 +610,7 @@ export default function SettingsScreen() {
               <View style={styles.startDateRow}>
                 <TextInput
                   style={styles.startDateInput}
-                  placeholder="JJ-MM-AAAA"
+                  placeholder="JJ/MM/AAAA"
                   placeholderTextColor={Colors.textMuted}
                   value={editStartDate}
                   onChangeText={setEditStartDate}
@@ -666,13 +666,13 @@ export default function SettingsScreen() {
             <Text style={styles.selectorLabel}>DATE (optionnel)</Text>
             <TextInput
               style={styles.input}
-              placeholder="ex: 15-03-2025"
+              placeholder="ex: 15/03/2025"
               placeholderTextColor={Colors.textMuted}
               value={selectedDate}
               onChangeText={setSelectedDate}
               maxLength={10}
             />
-            <Text style={styles.inputHint}>Format : JJ-MM-AAAA</Text>
+            <Text style={styles.inputHint}>Format : JJ/MM/AAAA</Text>
             {winFormError ? <Text style={styles.formError}>{winFormError}</Text> : null}
 
             <Text style={styles.selectorLabel}>FINISHER</Text>
@@ -728,13 +728,13 @@ export default function SettingsScreen() {
             <Text style={styles.inputLabel}>Date de début</Text>
             <TextInput
               style={styles.input}
-              placeholder="ex: 13-01-2026"
+              placeholder="ex: 13/01/2026"
               placeholderTextColor={Colors.textMuted}
               value={editDate}
               onChangeText={setEditDate}
               maxLength={10}
             />
-            <Text style={styles.inputHint}>Format : JJ-MM-AAAA</Text>
+            <Text style={styles.inputHint}>Format : JJ/MM/AAAA</Text>
             {seasonFormError ? <Text style={styles.formError}>{seasonFormError}</Text> : null}
 
             <View style={styles.modalButtons}>
