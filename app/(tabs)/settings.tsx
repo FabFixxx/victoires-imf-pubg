@@ -57,6 +57,10 @@ export default function SettingsScreen() {
   const [editStartDate, setEditStartDate] = useState('');
   const [savingDate, setSavingDate] = useState(false);
 
+  // Modal diagnostic
+  const [diagResult, setDiagResult] = useState<string[]>([]);
+  const [showDiagModal, setShowDiagModal] = useState(false);
+
   // Modal ajout/édition d'une victoire individuelle
   const [showAddWinModal, setShowAddWinModal] = useState(false);
   const [editingWin, setEditingWin] = useState<ManualWin | null>(null);
@@ -231,7 +235,8 @@ export default function SettingsScreen() {
     } catch (e: any) {
       results.push(`PUBG API ❌ ${e?.message}`);
     }
-    Alert.alert('Diagnostic', results.join('\n\n'));
+    setDiagResult(results);
+    setShowDiagModal(true);
   };
 
   const handleOpenChangelog = async () => {
@@ -718,6 +723,28 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Modal diagnostic ── */}
+      <Modal visible={showDiagModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Diagnostic connexion</Text>
+              <TouchableOpacity onPress={() => setShowDiagModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {diagResult.map((line, i) => (
+              <Text key={i} style={[styles.diagResultLine, { color: line.includes('❌') ? Colors.danger : Colors.win }]}>
+                {line}
+              </Text>
+            ))}
+            <TouchableOpacity style={[styles.submitBtn, { marginTop: 20 }]} onPress={() => setShowDiagModal(false)}>
+              <Text style={styles.submitBtnText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -912,6 +939,7 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
+  diagResultLine: { fontSize: 14, lineHeight: 22, marginBottom: 4 },
   notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
   notifInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   notifLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
