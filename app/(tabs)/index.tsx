@@ -54,10 +54,7 @@ function avg(total: number, matches: number): string {
 
 function MatchCard({ match, title }: { match: LastMatch; title: string }) {
   const formatDate = (date: Date) =>
-    date.toLocaleDateString('fr-FR', {
-      weekday: 'short', day: 'numeric', month: 'short',
-      hour: '2-digit', minute: '2-digit',
-    });
+    `${date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
 
   const totalKills = match.players.reduce((s, p) => s + p.kills, 0);
   const totalAssists = match.players.reduce((s, p) => s + p.assists, 0);
