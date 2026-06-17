@@ -1,12 +1,12 @@
 #!/bin/bash
 # Backup Supabase → Raspberry Pi
-# Cron : 0 2 * * * /home/pi/scripts/backup-supabase.sh >> /home/pi/scripts/backup.log 2>&1
+# Cron : 0 1 * * * /home/fabfixpi/scripts/backup-supabase.sh >> /home/fabfixpi/scripts/backup.log 2>&1
 
 # ── Config ──────────────────────────────────────────────────────────
-DB_HOST="db.wknxynnoybniifgbjvdt.supabase.co"
+DB_HOST="aws-1-eu-central-1.pooler.supabase.com"
 DB_PORT="5432"
 DB_NAME="postgres"
-DB_USER="postgres"
+DB_USER="postgres.wknxynnoybniifgbjvdt"
 # Mot de passe lu depuis un fichier sécurisé (chmod 600)
 # Créer avec : echo "DB_PASS=ton_mot_de_passe" > ~/.supabase_backup_env && chmod 600 ~/.supabase_backup_env
 ENV_FILE="$HOME/.supabase_backup_env"
@@ -27,12 +27,8 @@ mkdir -p "$BACKUP_DIR"
 
 echo "[$(date)] Démarrage backup..."
 
-# Forcer IPv4 (Supabase peut répondre en IPv6 non supporté)
-DB_HOST_IPV4=$(getent ahostsv4 "$DB_HOST" 2>/dev/null | head -1 | awk '{print $1}')
-CONNECT_HOST="${DB_HOST_IPV4:-$DB_HOST}"
-
 PGPASSWORD="$DB_PASS" pg_dump \
-  -h "$CONNECT_HOST" \
+  -h "$DB_HOST" \
   -p "$DB_PORT" \
   -U "$DB_USER" \
   -d "$DB_NAME" \
