@@ -549,8 +549,8 @@ export default function SettingsScreen() {
                       </View>
                       {win.finisher && (
                         <View style={styles.winFinisher}>
-                          <Ionicons name="skull-outline" size={11} color={Colors.win} />
-                          <Text style={styles.winFinisherText}>Dernier kill : {win.finisher}</Text>
+                          <Ionicons name="skull-outline" size={11} color={Colors.textMuted} />
+                          <Text style={styles.winFinisherText}>Dernier kill : <Text style={styles.winFinisherName}>{win.finisher}</Text></Text>
                         </View>
                       )}
                     </View>
@@ -840,7 +840,8 @@ const styles = StyleSheet.create({
   winMap: { fontSize: 14, fontWeight: '700', color: Colors.text },
   winDate: { fontSize: 11, color: Colors.textMuted },
   winFinisher: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  winFinisherText: { fontSize: 12, color: Colors.win, fontWeight: '600' },
+  winFinisherText: { fontSize: 12, color: Colors.textMuted },
+  winFinisherName: { fontWeight: '700', color: Colors.win },
   editWinBtn: {
     width: 30, height: 30, borderRadius: 15,
     backgroundColor: Colors.primary + '22',
