@@ -46,12 +46,12 @@ function addMonths(date: string, months: number): string {
   return d.toISOString().split('T')[0];
 }
 
+const JOURS_LONG = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const MOIS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
-  const weekday = d.toLocaleDateString('fr-FR', { weekday: 'long' });
-  const day = d.getDate();
-  const month = d.toLocaleDateString('fr-FR', { month: 'long' }).toLowerCase();
-  return `${weekday} ${day} ${month}`;
+  return `${JOURS_LONG[d.getDay()]} ${d.getDate()} ${MOIS_LONG[d.getMonth()]}`;
 }
 
 function getMondayOf(dateStr: string): string {
