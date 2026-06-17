@@ -29,6 +29,9 @@ interface RecentMatch {
   mapName?: string;
 }
 
+const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
 export default function StatsScreen() {
   const [selected, setSelected] = useState<PlayerName>(GROUP_PLAYERS[0]);
   const [stats, setStats] = useState<Record<string, PlayerStats>>({});
@@ -85,9 +88,9 @@ export default function StatsScreen() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+    const weekday = JOURS[d.getDay()];
     const day = d.getDate();
-    const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase();
+    const month = MOIS[d.getMonth()];
     const h = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${weekday} ${day} ${month} ${h}:${min}`;

@@ -52,11 +52,14 @@ function avg(total: number, matches: number): string {
   return (total / matches).toFixed(1);
 }
 
+const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
 function MatchCard({ match, title }: { match: LastMatch; title: string }) {
   const formatDate = (date: Date) => {
-    const weekday = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+    const weekday = JOURS[date.getDay()];
     const day = date.getDate();
-    const month = date.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase();
+    const month = MOIS[date.getMonth()];
     const h = String(date.getHours()).padStart(2, '0');
     const m = String(date.getMinutes()).padStart(2, '0');
     return `${weekday} ${day} ${month} ${h}:${m}`;
@@ -406,7 +409,7 @@ export default function DashboardScreen() {
                   <View style={[styles.teamMatchIndicator, match.is_win ? styles.teamMatchWin : styles.teamMatchLoss]} />
                   <View style={styles.teamMatchInfo}>
                     <Text style={styles.teamMatchDate}>
-                      {(() => { const d = new Date(match.match_date); const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }); const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase(); const h = String(d.getHours()).padStart(2, '0'); const m = String(d.getMinutes()).padStart(2, '0'); return `${weekday} ${d.getDate()} ${month} ${h}:${m}`; })()}
+                      {(() => { const d = new Date(match.match_date); const h = String(d.getHours()).padStart(2, '0'); const m = String(d.getMinutes()).padStart(2, '0'); return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${h}:${m}`; })()}
                       {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
                     <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
