@@ -30,6 +30,20 @@ import { PLAYER_COLORS, getNotificationPrefs, saveNotificationPrefs, Notificatio
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
 
+// Converts YYYY-MM-DD (ISO/DB) to DD-MM-YYYY (display)
+const toDisplayDate = (iso: string) => {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const [y, m, d] = iso.split('-');
+  return `${d}-${m}-${y}`;
+};
+
+// Converts DD-MM-YYYY (user input) to YYYY-MM-DD (ISO/DB)
+const toIsoDate = (display: string) => {
+  if (!display || !/^\d{2}-\d{2}-\d{4}$/.test(display)) return display;
+  const [d, m, y] = display.split('-');
+  return `${y}-${m}-${d}`;
+};
+
 export default function SettingsScreen() {
   const [currentPlayer, setPlayer] = useState<string | null>(null);
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
@@ -102,13 +116,13 @@ export default function SettingsScreen() {
       setSeasonFormError('Année invalide (entre 2020 et 2030)');
       return;
     }
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
     if (!dateRegex.test(editDate)) {
-      setSeasonFormError('Date invalide — format attendu : AAAA-MM-JJ');
+      setSeasonFormError('Date invalide — format attendu : JJ-MM-AAAA');
       return;
     }
     setSeasonFormError('');
-    await upsertImfSeason(year, editDate);
+    await upsertImfSeason(year, toIsoDate(editDate));
     setShowSeasonModal(false);
     setEditYear('');
     setEditDate('');
@@ -119,20 +133,20 @@ export default function SettingsScreen() {
   const handleOpenWinsModal = (year: number) => {
     setWinsSeasonYear(year);
     const season = imfSeasons.find((s) => s.year === year);
-    setEditStartDate(season?.startDate ?? '');
+    setEditStartDate(toDisplayDate(season?.startDate ?? ''));
     setShowWinsModal(true);
   };
 
   const handleSaveStartDate = async () => {
     if (!winsSeasonYear) return;
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
     if (!dateRegex.test(editStartDate)) {
-      setStartDateError('Date invalide — format attendu : AAAA-MM-JJ');
+      setStartDateError('Date invalide — format attendu : JJ-MM-AAAA');
       return;
     }
     setStartDateError('');
     setSavingDate(true);
-    await upsertImfSeason(winsSeasonYear, editStartDate);
+    await upsertImfSeason(winsSeasonYear, toIsoDate(editStartDate));
     await loadImfSeasons();
     setSavingDate(false);
     setStartDateSaved(true);
@@ -162,22 +176,23 @@ export default function SettingsScreen() {
     setEditingWin(win);
     setSelectedMap(win.mapName);
     setSelectedFinisher(win.finisher);
-    setSelectedDate(win.winDate ?? '');
+    setSelectedDate(toDisplayDate(win.winDate ?? ''));
     setShowAddWinModal(true);
   };
 
   const handleSaveWin = async () => {
     if (!winsSeasonYear) return;
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const dateRegex = /^\d{2}-\d{2}-\d{4}$/;
     if (selectedDate && !dateRegex.test(selectedDate)) {
-      setWinFormError('Date invalide — format attendu : AAAA-MM-JJ');
+      setWinFormError('Date invalide — format attendu : JJ-MM-AAAA');
       return;
     }
     setWinFormError('');
+    const isoDate = selectedDate ? toIsoDate(selectedDate) : null;
     if (editingWin) {
-      await updateManualWin(editingWin.id, selectedMap, selectedFinisher, selectedDate || null);
+      await updateManualWin(editingWin.id, selectedMap, selectedFinisher, isoDate);
     } else {
-      await addManualWin(winsSeasonYear, selectedMap, selectedFinisher, selectedDate || null);
+      await addManualWin(winsSeasonYear, selectedMap, selectedFinisher, isoDate);
     }
     setShowAddWinModal(false);
     loadImfSeasons();
@@ -595,7 +610,7 @@ export default function SettingsScreen() {
               <View style={styles.startDateRow}>
                 <TextInput
                   style={styles.startDateInput}
-                  placeholder="AAAA-MM-JJ"
+                  placeholder="JJ-MM-AAAA"
                   placeholderTextColor={Colors.textMuted}
                   value={editStartDate}
                   onChangeText={setEditStartDate}
@@ -651,13 +666,13 @@ export default function SettingsScreen() {
             <Text style={styles.selectorLabel}>DATE (optionnel)</Text>
             <TextInput
               style={styles.input}
-              placeholder="ex: 2025-03-15"
+              placeholder="ex: 15-03-2025"
               placeholderTextColor={Colors.textMuted}
               value={selectedDate}
               onChangeText={setSelectedDate}
               maxLength={10}
             />
-            <Text style={styles.inputHint}>Format : AAAA-MM-JJ</Text>
+            <Text style={styles.inputHint}>Format : JJ-MM-AAAA</Text>
             {winFormError ? <Text style={styles.formError}>{winFormError}</Text> : null}
 
             <Text style={styles.selectorLabel}>FINISHER</Text>
@@ -713,13 +728,13 @@ export default function SettingsScreen() {
             <Text style={styles.inputLabel}>Date de début</Text>
             <TextInput
               style={styles.input}
-              placeholder="ex: 2026-01-13"
+              placeholder="ex: 13-01-2026"
               placeholderTextColor={Colors.textMuted}
               value={editDate}
               onChangeText={setEditDate}
               maxLength={10}
             />
-            <Text style={styles.inputHint}>Format : AAAA-MM-JJ</Text>
+            <Text style={styles.inputHint}>Format : JJ-MM-AAAA</Text>
             {seasonFormError ? <Text style={styles.formError}>{seasonFormError}</Text> : null}
 
             <View style={styles.modalButtons}>
