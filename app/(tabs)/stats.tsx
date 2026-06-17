@@ -85,9 +85,11 @@ export default function StatsScreen() {
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    const date = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+    const day = d.getDate();
+    const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase();
     const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${date} ${time}`;
+    return `${weekday} ${day} ${month} ${time}`;
   };
 
   return (

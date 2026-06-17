@@ -53,8 +53,13 @@ function avg(total: number, matches: number): string {
 }
 
 function MatchCard({ match, title }: { match: LastMatch; title: string }) {
-  const formatDate = (date: Date) =>
-    `${date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  const formatDate = (date: Date) => {
+    const weekday = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+    const day = date.getDate();
+    const month = date.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase();
+    const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${weekday} ${day} ${month} ${time}`;
+  };
 
   const totalKills = match.players.reduce((s, p) => s + p.kills, 0);
   const totalAssists = match.players.reduce((s, p) => s + p.assists, 0);
@@ -400,7 +405,7 @@ export default function DashboardScreen() {
                   <View style={[styles.teamMatchIndicator, match.is_win ? styles.teamMatchWin : styles.teamMatchLoss]} />
                   <View style={styles.teamMatchInfo}>
                     <Text style={styles.teamMatchDate}>
-                      {(() => { const d = new Date(match.match_date); return `${d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`; })()}
+                      {(() => { const d = new Date(match.match_date); const weekday = d.toLocaleDateString('fr-FR', { weekday: 'short' }); const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toLowerCase(); const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); return `${weekday} ${d.getDate()} ${month} ${time}`; })()}
                       {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
                     <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
