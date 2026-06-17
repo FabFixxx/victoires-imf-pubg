@@ -16,7 +16,7 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 source "$ENV_FILE"
 
-BACKUP_DIR="/home/pi/backups/supabase"
+BACKUP_DIR="$HOME/backups/supabase"
 RETENTION_DAYS=30
 # ────────────────────────────────────────────────────────────────────
 
@@ -27,8 +27,12 @@ mkdir -p "$BACKUP_DIR"
 
 echo "[$(date)] Démarrage backup..."
 
+# Forcer IPv4 (Supabase peut répondre en IPv6 non supporté)
+DB_HOST_IPV4=$(getent ahostsv4 "$DB_HOST" 2>/dev/null | head -1 | awk '{print $1}')
+CONNECT_HOST="${DB_HOST_IPV4:-$DB_HOST}"
+
 PGPASSWORD="$DB_PASS" pg_dump \
-  -h "$DB_HOST" \
+  -h "$CONNECT_HOST" \
   -p "$DB_PORT" \
   -U "$DB_USER" \
   -d "$DB_NAME" \
