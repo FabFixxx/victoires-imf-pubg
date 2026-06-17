@@ -550,7 +550,7 @@ export default function SettingsScreen() {
                       {win.finisher && (
                         <View style={styles.winFinisher}>
                           <Ionicons name="skull-outline" size={11} color={Colors.win} />
-                          <Text style={styles.winFinisherText}>{win.finisher}</Text>
+                          <Text style={styles.winFinisherText}>Dernier kill : {win.finisher}</Text>
                         </View>
                       )}
                     </View>
