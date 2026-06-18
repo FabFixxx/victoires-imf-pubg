@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   bestDateRowChosen: { backgroundColor: '#FFD70011' },
   bestDateInfo: { flex: 1, gap: 6 },
   bestDateTitleRow: { flexDirection: 'row', alignItems: 'center' },
-  bestDateLabel: { fontSize: 13, fontWeight: '600', color: Colors.text, textTransform: 'capitalize' },
+  bestDateLabel: { fontSize: 13, fontWeight: '600', color: Colors.text },
   bestDateLabelPerfect: { color: Colors.win },
   bestDateDots: { flexDirection: 'row', gap: 4 },
   playerDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5 },
