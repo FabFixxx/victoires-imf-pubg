@@ -286,7 +286,7 @@ export default function CalendarScreen() {
         </View>
 
         {/* Meilleures dates semaine prochaine */}
-        <View style={styles.section}>
+        <View style={[styles.section, { marginBottom: 16 }]}>
           <Text style={styles.sectionTitle}>MEILLEURES DATES SEMAINE PROCHAINE ({nextWeekLabel})</Text>
           <View style={styles.card}>
             {bestNextWeek.length === 0 ? (
