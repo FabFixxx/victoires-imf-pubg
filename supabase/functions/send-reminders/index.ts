@@ -56,16 +56,64 @@ function getParisDateInfo() {
   }
 }
 
+async function sendPushToAll(
+  supabase: ReturnType<typeof createClient>,
+  players: any[],
+  title: string,
+  body: string,
+  type: string
+) {
+  const payload = { title, body }
+
+  // Expo Push (Android)
+  const expoTokens = players.map(p => p.expo_push_token).filter(Boolean)
+  if (expoTokens.length > 0) {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        expoTokens.map((token: string) => ({
+          to: token,
+          ...payload,
+          data: { type },
+          channelId: 'sessions',
+        }))
+      ),
+    })
+  }
+
+  // Web Push (iOS PWA) — uniquement pour les joueurs sans token Expo
+  if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+    const usernames = players.filter(p => !p.expo_push_token).map(p => p.username)
+    if (usernames.length > 0) {
+      const { data: webSubs } = await supabase
+        .from('web_push_subscriptions')
+        .select('username, endpoint, subscription')
+        .in('username', usernames)
+
+      for (const sub of webSubs ?? []) {
+        try {
+          const subJson = sub.subscription as any
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
+            JSON.stringify(payload)
+          )
+        } catch (e) {
+          console.warn(`Web push failed for ${sub.username}:`, e)
+        }
+      }
+    }
+  }
+}
+
 Deno.serve(async (_req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
   const { hour, dayOfWeek, todayStr, nextWeekMonday, nextWeekSunday } = getParisDateInfo()
 
-  // Seulement Dimanche (0) à Vendredi (5)
   if (dayOfWeek === 6) {
     return new Response(JSON.stringify({ skipped: 'Samedi' }), { status: 200 })
   }
 
-  // Récupérer les joueurs
   const { data: players } = await supabase
     .from('players')
     .select('username, expo_push_token')
@@ -74,12 +122,50 @@ Deno.serve(async (_req) => {
     return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
   }
 
-  // Préférences de notification
   const { data: prefs } = await supabase
     .from('notification_preferences')
-    .select('player_username, reminder_hour')
+    .select('player_username, reminder_hour, game_day_hour')
 
-  // Qui a déjà répondu pour la semaine prochaine
+  const { data: sentTodayLog } = await supabase
+    .from('notification_log')
+    .select('type, key')
+    .gte('sent_at', todayStr + 'T00:00:00Z')
+
+  const sentTodaySet = new Set((sentTodayLog ?? []).map((s: any) => `${s.type}:${s.key}`))
+
+  const result: Record<string, any> = { hour, dayOfWeek }
+
+  // --- 1. Notif jour de jeu ---
+  const { data: chosenDate } = await supabase
+    .from('chosen_dates')
+    .select('chosen_date')
+    .eq('chosen_date', todayStr)
+    .maybeSingle()
+
+  if (chosenDate) {
+    const gameDayKey = `game_day:${todayStr}`
+    if (!sentTodaySet.has(gameDayKey)) {
+      // Utilise le game_day_hour du premier joueur qui a une préf (ou 18h par défaut)
+      const gameDayHour = prefs?.find((p: any) => p.game_day_hour != null)?.game_day_hour ?? 18
+      if (hour === gameDayHour) {
+        await sendPushToAll(
+          supabase,
+          players,
+          '🎮 Ce soir c\'est soirée Victoires IMF !',
+          'On se retrouve ce soir pour chasser les wins 🏆 Préparez-vous !',
+          'game_day'
+        )
+        await supabase.from('notification_log').insert({
+          type: 'game_day',
+          key: todayStr,
+          sent_at: new Date().toISOString(),
+        })
+        result.game_day_sent = true
+      }
+    }
+  }
+
+  // --- 2. Rappel disponibilités ---
   const { data: availabilities } = await supabase
     .from('player_availability')
     .select('player_username')
@@ -96,16 +182,6 @@ Deno.serve(async (_req) => {
     ...(noAvails ?? []).map((a: any) => a.player_username),
   ])
 
-  // Notifications déjà envoyées aujourd'hui
-  const { data: sentToday } = await supabase
-    .from('notification_log')
-    .select('key')
-    .eq('type', 'dispo_reminder')
-    .gte('sent_at', todayStr + 'T00:00:00Z')
-
-  const sentKeys = new Set((sentToday ?? []).map((s: any) => s.key))
-
-  // Joueurs qui doivent recevoir une notif cette heure-ci
   const playersToNotify: string[] = []
   const keysToLog: string[] = []
 
@@ -117,79 +193,30 @@ Deno.serve(async (_req) => {
     if (hour !== reminderHour) continue
 
     const key = `${todayStr}_${player.username}`
-    if (sentKeys.has(key)) continue
+    if (sentTodaySet.has(`dispo_reminder:${key}`)) continue
 
     playersToNotify.push(player.username)
     keysToLog.push(key)
   }
 
-  if (playersToNotify.length === 0) {
-    return new Response(JSON.stringify({ sent: 0, hour, dayOfWeek }), { status: 200 })
+  if (playersToNotify.length > 0) {
+    const playersFiltered = players.filter(p => playersToNotify.includes(p.username))
+    await sendPushToAll(
+      supabase,
+      playersFiltered,
+      '🎮 Victoires IMF',
+      'Renseigne tes disponibilités pour la semaine prochaine !',
+      'dispo_reminder'
+    )
+    await supabase.from('notification_log').insert(
+      keysToLog.map(key => ({
+        type: 'dispo_reminder',
+        key,
+        sent_at: new Date().toISOString(),
+      }))
+    )
+    result.dispo_sent = playersToNotify.length
   }
 
-  const notifPayload = {
-    title: '🎮 Victoires IMF',
-    body: 'Renseigne tes disponibilités pour la semaine prochaine !',
-  }
-
-  // Expo Push (Android)
-  const expoTokens = players
-    .filter(p => playersToNotify.includes(p.username) && p.expo_push_token)
-    .map(p => p.expo_push_token)
-
-  if (expoTokens.length > 0) {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        expoTokens.map(token => ({
-          to: token,
-          ...notifPayload,
-          data: { type: 'dispo_reminder' },
-          channelId: 'sessions',
-        }))
-      ),
-    })
-  }
-
-  // Web Push (iOS PWA) — uniquement pour les joueurs sans token Expo
-  const playersWithoutExpoToken = playersToNotify.filter(
-    u => !players.find(p => p.username === u)?.expo_push_token
-  )
-
-  if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && playersWithoutExpoToken.length > 0) {
-    const { data: webSubs } = await supabase
-      .from('web_push_subscriptions')
-      .select('username, endpoint, subscription')
-      .in('username', playersWithoutExpoToken)
-
-    for (const sub of webSubs ?? []) {
-      try {
-        const subJson = sub.subscription as any
-        await webpush.sendNotification(
-          {
-            endpoint: sub.endpoint,
-            keys: {
-              p256dh: subJson.keys?.p256dh,
-              auth: subJson.keys?.auth,
-            },
-          },
-          JSON.stringify(notifPayload)
-        )
-      } catch (e) {
-        console.warn(`Web push failed for ${sub.username}:`, e)
-      }
-    }
-  }
-
-  // Log des notifications envoyées
-  await supabase.from('notification_log').insert(
-    keysToLog.map(key => ({
-      type: 'dispo_reminder',
-      key,
-      sent_at: new Date().toISOString(),
-    }))
-  )
-
-  return new Response(JSON.stringify({ sent: playersToNotify.length, players: keysToLog, hour, dayOfWeek }), { status: 200 })
+  return new Response(JSON.stringify(result), { status: 200 })
 })
