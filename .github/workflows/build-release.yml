@@ -41,10 +41,10 @@ jobs:
       - name: Build APK
         id: build
         run: |
-          OUTPUT=$(eas build --platform android --profile preview --non-interactive --wait --json 2>&1)
-          echo "$OUTPUT"
-          BUILD_URL=$(echo "$OUTPUT" | grep -o 'https://expo\.dev[^"]*\.apk' | head -1)
-          echo "artifact_url=$(echo $OUTPUT | jq -r '.[0].artifacts.buildUrl' 2>/dev/null)" >> $GITHUB_OUTPUT
+          eas build --platform android --profile preview --non-interactive --wait 2>&1 | tee build_output.txt
+          ARTIFACT_URL=$(grep -oP 'https://\S+\.apk' build_output.txt | head -1)
+          echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
+          cat build_output.txt
 
       - name: Download APK
         run: |
