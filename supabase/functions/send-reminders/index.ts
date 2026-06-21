@@ -151,8 +151,8 @@ Deno.serve(async (_req) => {
         await sendPushToAll(
           supabase,
           players,
-          '🎮 Ce soir c\'est soirée Victoires IMF !',
-          'On se retrouve ce soir pour chasser les wins 🏆 Préparez-vous !',
+          '🎮 Victoires IMF - Soirée ce soir !',
+          'N\'oublies pas que ce soir on gagne ! 🏆',
           'game_day'
         )
         await supabase.from('notification_log').insert({
