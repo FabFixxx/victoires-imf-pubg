@@ -57,8 +57,9 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             ## Nouveautés
-            - 🔔 Correction des notifications push Android : le token n'était jamais enregistré au démarrage pour les utilisateurs existants
-            - 📲 L'enregistrement du token se fait maintenant automatiquement à l'ouverture de l'app
-            - 🍎 Support des notifications push pour les utilisateurs iOS (via le site web ajouté à l'écran d'accueil)
-            - ✅ Correction de la notification "tout le monde a répondu" sur iOS web
-            - 📅 Correction des rappels de disponibilités hebdomadaires sur iOS web
+            - 🔔 Correction des notifications push Android : le token n'était jamais enregistré au démarrage
+            - 📲 Token push enregistré automatiquement à l'ouverture de l'app
+            - 🍎 Support des notifications push pour iOS (site web ajouté à l'écran d'accueil)
+            - ❌ Rappel dispo : "Tu n'as pas encore renseigné tes dispos pour la semaine prochaine !"
+            - ✅ Notif quand les 4 ont répondu avec la ou les meilleures dates
+            - 🎮 Notif le jour de la session : "N'oublies pas que ce soir on gagne ! 🏆"
