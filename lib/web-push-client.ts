@@ -34,6 +34,11 @@ export async function registerWebPush(username: string): Promise<void> {
   }
 }
 
+// Stub — le rappel dispo est géré côté serveur par l'Edge Function send-reminders
+export async function sendWebPush(_title: string, _body: string): Promise<void> {
+  return;
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');

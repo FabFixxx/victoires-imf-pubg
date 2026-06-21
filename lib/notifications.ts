@@ -87,10 +87,10 @@ export async function scheduleSundayReminder(): Promise<void> {
         channelId: 'sessions',
       },
       trigger: {
-        weekday: 1, // Dimanche
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: 1, // Dimanche (1=Dim, 2=Lun, ..., 7=Sam)
         hour: 19,
         minute: 0,
-        repeats: true,
       },
     });
   } catch (e) {
