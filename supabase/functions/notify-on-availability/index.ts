@@ -92,21 +92,31 @@ async function setChosenDateAuto(supabase: ReturnType<typeof createClient>, week
   )
 }
 
-// Construit le texte de notification des meilleures dates
-function buildBestDatesBody(fourVote: string[], threeVote: string[]): string {
-  if (fourVote.length > 0) {
-    const main = formatDate(fourVote[0])
-    const others = fourVote.slice(1)
-    let body = `Date retenue : ${main}.`
-    if (others.length > 0) {
-      body += ` Autres dispos éventuelles : ${others.map(formatDate).join(', ')}.`
+// Construit le titre et le corps de la notification
+function buildNotif(fourVote: string[], threeVote: string[]): { title: string; body: string } {
+  if (fourVote.length === 1) {
+    return {
+      title: '✅ Session IMF confirmée !',
+      body: `Tout le monde est dispo le ${formatDate(fourVote[0])} !`,
     }
-    return body
+  }
+  if (fourVote.length > 1) {
+    const [first, ...others] = fourVote.map(formatDate)
+    return {
+      title: '✅ Session IMF confirmée !',
+      body: `Plusieurs dates possibles : ${[first, ...others].join(', ')}. La date retenue est le ${first} !`,
+    }
   }
   if (threeVote.length > 0) {
-    return `Aucune date avec 4 disponibilités. 3 dispos : ${threeVote.map(formatDate).join(', ')}.`
+    return {
+      title: '✅ Tout le monde a répondu !',
+      body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !`,
+    }
   }
-  return 'Aucune date commune trouvée.'
+  return {
+    title: '✅ Tout le monde a répondu !',
+    body: 'Aucune date commune trouvée.',
+  }
 }
 
 Deno.serve(async (req) => {
@@ -157,8 +167,8 @@ Deno.serve(async (req) => {
         const retenue = allFourDates[0] ?? date
         await setChosenDateAuto(supabase, weekStart, retenue)
 
-        const body = buildBestDatesBody(allFourDates, [])
-        await sendToAll(supabase, '🎮 Session confirmée !', body)
+        const { title, body } = buildNotif(allFourDates, [])
+        await sendToAll(supabase, title, body)
         return new Response('ok - date_4votes notif sent')
       }
       return new Response('ok - already notified for this date')
@@ -207,8 +217,8 @@ Deno.serve(async (req) => {
         await setChosenDateAuto(supabase, weekStart, fourVote[0])
       }
 
-      const body = buildBestDatesBody(fourVote, threeVote)
-      await sendToAll(supabase, '✅ Tout le monde a répondu !', body)
+      const { title, body } = buildNotif(fourVote, threeVote)
+      await sendToAll(supabase, title, body)
     }
 
     return new Response('ok')

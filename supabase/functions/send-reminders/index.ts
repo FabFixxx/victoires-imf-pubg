@@ -151,7 +151,7 @@ Deno.serve(async (_req) => {
         await sendPushToAll(
           supabase,
           players,
-          '🎮 Victoires IMF - Soirée ce soir !',
+          '🎮 IMF - Ce soir c\'est le soir !',
           'N\'oublies pas que ce soir on gagne ! 🏆',
           'game_day'
         )
@@ -204,8 +204,8 @@ Deno.serve(async (_req) => {
     await sendPushToAll(
       supabase,
       playersFiltered,
-      '🎮 Victoires IMF',
-      'Renseigne tes disponibilités pour la semaine prochaine !',
+      '❌ Disponibilités IMF',
+      'Tu n\'as pas encore renseigné tes dispos pour la semaine prochaine !',
       'dispo_reminder'
     )
     await supabase.from('notification_log').insert(

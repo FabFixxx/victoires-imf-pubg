@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
-import { registerPushToken, scheduleSundayReminder } from '../lib/notifications';
+import { registerPushToken } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 import { checkForUpdate } from '../lib/update-check';
 import { registerWebPush } from '../lib/web-push-client';
@@ -39,7 +39,7 @@ export default function RootLayout() {
         } else {
           setPlayer(player);
           setInitState('ready');
-          registerPushToken(player).then(() => scheduleSundayReminder());
+          registerPushToken(player);
           registerWebPush(player);
           triggerAutoSync();
           checkForUpdate().then((info) => {
@@ -82,7 +82,7 @@ export default function RootLayout() {
     await setCurrentPlayer(name);
     setPlayer(name);
     setInitState('ready');
-    registerPushToken(name).then(() => scheduleSundayReminder());
+    registerPushToken(name);
     registerWebPush(name);
     triggerAutoSync();
   };
