@@ -57,13 +57,5 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             ## Nouveautés
-            - 🎨 Nouvelles couleurs pour les pastilles joueurs
-            - ✏️ Bouton pour modifier une victoire manuelle
-            - 🗑️ Suppression du bouton supprimer une saison (sécurité)
-            - 🌐 Tous les popups fonctionnent désormais sur le site web
-            - 🚫 Bouton "Je ne suis pas dispo" : affiche les dates exactes de la semaine
-            - ✅ Le statut passe bien à "A répondu" après avoir cliqué "Aucune dispo"
-            - 📋 Cliquer un jour de la semaine prochaine retire automatiquement "Aucune dispo"
-            - 🔟 Matchs récents limités à 10 (accueil + stats)
-            - 📅 Format de date JJ/MM/AAAA dans les saisies
-            - 🔡 Mois en minuscule et suppression du "à" dans les dates de matchs
+            - 🔔 Correction des notifications push : les tokens Expo étaient jamais enregistrés au démarrage
+            - 📲 L'enregistrement du token se fait maintenant automatiquement à l'ouverture de l'app

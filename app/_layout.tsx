@@ -39,7 +39,7 @@ export default function RootLayout() {
         } else {
           setPlayer(player);
           setInitState('ready');
-          scheduleSundayReminder();
+          registerPushToken(player).then(() => scheduleSundayReminder());
           registerWebPush(player);
           triggerAutoSync();
           checkForUpdate().then((info) => {

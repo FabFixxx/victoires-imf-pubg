@@ -21,13 +21,13 @@ export async function registerWebPush(username: string): Promise<void> {
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
 
-    const { endpoint, keys } = subscription.toJSON() as any;
+    const subJson = subscription.toJSON() as any;
+    const endpoint = subJson.endpoint;
 
     await supabase.from('web_push_subscriptions').upsert({
-      player_username: username,
+      username,
       endpoint,
-      p256dh: keys.p256dh,
-      auth: keys.auth,
+      subscription: subJson,
     }, { onConflict: 'endpoint' });
   } catch (e) {
     console.warn('Web push registration failed:', e);

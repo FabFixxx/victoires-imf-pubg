@@ -1,7 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush from 'https://esm.sh/web-push@3'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
+const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:fwagner@divalto.com'
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+}
 
 function getParisDateInfo() {
   const now = new Date()
@@ -97,11 +105,11 @@ Deno.serve(async (_req) => {
 
   const sentKeys = new Set((sentToday ?? []).map((s: any) => s.key))
 
-  const tokensToSend: string[] = []
+  // Joueurs qui doivent recevoir une notif cette heure-ci
+  const playersToNotify: string[] = []
   const keysToLog: string[] = []
 
   for (const player of players) {
-    if (!player.expo_push_token) continue
     if (respondedPlayers.has(player.username)) continue
 
     const pref = prefs?.find((p: any) => p.player_username === player.username)
@@ -111,28 +119,68 @@ Deno.serve(async (_req) => {
     const key = `${todayStr}_${player.username}`
     if (sentKeys.has(key)) continue
 
-    tokensToSend.push(player.expo_push_token)
+    playersToNotify.push(player.username)
     keysToLog.push(key)
   }
 
-  if (tokensToSend.length === 0) {
+  if (playersToNotify.length === 0) {
     return new Response(JSON.stringify({ sent: 0, hour, dayOfWeek }), { status: 200 })
   }
 
-  // Envoi Expo Push
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(
-      tokensToSend.map(token => ({
-        to: token,
-        title: '🎮 Victoires IMF',
-        body: 'Renseigne tes disponibilités pour la semaine prochaine !',
-        data: { type: 'dispo_reminder' },
-        channelId: 'sessions',
-      }))
-    ),
-  })
+  const notifPayload = {
+    title: '🎮 Victoires IMF',
+    body: 'Renseigne tes disponibilités pour la semaine prochaine !',
+  }
+
+  // Expo Push (Android)
+  const expoTokens = players
+    .filter(p => playersToNotify.includes(p.username) && p.expo_push_token)
+    .map(p => p.expo_push_token)
+
+  if (expoTokens.length > 0) {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        expoTokens.map(token => ({
+          to: token,
+          ...notifPayload,
+          data: { type: 'dispo_reminder' },
+          channelId: 'sessions',
+        }))
+      ),
+    })
+  }
+
+  // Web Push (iOS PWA) — uniquement pour les joueurs sans token Expo
+  const playersWithoutExpoToken = playersToNotify.filter(
+    u => !players.find(p => p.username === u)?.expo_push_token
+  )
+
+  if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && playersWithoutExpoToken.length > 0) {
+    const { data: webSubs } = await supabase
+      .from('web_push_subscriptions')
+      .select('username, endpoint, subscription')
+      .in('username', playersWithoutExpoToken)
+
+    for (const sub of webSubs ?? []) {
+      try {
+        const subJson = sub.subscription as any
+        await webpush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: subJson.keys?.p256dh,
+              auth: subJson.keys?.auth,
+            },
+          },
+          JSON.stringify(notifPayload)
+        )
+      } catch (e) {
+        console.warn(`Web push failed for ${sub.username}:`, e)
+      }
+    }
+  }
 
   // Log des notifications envoyées
   await supabase.from('notification_log').insert(
@@ -143,5 +191,5 @@ Deno.serve(async (_req) => {
     }))
   )
 
-  return new Response(JSON.stringify({ sent: tokensToSend.length, players: keysToLog }), { status: 200 })
+  return new Response(JSON.stringify({ sent: playersToNotify.length, players: keysToLog, hour, dayOfWeek }), { status: 200 })
 })

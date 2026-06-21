@@ -1,35 +1,26 @@
 import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
-const isExpoGo = Constants.appOwnership === 'expo';
-
-// Push notifications are not available in Expo Go SDK 53+.
-// They will work once you build a development/production build.
-let Notifications: any = null;
-let Device: any = null;
+// In Expo Go, push notifications require a standalone/EAS build.
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 if (!isExpoGo) {
-  try {
-    Notifications = require('expo-notifications');
-    Device = require('expo-device');
-
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-  } catch {
-    // Silently ignore — running in Expo Go
-  }
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
 }
 
 export async function registerPushToken(username: string): Promise<string | null> {
-  if (isExpoGo || !Notifications || !Device) return null;
+  if (isExpoGo) return null;
   if (!Device.isDevice) return null;
 
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -54,11 +45,10 @@ export async function registerPushToken(username: string): Promise<string | null
   try {
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
-      Constants.easConfig?.projectId;
+      Constants.easConfig?.projectId ??
+      'db458e49-84af-48e4-a5e5-b212dfeb7e84';
 
-    const tokenData = projectId
-      ? await Notifications.getExpoPushTokenAsync({ projectId })
-      : await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
     const token = tokenData.data;
 
@@ -75,7 +65,7 @@ export async function registerPushToken(username: string): Promise<string | null
 }
 
 export async function scheduleSundayReminder(): Promise<void> {
-  if (isExpoGo || !Notifications) return;
+  if (isExpoGo) return;
   try {
     await Notifications.cancelScheduledNotificationAsync('sunday-dispo-reminder').catch(() => {});
     await Notifications.scheduleNotificationAsync({
@@ -112,7 +102,7 @@ export async function notifyAllAvailabilityFilled(
   const body = `Meilleure(s) date(s) : ${dateStr}`;
 
   // Expo push (Android)
-  if (!isExpoGo && Notifications) {
+  if (!isExpoGo) {
     const { data: players } = await supabase
       .from('players')
       .select('expo_push_token')
