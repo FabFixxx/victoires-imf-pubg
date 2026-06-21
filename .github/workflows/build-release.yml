@@ -41,8 +41,10 @@ jobs:
       - name: Build APK
         id: build
         run: |
-          OUTPUT=$(eas build --platform android --profile preview --non-interactive --wait --json 2>/dev/null)
-          echo "artifact_url=$(echo $OUTPUT | jq -r '.[0].artifacts.buildUrl')" >> $GITHUB_OUTPUT
+          OUTPUT=$(eas build --platform android --profile preview --non-interactive --wait --json 2>&1)
+          echo "$OUTPUT"
+          BUILD_URL=$(echo "$OUTPUT" | grep -o 'https://expo\.dev[^"]*\.apk' | head -1)
+          echo "artifact_url=$(echo $OUTPUT | jq -r '.[0].artifacts.buildUrl' 2>/dev/null)" >> $GITHUB_OUTPUT
 
       - name: Download APK
         run: |
