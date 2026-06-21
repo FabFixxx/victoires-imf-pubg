@@ -64,8 +64,9 @@ async function sendToAll(supabase: ReturnType<typeof createClient>, title: strin
     const { data: subs } = await supabase.from('web_push_subscriptions').select('*')
     for (const sub of subs ?? []) {
       try {
+        const subJson = sub.subscription as any
         await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
           JSON.stringify({ title, body })
         )
       } catch {
