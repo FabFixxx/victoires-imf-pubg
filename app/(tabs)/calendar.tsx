@@ -35,6 +35,7 @@ import {
   DayAvailability,
   ChosenDate,
 } from '../../lib/availability';
+import { SwipeableScreen } from '../../components/SwipeableScreen';
 
 function getToday(): string {
   return new Date().toISOString().split('T')[0];
@@ -235,6 +236,7 @@ export default function CalendarScreen() {
   const myNoAvail = currentPlayer ? noAvailPlayers.includes(currentPlayer) : false;
 
   return (
+    <SwipeableScreen>
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>DISPONIBILITÉS</Text>
@@ -442,6 +444,7 @@ export default function CalendarScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </SwipeableScreen>
   );
 }
 

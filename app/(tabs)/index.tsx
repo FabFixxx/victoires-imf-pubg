@@ -30,6 +30,7 @@ import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
 import { supabase } from '../../lib/supabase';
+import { SwipeableScreen } from '../../components/SwipeableScreen';
 
 interface TeamMatch {
   match_id: string;
@@ -234,6 +235,7 @@ export default function DashboardScreen() {
   const isEmpty = !monthly?.totalWins && !imfStats?.totalWins;
 
   return (
+    <SwipeableScreen>
     <SafeAreaView style={styles.safe}>
       <ScrollView
         style={styles.container}
@@ -429,6 +431,7 @@ export default function DashboardScreen() {
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
+    </SwipeableScreen>
   );
 }
 

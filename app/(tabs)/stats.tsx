@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase';
 import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentPlayer } from '../../lib/storage';
+import { SwipeableScreen } from '../../components/SwipeableScreen';
 
 interface RecentMatch {
   match_id: string;
@@ -97,6 +98,7 @@ export default function StatsScreen() {
   };
 
   return (
+    <SwipeableScreen>
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>STATISTIQUES</Text>
@@ -217,6 +219,7 @@ export default function StatsScreen() {
         <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
+    </SwipeableScreen>
   );
 }
 

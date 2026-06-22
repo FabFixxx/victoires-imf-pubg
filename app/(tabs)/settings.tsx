@@ -27,6 +27,7 @@ import {
 } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS, getNotificationPrefs, saveNotificationPrefs, NotificationPrefs } from '../../lib/availability';
+import { SwipeableScreen } from '../../components/SwipeableScreen';
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
 
@@ -297,6 +298,7 @@ export default function SettingsScreen() {
   const currentWinsSeason = imfSeasons.find((s) => s.year === winsSeasonYear);
 
   return (
+    <SwipeableScreen>
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>PARAMÈTRES</Text>
@@ -821,6 +823,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </SwipeableScreen>
   );
 }
 
