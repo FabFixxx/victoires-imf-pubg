@@ -115,7 +115,7 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
   }
 }
 
-async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
+async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) => void): Promise<MatchData | null> {
   const { data: cached } = await supabase
     .from('match_cache')
     .select('data, map_name, finisher')
@@ -165,7 +165,10 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
       return cached.data as MatchData;
     }
 
-    if (!gameMode.includes('fpp')) return null;
+    if (!gameMode.includes('fpp')) {
+      onProgress?.(`  ↳ ignoré : mode ${gameMode} (pas FPP)`);
+      return null;
+    }
 
     const participants = (raw.included as any[]).filter((i) => i.type === 'participant');
 
@@ -213,6 +216,8 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
     if (groupPlayers.length !== GROUP_PLAYERS.length) {
+      const found = groupPlayers.map((p) => p.name).join(', ') || 'aucun';
+      onProgress?.(`  ↳ ignoré : groupe incomplet (${groupPlayers.length}/${GROUP_PLAYERS.length} — ${found})`);
       return null; // FPP mais groupe incomplet — déjà en cache, ne sera pas retraité
     }
 
@@ -297,7 +302,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   let saved = 0;
   let failed = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
-    const result = await fetchAndCacheMatch(newIds[i]);
+    const result = await fetchAndCacheMatch(newIds[i], progress);
     if (result) saved++; else failed++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
     progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardé${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''} (TPP, groupe incomplet ou erreur)` : ''}`);
