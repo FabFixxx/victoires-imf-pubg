@@ -78,6 +78,7 @@ export default function SettingsScreen() {
   // Modal logs
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [logs, setLogs] = useState<{ time: string; msg: string }[]>([]);
+  const [confirmClearLogs, setConfirmClearLogs] = useState(false);
 
   // Modal changer de joueur
   const [showPlayerModal, setShowPlayerModal] = useState(false);
@@ -818,7 +819,7 @@ export default function SettingsScreen() {
           <View style={[styles.modalContent, { maxHeight: '85%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Logs de sync</Text>
-              <TouchableOpacity onPress={() => setShowLogsModal(false)}>
+              <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
@@ -838,17 +839,36 @@ export default function SettingsScreen() {
                 ))}
               </ScrollView>
             )}
-            <View style={[styles.modalButtons, { marginTop: 16 }]}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => { clearSyncLogs(); setLogs([]); }}
-              >
-                <Text style={styles.cancelBtnText}>Supprimer</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.submitBtn} onPress={() => setShowLogsModal(false)}>
-                <Text style={styles.submitBtnText}>Fermer</Text>
-              </TouchableOpacity>
-            </View>
+            {confirmClearLogs ? (
+              <View style={[styles.modalButtons, { marginTop: 16, flexDirection: 'column', gap: 8 }]}>
+                <Text style={{ color: Colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
+                  Supprimer tous les logs de synchronisation ?
+                </Text>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setConfirmClearLogs(false)}>
+                    <Text style={styles.cancelBtnText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.submitBtn, { backgroundColor: Colors.danger }]}
+                    onPress={() => { clearSyncLogs(); setLogs([]); setConfirmClearLogs(false); }}
+                  >
+                    <Text style={styles.submitBtnText}>Confirmer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.modalButtons, { marginTop: 16 }]}>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { backgroundColor: Colors.danger + '22', borderColor: Colors.danger }]}
+                  onPress={() => setConfirmClearLogs(true)}
+                >
+                  <Text style={[styles.cancelBtnText, { color: Colors.danger }]}>Supprimer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.submitBtn} onPress={() => setShowLogsModal(false)}>
+                  <Text style={styles.submitBtnText}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
