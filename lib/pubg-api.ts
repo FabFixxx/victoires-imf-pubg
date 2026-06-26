@@ -126,15 +126,18 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
     .eq('match_id', matchId)
     .single();
 
-  // Complet si map_name ET data sont renseignés ET (finisher est renseigné OU ce n'est pas une victoire)
-  if (cached?.map_name && cached?.data) {
-    const isWin = (cached.data as MatchData).players.some(
+  // Complet si map_name ET data (avec players) renseignés ET (finisher renseigné OU pas une victoire)
+  const cachedPlayers: MatchData['players'] | undefined = Array.isArray((cached?.data as MatchData)?.players)
+    ? (cached!.data as MatchData).players
+    : undefined;
+  if (cached?.map_name && cachedPlayers) {
+    const isWin = cachedPlayers.some(
       (p) => GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number]) && p.winPlace === 1
     );
-    const groupPresent = (cached.data as MatchData).players.filter((p) =>
+    const groupPresent = cachedPlayers.filter((p) =>
       GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number])
     ).length === GROUP_PLAYERS.length;
-    if (!groupPresent || !isWin || cached.finisher) return cached.data as MatchData;
+    if (!groupPresent || !isWin || cached!.finisher) return cached!.data as MatchData;
   }
 
   try {
@@ -145,12 +148,14 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
     // Déjà en cache : mettre à jour map_name, finisher et/ou data manquants
     if (cached) {
       const participants = (raw.included as any[]).filter((i) => i.type === 'participant');
-      const groupPlayers = participants.filter((p) =>
-        GROUP_PLAYERS.includes(p.attributes.stats.name as (typeof GROUP_PLAYERS)[number])
-      );
-      const isGroupWin =
-        groupPlayers.length === GROUP_PLAYERS.length &&
-        groupPlayers.some((p) => p.attributes.stats.winPlace === 1);
+
+      // Normaliser UUID → nom canonique pour le filtre groupe
+      const groupPlayers = participants.filter((p) => {
+        const canonical = playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name;
+        return GROUP_PLAYERS.includes(canonical as (typeof GROUP_PLAYERS)[number]);
+      });
+      const isGroupComplete = groupPlayers.length === GROUP_PLAYERS.length;
+      const isGroupWin = isGroupComplete && groupPlayers.some((p) => p.attributes.stats.winPlace === 1);
 
       // Reconstruire matchData si absent (ancienne ligne en cache sans data)
       const matchData: MatchData = (cached.data as MatchData) ?? {
@@ -182,32 +187,40 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
         .update({ map_name: mapName || null, finisher, data: matchData })
         .eq('match_id', matchId);
 
-      // Si data était absent et groupe complet, insérer les stats manquantes
-      if (!cached.data && groupPlayers.length === GROUP_PLAYERS.length) {
-        await supabase.from('player_match_stats').upsert(
-          groupPlayers.map((p) => ({
-            match_id: matchId,
-            player_username: p.attributes.stats.name,
-            kills: p.attributes.stats.kills,
-            assists: p.attributes.stats.assists,
-            damage: p.attributes.stats.damageDealt,
-            win_place: p.attributes.stats.winPlace,
-            is_win: p.attributes.stats.winPlace === 1,
-            match_date: matchData.matchDate,
-          })),
-          { onConflict: 'match_id,player_username' }
-        );
-      } else if (!cached.data) {
-        const foundNames = groupPlayers.map((p) => p.attributes.stats.name);
-        const allNames = participants.map((p: any) => p.attributes.stats.name as string);
-        const missing = GROUP_PLAYERS.filter((n) => !foundNames.includes(n));
-        const missingWithHints = missing.map((n) => {
-          const similar = allNames.find((a) => a.toLowerCase() === n.toLowerCase() && a !== n);
-          return similar ? `${n} (présent comme "${similar}" ?)` : n;
-        });
-        onProgress?.(`  ↳ groupe incomplet en cache (${groupPlayers.length}/${GROUP_PLAYERS.length})`);
-        onProgress?.(`  ↳ trouvés: ${foundNames.join(', ') || 'aucun'}`);
-        onProgress?.(`  ↳ manquants: ${missingWithHints.join(', ')}`);
+      // Si data était absent : insérer les stats si groupe complet, sinon signaler
+      if (!cached.data) {
+        if (isGroupComplete) {
+          await supabase.from('player_match_stats').upsert(
+            groupPlayers.map((p) => ({
+              match_id: matchId,
+              player_username: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
+              kills: p.attributes.stats.kills,
+              assists: p.attributes.stats.assists,
+              damage: p.attributes.stats.damageDealt,
+              win_place: p.attributes.stats.winPlace,
+              is_win: p.attributes.stats.winPlace === 1,
+              match_date: matchData.matchDate,
+            })),
+            { onConflict: 'match_id,player_username' }
+          );
+          return matchData;
+        } else {
+          const foundNames = groupPlayers.map(
+            (p) => playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name
+          );
+          const allNames = participants.map((p: any) =>
+            playerIdToName[p.attributes.stats.playerId] ?? (p.attributes.stats.name as string)
+          );
+          const missing = GROUP_PLAYERS.filter((n) => !foundNames.includes(n));
+          const missingWithHints = missing.map((n) => {
+            const similar = allNames.find((a) => a.toLowerCase() === n.toLowerCase() && a !== n);
+            return similar ? `${n} (présent comme "${similar}" ?)` : n;
+          });
+          onProgress?.(`  ↳ groupe incomplet en cache (${groupPlayers.length}/${GROUP_PLAYERS.length})`);
+          onProgress?.(`  ↳ trouvés: ${foundNames.join(', ') || 'aucun'}`);
+          onProgress?.(`  ↳ manquants: ${missingWithHints.join(', ')}`);
+          return null;
+        }
       }
 
       return matchData;
