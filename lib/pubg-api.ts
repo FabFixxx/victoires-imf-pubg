@@ -10,6 +10,18 @@ const PUBG_HEADERS = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const RATE_LIMIT_DELAY = 6200;
 
+const MAX_LOG_LINES = 100;
+let syncLogBuffer: { time: string; msg: string }[] = [];
+
+export function getSyncLogs(): { time: string; msg: string }[] {
+  return [...syncLogBuffer];
+}
+
+function appendLog(msg: string) {
+  const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  syncLogBuffer = [...syncLogBuffer.slice(-(MAX_LOG_LINES - 1)), { time, msg }];
+}
+
 async function fetchPUBG(endpoint: string) {
   const res = await fetch(`${PUBG_BASE_URL}${endpoint}`, { headers: PUBG_HEADERS });
   if (!res.ok) throw new Error(`PUBG API ${res.status}: ${endpoint}`);
@@ -220,13 +232,15 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
 }
 
 export async function syncData(onProgress?: (msg: string) => void): Promise<void> {
-  onProgress?.('Récupération des IDs joueurs...');
+  const progress = (msg: string) => { appendLog(msg); onProgress?.(msg); };
+
+  progress('Récupération des IDs joueurs...');
   let accountIds: Record<string, string>;
   try {
     accountIds = await resolvePlayerIds();
-    onProgress?.(`${Object.keys(accountIds).length} joueurs trouvés...`);
+    progress(`${Object.keys(accountIds).length} joueurs trouvés...`);
   } catch (e: any) {
-    onProgress?.(`Erreur API PUBG: ${e?.message ?? 'inconnue'}`);
+    progress(`Erreur API PUBG: ${e?.message ?? 'inconnue'}`);
     throw e;
   }
   await sleep(RATE_LIMIT_DELAY);
@@ -236,14 +250,14 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   // Un seul joueur suffit : tous les matchs IMF ont les 4 membres
   const referencePlayer = GROUP_PLAYERS[0];
   const referenceId = accountIds[referencePlayer];
-  onProgress?.('Récupération des matchs IMF...');
+  progress('Récupération des matchs IMF...');
   try {
     const data = await fetchPUBG(`/players/${referenceId}`);
     const matchIds: string[] = data.data.relationships.matches.data.map((m: any) => m.id);
     matchIds.forEach((id) => allMatchIds.add(id));
     await sleep(RATE_LIMIT_DELAY);
   } catch (e: any) {
-    onProgress?.(`Erreur récupération matchs IMF: ${e?.message ?? 'inconnue'}`);
+    progress(`Erreur récupération matchs IMF: ${e?.message ?? 'inconnue'}`);
     throw e;
   }
 
@@ -268,7 +282,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   );
   const newIds = Array.from(allMatchIds).filter((id) => !cachedComplete.has(id));
 
-  onProgress?.(
+  progress(
     newIds.length > 0
       ? `${newIds.length} nouveaux matchs à synchroniser...`
       : 'Tout est à jour !'
@@ -280,10 +294,10 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
     const result = await fetchAndCacheMatch(newIds[i]);
     if (result) saved++; else failed++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
-    onProgress?.(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardés${failed > 0 ? `, ${failed} ignorés (TPP ou erreur)` : ''}`);
+    progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardés${failed > 0 ? `, ${failed} ignorés (TPP ou erreur)` : ''}`);
   }
 
-  onProgress?.(
+  progress(
     saved > 0
       ? `Synchronisation terminée ! ${saved} match(s) ajouté(s)${failed > 0 ? `, ${failed} ignoré(s)` : ''}.`
       : failed > 0

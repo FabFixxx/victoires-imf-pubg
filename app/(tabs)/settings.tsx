@@ -18,7 +18,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 import { PUBG_API_KEY } from '../../constants/config';
-import { syncData, PUBG_MAPS } from '../../lib/pubg-api';
+import { syncData, getSyncLogs, PUBG_MAPS } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
   getImfSeasons, upsertImfSeason,
@@ -74,6 +74,10 @@ export default function SettingsScreen() {
   // Modal diagnostic
   const [diagResult, setDiagResult] = useState<string[]>([]);
   const [showDiagModal, setShowDiagModal] = useState(false);
+
+  // Modal logs
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [logs, setLogs] = useState<{ time: string; msg: string }[]>([]);
 
   // Modal changer de joueur
   const [showPlayerModal, setShowPlayerModal] = useState(false);
@@ -428,6 +432,13 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.diagBtn} onPress={handleDiagnostic}>
             <Ionicons name="bug-outline" size={14} color={Colors.textMuted} />
             <Text style={styles.diagBtnText}>Tester la connexion</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.diagBtn, { borderTopWidth: 1, borderTopColor: Colors.cardBorder }]}
+            onPress={() => { setLogs(getSyncLogs()); setShowLogsModal(true); }}
+          >
+            <Ionicons name="terminal-outline" size={14} color={Colors.textMuted} />
+            <Text style={styles.diagBtnText}>Logs de synchronisation</Text>
           </TouchableOpacity>
         </View>
 
@@ -801,6 +812,39 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
+      {/* ── Modal logs ── */}
+      <Modal visible={showLogsModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Logs de sync</Text>
+              <TouchableOpacity onPress={() => setShowLogsModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {logs.length === 0 ? (
+              <Text style={styles.emptyWins}>Aucun log — lance une synchronisation d'abord</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator style={styles.logsScroll}>
+                {[...logs].reverse().map((line, i) => (
+                  <View key={i} style={styles.logLine}>
+                    <Text style={styles.logTime}>{line.time}</Text>
+                    <Text style={[
+                      styles.logMsg,
+                      (line.msg.includes('Erreur') || line.msg.includes('erreur') || line.msg.includes('ignoré')) && { color: Colors.danger },
+                      (line.msg.includes('terminée') || line.msg.includes('ajouté') || line.msg.includes('✓') || line.msg.includes('à jour')) && { color: Colors.win },
+                    ]}>{line.msg}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={[styles.submitBtn, { marginTop: 16 }]} onPress={() => setShowLogsModal(false)}>
+              <Text style={styles.submitBtnText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Modal diagnostic ── */}
       <Modal visible={showDiagModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -1018,6 +1062,10 @@ const styles = StyleSheet.create({
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
   diagResultLine: { fontSize: 14, lineHeight: 22, marginBottom: 4 },
+  logsScroll: { maxHeight: 400, marginBottom: 4 },
+  logLine: { flexDirection: 'row', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  logTime: { fontSize: 11, color: Colors.textMuted, minWidth: 72, fontFamily: 'monospace' },
+  logMsg: { flex: 1, fontSize: 12, color: Colors.textSecondary, flexWrap: 'wrap' },
   formError: { fontSize: 12, color: Colors.danger, marginTop: 6, fontStyle: 'italic' },
   formSuccess: { fontSize: 12, color: Colors.win, marginTop: 6, fontWeight: '600' },
   playerPickRow: {
