@@ -252,7 +252,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   const allMatchIds = new Set<string>();
 
   // Un seul joueur suffit : tous les matchs IMF ont les 4 membres
-  const referencePlayer = GROUP_PLAYERS[0];
+  const referencePlayer = 'Jibby37' as typeof GROUP_PLAYERS[number];
   const referenceId = accountIds[referencePlayer];
   progress('Récupération des matchs IMF...');
   try {
