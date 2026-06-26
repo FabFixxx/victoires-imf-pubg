@@ -194,8 +194,16 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
           { onConflict: 'match_id,player_username' }
         );
       } else if (!cached.data) {
-        const found = groupPlayers.map((p) => p.attributes.stats.name).join(', ') || 'aucun';
-        onProgress?.(`  ↳ groupe incomplet en cache (${groupPlayers.length}/${GROUP_PLAYERS.length} — ${found})`);
+        const foundNames = groupPlayers.map((p) => p.attributes.stats.name);
+        const allNames = participants.map((p: any) => p.attributes.stats.name as string);
+        const missing = GROUP_PLAYERS.filter((n) => !foundNames.includes(n));
+        const missingWithHints = missing.map((n) => {
+          const similar = allNames.find((a) => a.toLowerCase() === n.toLowerCase() && a !== n);
+          return similar ? `${n} (présent comme "${similar}" ?)` : n;
+        });
+        onProgress?.(`  ↳ groupe incomplet en cache (${groupPlayers.length}/${GROUP_PLAYERS.length})`);
+        onProgress?.(`  ↳ trouvés: ${foundNames.join(', ') || 'aucun'}`);
+        onProgress?.(`  ↳ manquants: ${missingWithHints.join(', ')}`);
       }
 
       return matchData;
@@ -252,9 +260,17 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
     if (groupPlayers.length !== GROUP_PLAYERS.length) {
-      const found = groupPlayers.map((p) => p.name).join(', ') || 'aucun';
-      onProgress?.(`  ↳ ignoré : groupe incomplet (${groupPlayers.length}/${GROUP_PLAYERS.length} — ${found})`);
-      return null; // FPP mais groupe incomplet — déjà en cache, ne sera pas retraité
+      const foundNames = groupPlayers.map((p) => p.name);
+      const missing = GROUP_PLAYERS.filter((n) => !foundNames.includes(n));
+      const allNames = matchData.players.map((p) => p.name);
+      const missingWithHints = missing.map((n) => {
+        const similar = allNames.find((a) => a.toLowerCase() === n.toLowerCase() && a !== n);
+        return similar ? `${n} (présent comme "${similar}" ?)` : n;
+      });
+      onProgress?.(`  ↳ ignoré : groupe incomplet (${groupPlayers.length}/${GROUP_PLAYERS.length})`);
+      onProgress?.(`  ↳ trouvés: ${foundNames.join(', ') || 'aucun'}`);
+      onProgress?.(`  ↳ manquants: ${missingWithHints.join(', ')}`);
+      return null;
     }
 
     await supabase.from('player_match_stats').upsert(
