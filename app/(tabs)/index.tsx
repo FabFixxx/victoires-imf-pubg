@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -130,6 +130,7 @@ export default function DashboardScreen() {
   const [lastWin, setLastWin] = useState<LastMatch | null>(null);
   const [recentTeamMatches, setRecentTeamMatches] = useState<TeamMatch[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,7 +208,8 @@ export default function DashboardScreen() {
   }, [loadData]);
 
   const handleSync = async () => {
-    if (syncing) return;
+    if (syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     setSyncMsg('Démarrage...');
     try {
@@ -219,6 +221,7 @@ export default function DashboardScreen() {
       setSyncMsg('Erreur de synchronisation');
     }
     await loadData();
+    syncingRef.current = false;
     setSyncing(false);
     setSyncMsg('');
   };
