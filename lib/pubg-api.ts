@@ -212,21 +212,23 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
     });
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
-    if (groupPlayers.length === GROUP_PLAYERS.length) {
-      await supabase.from('player_match_stats').upsert(
-        groupPlayers.map((p) => ({
-          match_id: matchId,
-          player_username: p.name,
-          kills: p.kills,
-          assists: p.assists,
-          damage: p.damageDealt,
-          win_place: p.winPlace,
-          is_win: p.winPlace === 1,
-          match_date: matchData.matchDate,
-        })),
-        { onConflict: 'match_id,player_username' }
-      );
+    if (groupPlayers.length !== GROUP_PLAYERS.length) {
+      return null; // FPP mais groupe incomplet — déjà en cache, ne sera pas retraité
     }
+
+    await supabase.from('player_match_stats').upsert(
+      groupPlayers.map((p) => ({
+        match_id: matchId,
+        player_username: p.name,
+        kills: p.kills,
+        assists: p.assists,
+        damage: p.damageDealt,
+        win_place: p.winPlace,
+        is_win: p.winPlace === 1,
+        match_date: matchData.matchDate,
+      })),
+      { onConflict: 'match_id,player_username' }
+    );
 
     return matchData;
   } catch (e: any) {
@@ -298,7 +300,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
     const result = await fetchAndCacheMatch(newIds[i]);
     if (result) saved++; else failed++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
-    progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardé${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''} (TPP ou erreur)` : ''}`);
+    progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardé${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''} (TPP, groupe incomplet ou erreur)` : ''}`);
   }
 
   progress(
