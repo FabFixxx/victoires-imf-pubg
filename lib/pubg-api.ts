@@ -116,7 +116,7 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
   }
 }
 
-async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>, onProgress?: (msg: string) => void): Promise<MatchData | null> {
+async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>, onProgress?: (msg: string) => void): Promise<MatchData | null | false> {
   // Reverse map: PUBG account ID → canonical GROUP_PLAYERS name
   const playerIdToName: Record<string, string> = Object.fromEntries(
     Object.entries(accountIds).map(([name, id]) => [id, name])
@@ -284,7 +284,7 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
   } catch (e: any) {
     const msg: string = e?.message ?? String(e);
     onProgress?.(`  ↳ erreur API : ${msg}`);
-    return null;
+    return false;
   }
 }
 
@@ -347,18 +347,30 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   progress(`${newIds.length} nouveau${newIds.length > 1 ? 'x' : ''} match${newIds.length > 1 ? 's' : ''} à synchroniser...`);
 
   let saved = 0;
-  let errors = 0;
+  let apiErrors = 0;
+  let consecutiveApiErrors = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
     const result = await fetchAndCacheMatch(newIds[i], accountIds, progress);
-    if (result) saved++;
-    else errors++;
+    if (result) {
+      saved++;
+      consecutiveApiErrors = 0;
+    } else if (result === false) {
+      apiErrors++;
+      consecutiveApiErrors++;
+      if (consecutiveApiErrors >= 2) {
+        progress('Rate limit PUBG atteint — sync stoppée, réessaie dans quelques minutes.');
+        break;
+      }
+    } else {
+      consecutiveApiErrors = 0;
+    }
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
   }
 
   if (saved > 0) {
     progress(`Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}.`);
-  } else if (errors > 0) {
-    progress(`Aucun match sauvegardé (${errors} erreur${errors > 1 ? 's' : ''} — rate limit PUBG ?)`);
+  } else if (apiErrors > 0) {
+    progress('Aucun match sauvegardé — rate limit PUBG, réessaie dans quelques minutes.');
   } else {
     progress('Tout est à jour !');
   }
