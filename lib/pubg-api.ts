@@ -213,7 +213,8 @@ async function fetchAndCacheMatch(matchId: string): Promise<MatchData | null> {
     }
 
     return matchData;
-  } catch {
+  } catch (e: any) {
+    console.warn(`fetchAndCacheMatch ${matchId} failed:`, e?.message ?? e);
     return null;
   }
 }
@@ -273,15 +274,22 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
       : 'Tout est à jour !'
   );
 
+  let saved = 0;
+  let failed = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
-    await fetchAndCacheMatch(newIds[i]);
+    const result = await fetchAndCacheMatch(newIds[i]);
+    if (result) saved++; else failed++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
-    if ((i + 1) % 5 === 0 || i === newIds.length - 1) {
-      onProgress?.(`Matchs synchronisés : ${i + 1}/${Math.min(newIds.length, 30)}`);
-    }
+    onProgress?.(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardés${failed > 0 ? `, ${failed} ignorés (TPP ou erreur)` : ''}`);
   }
 
-  onProgress?.('Synchronisation terminée !');
+  onProgress?.(
+    saved > 0
+      ? `Synchronisation terminée ! ${saved} match(s) ajouté(s)${failed > 0 ? `, ${failed} ignoré(s)` : ''}.`
+      : failed > 0
+        ? `Aucun match sauvegardé (${failed} erreur(s) — rate limit PUBG ?)`
+        : 'Synchronisation terminée !'
+  );
 }
 
 export interface SeasonHighlights {
