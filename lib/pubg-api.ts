@@ -122,8 +122,8 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
     .eq('match_id', matchId)
     .single();
 
-  // Complet si map_name est renseigné ET (finisher est renseigné OU ce n'est pas une victoire)
-  if (cached?.map_name) {
+  // Complet si map_name ET data sont renseignés ET (finisher est renseigné OU ce n'est pas une victoire)
+  if (cached?.map_name && cached?.data) {
     const isWin = (cached.data as MatchData).players.some(
       (p) => GROUP_PLAYERS.includes(p.name as (typeof GROUP_PLAYERS)[number]) && p.winPlace === 1
     );
@@ -138,7 +138,7 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
     const gameMode: string = raw.data.attributes.gameMode;
     const mapName: string = raw.data.attributes.mapName ?? '';
 
-    // Déjà en cache : mettre à jour map_name et/ou finisher manquants
+    // Déjà en cache : mettre à jour map_name, finisher et/ou data manquants
     if (cached) {
       const participants = (raw.included as any[]).filter((i) => i.type === 'participant');
       const groupPlayers = participants.filter((p) =>
@@ -147,6 +147,21 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
       const isGroupWin =
         groupPlayers.length === GROUP_PLAYERS.length &&
         groupPlayers.some((p) => p.attributes.stats.winPlace === 1);
+
+      // Reconstruire matchData si absent (ancienne ligne en cache sans data)
+      const matchData: MatchData = (cached.data as MatchData) ?? {
+        matchId,
+        matchDate: raw.data.attributes.createdAt,
+        gameMode,
+        players: participants.map((p) => ({
+          accountId: p.attributes.stats.playerId,
+          name: p.attributes.stats.name,
+          kills: p.attributes.stats.kills,
+          assists: p.attributes.stats.assists,
+          damageDealt: p.attributes.stats.damageDealt,
+          winPlace: p.attributes.stats.winPlace,
+        })),
+      };
 
       let finisher = cached.finisher ?? null;
       if (isGroupWin && !finisher) {
@@ -160,9 +175,30 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
 
       await supabase
         .from('match_cache')
-        .update({ map_name: mapName || null, finisher })
+        .update({ map_name: mapName || null, finisher, data: matchData })
         .eq('match_id', matchId);
-      return cached.data as MatchData;
+
+      // Si data était absent et groupe complet, insérer les stats manquantes
+      if (!cached.data && groupPlayers.length === GROUP_PLAYERS.length) {
+        await supabase.from('player_match_stats').upsert(
+          groupPlayers.map((p) => ({
+            match_id: matchId,
+            player_username: p.attributes.stats.name,
+            kills: p.attributes.stats.kills,
+            assists: p.attributes.stats.assists,
+            damage: p.attributes.stats.damageDealt,
+            win_place: p.attributes.stats.winPlace,
+            is_win: p.attributes.stats.winPlace === 1,
+            match_date: matchData.matchDate,
+          })),
+          { onConflict: 'match_id,player_username' }
+        );
+      } else if (!cached.data) {
+        const found = groupPlayers.map((p) => p.attributes.stats.name).join(', ') || 'aucun';
+        onProgress?.(`  ↳ groupe incomplet en cache (${groupPlayers.length}/${GROUP_PLAYERS.length} — ${found})`);
+      }
+
+      return matchData;
     }
 
     if (!gameMode.includes('fpp')) {
