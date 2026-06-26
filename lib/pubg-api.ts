@@ -298,14 +298,14 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
     const result = await fetchAndCacheMatch(newIds[i]);
     if (result) saved++; else failed++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
-    progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardés${failed > 0 ? `, ${failed} ignorés (TPP ou erreur)` : ''}`);
+    progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardé${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''} (TPP ou erreur)` : ''}`);
   }
 
   progress(
     saved > 0
-      ? `Synchronisation terminée ! ${saved} match(s) ajouté(s)${failed > 0 ? `, ${failed} ignoré(s)` : ''}.`
+      ? `Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''}` : ''}.`
       : failed > 0
-        ? `Aucun match sauvegardé (${failed} erreur(s) — rate limit PUBG ?)`
+        ? `Aucun match sauvegardé (${failed} erreur${failed > 1 ? 's' : ''} — rate limit PUBG ?)`
         : 'Synchronisation terminée !'
   );
 }
