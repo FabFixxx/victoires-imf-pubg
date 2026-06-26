@@ -115,7 +115,11 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
   }
 }
 
-async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) => void): Promise<MatchData | null> {
+async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>, onProgress?: (msg: string) => void): Promise<MatchData | null> {
+  // Reverse map: PUBG account ID → canonical GROUP_PLAYERS name
+  const playerIdToName: Record<string, string> = Object.fromEntries(
+    Object.entries(accountIds).map(([name, id]) => [id, name])
+  );
   const { data: cached } = await supabase
     .from('match_cache')
     .select('data, map_name, finisher')
@@ -155,7 +159,7 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
         gameMode,
         players: participants.map((p) => ({
           accountId: p.attributes.stats.playerId,
-          name: p.attributes.stats.name,
+          name: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
           kills: p.attributes.stats.kills,
           assists: p.attributes.stats.assists,
           damageDealt: p.attributes.stats.damageDealt,
@@ -222,7 +226,8 @@ async function fetchAndCacheMatch(matchId: string, onProgress?: (msg: string) =>
       gameMode,
       players: participants.map((p) => ({
         accountId: p.attributes.stats.playerId,
-        name: p.attributes.stats.name,
+        // Normalise UUID → nom canonique si le compte est connu (ex: FabFix apparaît en UUID)
+        name: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
         kills: p.attributes.stats.kills,
         assists: p.attributes.stats.assists,
         damageDealt: p.attributes.stats.damageDealt,
@@ -354,7 +359,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   let saved = 0;
   let failed = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
-    const result = await fetchAndCacheMatch(newIds[i], progress);
+    const result = await fetchAndCacheMatch(newIds[i], accountIds, progress);
     if (result) saved++; else failed++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
     progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardé${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''} (TPP, groupe incomplet ou erreur)` : ''}`);
