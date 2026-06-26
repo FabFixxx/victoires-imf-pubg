@@ -18,7 +18,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 import { PUBG_API_KEY } from '../../constants/config';
-import { syncData, getSyncLogs, PUBG_MAPS } from '../../lib/pubg-api';
+import { syncData, getSyncLogs, clearSyncLogs, PUBG_MAPS } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
   getImfSeasons, upsertImfSeason,
@@ -838,9 +838,17 @@ export default function SettingsScreen() {
                 ))}
               </ScrollView>
             )}
-            <TouchableOpacity style={[styles.submitBtn, { marginTop: 16 }]} onPress={() => setShowLogsModal(false)}>
-              <Text style={styles.submitBtnText}>Fermer</Text>
-            </TouchableOpacity>
+            <View style={[styles.modalButtons, { marginTop: 16 }]}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => { clearSyncLogs(); setLogs([]); }}
+              >
+                <Text style={styles.cancelBtnText}>Supprimer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.submitBtn} onPress={() => setShowLogsModal(false)}>
+                <Text style={styles.submitBtnText}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
