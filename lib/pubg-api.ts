@@ -115,7 +115,7 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
   }
 }
 
-async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>, onProgress?: (msg: string) => void): Promise<MatchData | null> {
+async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>): Promise<MatchData | null> {
   // Reverse map: PUBG account ID → canonical GROUP_PLAYERS name
   const playerIdToName: Record<string, string> = Object.fromEntries(
     Object.entries(accountIds).map(([name, id]) => [id, name])
@@ -205,20 +205,6 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
           );
           return matchData;
         } else {
-          const foundNames = groupPlayers.map(
-            (p) => playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name
-          );
-          const allNames = participants.map((p: any) =>
-            playerIdToName[p.attributes.stats.playerId] ?? (p.attributes.stats.name as string)
-          );
-          const missing = GROUP_PLAYERS.filter((n) => !foundNames.includes(n));
-          const missingWithHints = missing.map((n) => {
-            const similar = allNames.find((a) => a.toLowerCase() === n.toLowerCase() && a !== n);
-            return similar ? `${n} (présent comme "${similar}" ?)` : n;
-          });
-          onProgress?.(`  ↳ groupe incomplet en cache (${groupPlayers.length}/${GROUP_PLAYERS.length})`);
-          onProgress?.(`  ↳ trouvés: ${foundNames.join(', ') || 'aucun'}`);
-          onProgress?.(`  ↳ manquants: ${missingWithHints.join(', ')}`);
           return null;
         }
       }
@@ -226,10 +212,7 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
       return matchData;
     }
 
-    if (!gameMode.includes('fpp')) {
-      onProgress?.(`  ↳ ignoré : mode ${gameMode} (pas FPP)`);
-      return null;
-    }
+    if (!gameMode.includes('fpp')) return null;
 
     const participants = (raw.included as any[]).filter((i) => i.type === 'participant');
 
@@ -277,19 +260,7 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
     });
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
-    if (groupPlayers.length !== GROUP_PLAYERS.length) {
-      const foundNames = groupPlayers.map((p) => p.name);
-      const missing = GROUP_PLAYERS.filter((n) => !foundNames.includes(n));
-      const allNames = matchData.players.map((p) => p.name);
-      const missingWithHints = missing.map((n) => {
-        const similar = allNames.find((a) => a.toLowerCase() === n.toLowerCase() && a !== n);
-        return similar ? `${n} (présent comme "${similar}" ?)` : n;
-      });
-      onProgress?.(`  ↳ ignoré : groupe incomplet (${groupPlayers.length}/${GROUP_PLAYERS.length})`);
-      onProgress?.(`  ↳ trouvés: ${foundNames.join(', ') || 'aucun'}`);
-      onProgress?.(`  ↳ manquants: ${missingWithHints.join(', ')}`);
-      return null;
-    }
+    if (groupPlayers.length !== GROUP_PLAYERS.length) return null;
 
     await supabase.from('player_match_stats').upsert(
       groupPlayers.map((p) => ({
@@ -363,27 +334,24 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   );
   const newIds = Array.from(allMatchIds).filter((id) => !cachedComplete.has(id));
 
-  progress(
-    newIds.length > 0
-      ? `${newIds.length} nouveaux matchs à synchroniser...`
-      : 'Tout est à jour !'
-  );
+  if (newIds.length === 0) {
+    progress('Tout est à jour !');
+    return;
+  }
+
+  progress('Vérification des matchs récents...');
 
   let saved = 0;
-  let failed = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
-    const result = await fetchAndCacheMatch(newIds[i], accountIds, progress);
-    if (result) saved++; else failed++;
+    const result = await fetchAndCacheMatch(newIds[i], accountIds);
+    if (result) saved++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
-    progress(`Match ${i + 1}/${Math.min(newIds.length, 30)} — ${saved} sauvegardé${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''} (TPP, groupe incomplet ou erreur)` : ''}`);
   }
 
   progress(
     saved > 0
-      ? `Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}${failed > 0 ? `, ${failed} ignoré${failed > 1 ? 's' : ''}` : ''}.`
-      : failed > 0
-        ? `Aucun match sauvegardé (${failed} erreur${failed > 1 ? 's' : ''} — rate limit PUBG ?)`
-        : 'Synchronisation terminée !'
+      ? `Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}.`
+      : 'Tout est à jour !'
   );
 }
 
