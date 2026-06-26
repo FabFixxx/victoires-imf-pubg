@@ -115,7 +115,7 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
   }
 }
 
-async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>): Promise<MatchData | null> {
+async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, string>, onProgress?: (msg: string) => void): Promise<MatchData | null> {
   // Reverse map: PUBG account ID → canonical GROUP_PLAYERS name
   const playerIdToName: Record<string, string> = Object.fromEntries(
     Object.entries(accountIds).map(([name, id]) => [id, name])
@@ -187,28 +187,21 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
         .update({ map_name: mapName || null, finisher, data: matchData })
         .eq('match_id', matchId);
 
-      // Si data était absent : insérer les stats si groupe complet, sinon signaler
-      if (!cached.data) {
-        if (isGroupComplete) {
-          await supabase.from('player_match_stats').upsert(
-            groupPlayers.map((p) => ({
-              match_id: matchId,
-              player_username: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
-              kills: p.attributes.stats.kills,
-              assists: p.attributes.stats.assists,
-              damage: p.attributes.stats.damageDealt,
-              win_place: p.attributes.stats.winPlace,
-              is_win: p.attributes.stats.winPlace === 1,
-              match_date: matchData.matchDate,
-            })),
-            { onConflict: 'match_id,player_username' }
-          );
-          return matchData;
-        } else {
-          return null;
-        }
-      }
+      if (!isGroupComplete) return null;
 
+      await supabase.from('player_match_stats').upsert(
+        groupPlayers.map((p) => ({
+          match_id: matchId,
+          player_username: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
+          kills: p.attributes.stats.kills,
+          assists: p.attributes.stats.assists,
+          damage: p.attributes.stats.damageDealt,
+          win_place: p.attributes.stats.winPlace,
+          is_win: p.attributes.stats.winPlace === 1,
+          match_date: matchData.matchDate,
+        })),
+        { onConflict: 'match_id,player_username' }
+      );
       return matchData;
     }
 
@@ -278,7 +271,8 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
 
     return matchData;
   } catch (e: any) {
-    console.warn(`fetchAndCacheMatch ${matchId} failed:`, e?.message ?? e);
+    const msg: string = e?.message ?? String(e);
+    onProgress?.(`  ↳ erreur API : ${msg}`);
     return null;
   }
 }
@@ -343,7 +337,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
 
   let saved = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
-    const result = await fetchAndCacheMatch(newIds[i], accountIds);
+    const result = await fetchAndCacheMatch(newIds[i], accountIds, progress);
     if (result) saved++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
   }
