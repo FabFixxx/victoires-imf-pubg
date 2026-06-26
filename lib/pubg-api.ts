@@ -339,7 +339,7 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
     return;
   }
 
-  progress('Vérification des matchs récents...');
+  progress(`${newIds.length} nouveau${newIds.length > 1 ? 'x' : ''} match${newIds.length > 1 ? 's' : ''} à synchroniser...`);
 
   let saved = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
