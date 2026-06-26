@@ -36,6 +36,7 @@ export async function resolvePlayerIds(): Promise<Record<string, string>> {
   const { data: cached } = await supabase
     .from('players')
     .select('username, pubg_account_id')
+    .in('username', GROUP_PLAYERS as unknown as string[])
     .not('pubg_account_id', 'is', null);
 
   if (cached && cached.length === GROUP_PLAYERS.length) {
@@ -182,14 +183,15 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
         }
       }
 
-      await supabase
+      const { error: cacheUpdateErr } = await supabase
         .from('match_cache')
         .update({ map_name: mapName || null, finisher, data: matchData })
         .eq('match_id', matchId);
+      if (cacheUpdateErr) onProgress?.(`  ↳ cache update: ${cacheUpdateErr.message}`);
 
       if (!isGroupComplete) return null;
 
-      await supabase.from('player_match_stats').upsert(
+      const { error: statsErr } = await supabase.from('player_match_stats').upsert(
         groupPlayers.map((p) => ({
           match_id: matchId,
           player_username: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
@@ -202,6 +204,10 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
         })),
         { onConflict: 'match_id,player_username' }
       );
+      if (statsErr) {
+        onProgress?.(`  ↳ erreur stats: ${statsErr.message}`);
+        return null;
+      }
       return matchData;
     }
 
@@ -243,7 +249,7 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
       }
     }
 
-    await supabase.from('match_cache').insert({
+    const { error: insertErr } = await supabase.from('match_cache').insert({
       match_id: matchId,
       match_date: matchData.matchDate,
       game_mode: gameMode,
@@ -251,11 +257,12 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
       finisher,
       data: matchData,
     });
+    if (insertErr) onProgress?.(`  ↳ cache insert: ${insertErr.message}`);
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
     if (groupPlayers.length !== GROUP_PLAYERS.length) return null;
 
-    await supabase.from('player_match_stats').upsert(
+    const { error: statsErr2 } = await supabase.from('player_match_stats').upsert(
       groupPlayers.map((p) => ({
         match_id: matchId,
         player_username: p.name,
@@ -268,6 +275,10 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
       })),
       { onConflict: 'match_id,player_username' }
     );
+    if (statsErr2) {
+      onProgress?.(`  ↳ erreur stats: ${statsErr2.message}`);
+      return null;
+    }
 
     return matchData;
   } catch (e: any) {
@@ -347,6 +358,17 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
       ? `Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}.`
       : 'Tout est à jour !'
   );
+
+  const { count } = await supabase
+    .from('player_match_stats')
+    .select('*', { count: 'exact', head: true });
+  const { data: recentRows } = await supabase
+    .from('player_match_stats')
+    .select('player_username')
+    .order('match_date', { ascending: false })
+    .limit(4);
+  const names = recentRows?.map((r) => r.player_username).join(', ') ?? '—';
+  progress(`DB: ${count ?? '?'} lignes — derniers joueurs: ${names}`);
 }
 
 export interface SeasonHighlights {
