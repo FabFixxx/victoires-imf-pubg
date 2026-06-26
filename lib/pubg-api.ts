@@ -347,17 +347,21 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
   progress(`${newIds.length} nouveau${newIds.length > 1 ? 'x' : ''} match${newIds.length > 1 ? 's' : ''} à synchroniser...`);
 
   let saved = 0;
+  let errors = 0;
   for (let i = 0; i < Math.min(newIds.length, 30); i++) {
     const result = await fetchAndCacheMatch(newIds[i], accountIds, progress);
     if (result) saved++;
+    else errors++;
     if (i < newIds.length - 1) await sleep(RATE_LIMIT_DELAY);
   }
 
-  progress(
-    saved > 0
-      ? `Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}.`
-      : 'Tout est à jour !'
-  );
+  if (saved > 0) {
+    progress(`Synchronisation terminée ! ${saved} match${saved > 1 ? 's' : ''} ajouté${saved > 1 ? 's' : ''}.`);
+  } else if (errors > 0) {
+    progress(`Aucun match sauvegardé (${errors} erreur${errors > 1 ? 's' : ''} — rate limit PUBG ?)`);
+  } else {
+    progress('Tout est à jour !');
+  }
 
   const { count } = await supabase
     .from('player_match_stats')
