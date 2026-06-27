@@ -378,19 +378,6 @@ export async function syncData(onProgress?: (msg: string) => void): Promise<void
     progress('Tout est à jour !');
   }
 
-  const { data: recentMatch } = await supabase
-    .from('player_match_stats')
-    .select('match_date, is_win')
-    .order('match_date', { ascending: false })
-    .limit(1)
-    .single();
-  if (recentMatch) {
-    const date = new Date(recentMatch.match_date).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    });
-    const label = recentMatch.is_win ? '🏆 victoire' : 'défaite';
-    progress(`Dernier match enregistré : ${date} (${label})`);
-  }
 }
 
 export interface SeasonHighlights {
