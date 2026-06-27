@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { PUBG_API_KEY, PUBG_BASE_URL } from '../constants/config';
 import { GROUP_PLAYERS } from '../constants/players';
 import { supabase } from './supabase';
 
@@ -21,7 +23,13 @@ function appendLog(msg: string) {
 }
 
 async function fetchPUBG(endpoint: string) {
-  const res = await fetch(`/api/pubg?endpoint=${encodeURIComponent(endpoint)}`);
+  // Sur web : proxy Vercel pour éviter les erreurs CORS sur les 429
+  // Sur natif (APK) : appel direct, pas de contrainte CORS
+  const res = Platform.OS === 'web'
+    ? await fetch(`/api/pubg?endpoint=${encodeURIComponent(endpoint)}`)
+    : await fetch(`${PUBG_BASE_URL}${endpoint}`, {
+        headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: 'application/vnd.api+json' },
+      });
   if (res.status === 429) throw new Error('Rate limit PUBG — réessaie dans quelques minutes');
   if (!res.ok) throw new Error(`PUBG API ${res.status}: ${endpoint}`);
   return res.json();
