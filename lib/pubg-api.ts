@@ -1,11 +1,5 @@
-import { PUBG_API_KEY, PUBG_BASE_URL } from '../constants/config';
 import { GROUP_PLAYERS } from '../constants/players';
 import { supabase } from './supabase';
-
-const PUBG_HEADERS = {
-  Authorization: `Bearer ${PUBG_API_KEY}`,
-  Accept: 'application/vnd.api+json',
-};
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const RATE_LIMIT_DELAY = 6200;
@@ -27,7 +21,8 @@ function appendLog(msg: string) {
 }
 
 async function fetchPUBG(endpoint: string) {
-  const res = await fetch(`${PUBG_BASE_URL}${endpoint}`, { headers: PUBG_HEADERS });
+  const res = await fetch(`/api/pubg?endpoint=${encodeURIComponent(endpoint)}`);
+  if (res.status === 429) throw new Error('Rate limit PUBG — réessaie dans quelques minutes');
   if (!res.ok) throw new Error(`PUBG API ${res.status}: ${endpoint}`);
   return res.json();
 }
