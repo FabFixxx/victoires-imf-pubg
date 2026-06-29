@@ -22,7 +22,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "static",
+      "display": "standalone",
+      "backgroundColor": "#0A0A0A",
+      "themeColor": "#0A0A0A",
+      "shortName": "IMF PUBG"
     },
     "plugins": [
       "expo-router",

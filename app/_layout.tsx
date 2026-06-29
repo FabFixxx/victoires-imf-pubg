@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { Stack } from 'expo-router';
+import { Head } from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
@@ -127,6 +128,12 @@ export default function RootLayout() {
 
   return (
     <>
+      <Head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="IMF PUBG" />
+        <link rel="apple-touch-icon" href="/assets/icon.png" />
+      </Head>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
