@@ -79,6 +79,7 @@ export default function CalendarScreen() {
   const [currentPlayer, setCurrentPlayer_] = useState<string | null>(null);
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
   const [noAvailPlayers, setNoAvailPlayers] = useState<string[]>([]);
+  const [noAvailThisWeekPlayers, setNoAvailThisWeekPlayers] = useState<string[]>([]);
   const [chosenDate, setChosenDateState] = useState<ChosenDate | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -92,13 +93,15 @@ export default function CalendarScreen() {
   const loadAll = useCallback(async () => {
     setRefreshing(true);
     const weekMonday = getMondayOf(getToday());
-    const [data, noAvail, chosen] = await Promise.all([
+    const [data, noAvail, noAvailThis, chosen] = await Promise.all([
       getAvailability(weekMonday, addMonths(getToday(), 3)),
       getNoAvailability(nextWeekMonday),
+      getNoAvailability(weekMonday),
       getChosenDate(nextWeekMonday),
     ]);
     setAvailability(data);
     setNoAvailPlayers(noAvail);
+    setNoAvailThisWeekPlayers(noAvailThis);
     setChosenDateState(chosen);
     setRefreshing(false);
   }, []);
@@ -227,10 +230,16 @@ export default function CalendarScreen() {
 
   // Qui a répondu pour la semaine PROCHAINE (dispo ou aucune dispo)
   const playersWithNextWeekAvail = useMemo(() => {
-    const withDispo = new Set(
+    return new Set(
       availability.filter((d) => d.date >= nextWeekMonday && d.date <= nextWeekSunday).flatMap((d) => d.players)
     );
-    return withDispo;
+  }, [availability]);
+
+  // Qui a répondu pour CETTE semaine (dispo ou aucune dispo)
+  const playersWithThisWeekAvail = useMemo(() => {
+    return new Set(
+      availability.filter((d) => d.date >= currentWeekMonday && d.date <= thisWeekSunday).flatMap((d) => d.players)
+    );
   }, [availability]);
 
   const myNoAvail = currentPlayer ? noAvailPlayers.includes(currentPlayer) : false;
@@ -374,6 +383,35 @@ export default function CalendarScreen() {
               <Text style={[styles.legendName, p === currentPlayer && styles.legendNameMe]}>{getDisplayName(p)}</Text>
             </View>
           ))}
+        </View>
+
+        {/* DISPO CETTE SEMAINE */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DISPO CETTE SEMAINE ({thisWeekLabel})</Text>
+          <View style={[styles.card, styles.statusGrid]}>
+            {GROUP_PLAYERS.map((p) => {
+              const hasNoAvail = noAvailThisWeekPlayers.includes(p);
+              const hasAvail = playersWithThisWeekAvail.has(p);
+              const responded = hasAvail || hasNoAvail;
+              return (
+                <View key={p} style={styles.statusCell}>
+                  <View style={styles.statusCellLeft}>
+                    <View style={[styles.statusDot, { backgroundColor: PLAYER_COLORS[p] }]} />
+                    <Text style={[styles.statusName, p === currentPlayer && styles.statusNameMe]}>{getDisplayName(p)}</Text>
+                  </View>
+                  {responded ? (
+                    <View style={[styles.respondedBadge, hasNoAvail && styles.noAvailBadge]}>
+                      <Text style={[styles.respondedBadgeText, hasNoAvail && styles.noAvailBadgeText]}>
+                        {hasNoAvail ? '✗ Aucune dispo' : '✓ A répondu'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.waitingText}>En attente...</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         {/* DISPO SEMAINE PROCHAINE */}
