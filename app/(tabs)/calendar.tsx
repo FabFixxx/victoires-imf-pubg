@@ -241,12 +241,13 @@ export default function CalendarScreen() {
     return result;
   }, [availability, currentPlayer, chosenDate]);
 
-  const MONTHS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
-
   const getWeekLabel = (mondayStr: string, sundayStr: string) => {
     const mon = new Date(mondayStr + 'T12:00:00');
     const sun = new Date(sundayStr + 'T12:00:00');
-    return `du ${mon.getDate()} au ${sun.getDate()} ${MONTHS_FR[sun.getMonth()]} ${sun.getFullYear()}`;
+    if (mon.getMonth() === sun.getMonth()) {
+      return `du ${mon.getDate()} au ${sun.getDate()} ${MOIS_LONG[sun.getMonth()]}`;
+    }
+    return `du ${mon.getDate()} ${MOIS_LONG[mon.getMonth()]} au ${sun.getDate()} ${MOIS_LONG[sun.getMonth()]}`;
   };
 
   const thisWeekLabel = getWeekLabel(currentWeekMonday, thisWeekSunday);
