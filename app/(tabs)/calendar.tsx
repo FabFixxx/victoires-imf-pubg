@@ -84,6 +84,7 @@ export default function CalendarScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [showNoAvailConfirm, setShowNoAvailConfirm] = useState(false);
+  const [showNoAvailThisWeekConfirm, setShowNoAvailThisWeekConfirm] = useState(false);
 
   useEffect(() => {
     getCurrentPlayer().then(setCurrentPlayer_);
@@ -140,6 +141,15 @@ export default function CalendarScreen() {
       }
     }
 
+    // Si le joueur ajoute une dispo sur cette semaine, retirer "Aucune dispo"
+    if (day.dateString >= currentWeekMonday && day.dateString <= thisWeekSunday) {
+      const isAdding = !availability.find((d) => d.date === day.dateString)?.players.includes(currentPlayer);
+      if (isAdding && noAvailThisWeekPlayers.includes(currentPlayer)) {
+        setNoAvailThisWeekPlayers((prev) => prev.filter((p) => p !== currentPlayer));
+        await removeNoAvailability(currentPlayer, currentWeekMonday);
+      }
+    }
+
     setToggling(null);
   };
 
@@ -171,6 +181,37 @@ export default function CalendarScreen() {
     await Promise.all([
       addNoAvailability(player, nextWeekMonday),
       deleteAvailabilityForWeek(player, nextWeekMonday, nextWeekSunday),
+    ]);
+  };
+
+  const handleNoAvailThisWeek = async () => {
+    if (!currentPlayer) return;
+    const player = currentPlayer;
+    const hasIt = noAvailThisWeekPlayers.includes(player);
+
+    if (hasIt) {
+      setNoAvailThisWeekPlayers((prev) => prev.filter((p) => p !== player));
+      await removeNoAvailability(player, currentWeekMonday);
+    } else {
+      setShowNoAvailThisWeekConfirm(true);
+    }
+  };
+
+  const confirmNoAvailThisWeek = async () => {
+    if (!currentPlayer) return;
+    const player = currentPlayer;
+    setShowNoAvailThisWeekConfirm(false);
+    setNoAvailThisWeekPlayers((prev) => [...prev, player]);
+    setAvailability((prev) =>
+      prev.map((d) =>
+        d.date >= currentWeekMonday && d.date <= thisWeekSunday
+          ? { ...d, players: d.players.filter((p) => p !== player) }
+          : d
+      ).filter((d) => d.players.length > 0)
+    );
+    await Promise.all([
+      addNoAvailability(player, currentWeekMonday),
+      deleteAvailabilityForWeek(player, currentWeekMonday, thisWeekSunday),
     ]);
   };
 
@@ -243,6 +284,7 @@ export default function CalendarScreen() {
   }, [availability]);
 
   const myNoAvail = currentPlayer ? noAvailPlayers.includes(currentPlayer) : false;
+  const myNoAvailThisWeek = currentPlayer ? noAvailThisWeekPlayers.includes(currentPlayer) : false;
 
   return (
     <SwipeableScreen>
@@ -412,6 +454,23 @@ export default function CalendarScreen() {
               );
             })}
           </View>
+
+          {/* Bouton Aucune dispo cette semaine */}
+          <TouchableOpacity
+            style={[styles.noAvailBtn, myNoAvailThisWeek && styles.noAvailBtnActive]}
+            onPress={handleNoAvailThisWeek}
+          >
+            <Ionicons
+              name={myNoAvailThisWeek ? 'close-circle' : 'ban-outline'}
+              size={18}
+              color={myNoAvailThisWeek ? '#fff' : Colors.danger}
+            />
+            <Text style={[styles.noAvailBtnText, myNoAvailThisWeek && styles.noAvailBtnTextActive]}>
+              {myNoAvailThisWeek
+                ? `Annuler "Aucune dispo du ${new Date(currentWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(thisWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}"`
+                : `Je ne suis pas dispo du ${new Date(currentWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s\d{4}$/, '')} au ${new Date(thisWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* DISPO SEMAINE PROCHAINE */}
@@ -475,6 +534,25 @@ export default function CalendarScreen() {
                 <Text style={styles.confirmCancelText}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.confirmOk} onPress={confirmNoAvail}>
+                <Text style={styles.confirmOkText}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={showNoAvailThisWeekConfirm} transparent animationType="fade">
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
+            <Text style={styles.confirmText}>
+              {`Tu confirmes ne pas être disponible du ${new Date(currentWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(thisWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
+            </Text>
+            <Text style={styles.confirmSub}>Tes dispos déjà saisies sur cette semaine seront supprimées.</Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity style={styles.confirmCancel} onPress={() => setShowNoAvailThisWeekConfirm(false)}>
+                <Text style={styles.confirmCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmOk} onPress={confirmNoAvailThisWeek}>
                 <Text style={styles.confirmOkText}>Confirmer</Text>
               </TouchableOpacity>
             </View>
