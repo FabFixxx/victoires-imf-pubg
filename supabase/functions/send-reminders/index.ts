@@ -160,8 +160,8 @@ Deno.serve(async (_req) => {
   if (!sentTodaySet.has(victoryRecapKey)) {
     const victoryRecapHour = getVictoryRecapHour(todayStr)
     if (hour === victoryRecapHour) {
-      // Fenêtre : hier 18h Paris → aujourd'hui 6h Paris
-      const windowStart = parisLocalToUTC(yesterdayStr, 18)
+      // Fenêtre : hier 6h01 Paris → aujourd'hui 6h00 Paris
+      const windowStart = new Date(new Date(parisLocalToUTC(yesterdayStr, 6)).getTime() + 60000).toISOString()
       const windowEnd = parisLocalToUTC(todayStr, 6)
 
       const { data: nightWins } = await supabase
