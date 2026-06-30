@@ -47,13 +47,30 @@ function getParisDateInfo() {
   const nextWeekSunday = new Date(nextMonday)
   nextWeekSunday.setDate(nextMonday.getDate() + 6)
 
+  const yesterday = new Date(parisDate)
+  yesterday.setDate(parisDate.getDate() - 1)
+
   return {
     hour,
     dayOfWeek,
     todayStr: fmt(parisDate),
+    yesterdayStr: fmt(yesterday),
     nextWeekMonday: fmt(nextMonday),
     nextWeekSunday: fmt(nextWeekSunday),
   }
+}
+
+// Convertit une heure locale Paris (ex: 18) pour une date donnée en UTC ISO string
+function parisLocalToUTC(dateStr: string, localHour: number): string {
+  const guess = new Date(`${dateStr}T${String(localHour).padStart(2, '0')}:00:00Z`)
+  const parisHourActual = parseInt(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    hour: '2-digit',
+    hour12: false,
+  }).format(guess))
+  const diff = parisHourActual - localHour
+  const adjusted = new Date(guess.getTime() - diff * 3600000)
+  return adjusted.toISOString()
 }
 
 async function sendPushToAll(
@@ -106,13 +123,16 @@ async function sendPushToAll(
   }
 }
 
+// Heure pseudo-aléatoire mais déterministe pour une date donnée (10h-16h)
+function getVictoryRecapHour(dateStr: string): number {
+  let hash = 0
+  for (const c of dateStr) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff
+  return 10 + (Math.abs(hash) % 7) // 10, 11, 12, 13, 14, 15 ou 16
+}
+
 Deno.serve(async (_req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-  const { hour, dayOfWeek, todayStr, nextWeekMonday, nextWeekSunday } = getParisDateInfo()
-
-  if (dayOfWeek === 6) {
-    return new Response(JSON.stringify({ skipped: 'Samedi' }), { status: 200 })
-  }
+  const { hour, dayOfWeek, todayStr, yesterdayStr, nextWeekMonday, nextWeekSunday } = getParisDateInfo()
 
   const { data: players } = await supabase
     .from('players')
@@ -135,6 +155,53 @@ Deno.serve(async (_req) => {
 
   const result: Record<string, any> = { hour, dayOfWeek }
 
+  // --- 3. Récap victoires de la nuit (avant le skip samedi pour couvrir vendredi soir) ---
+  const victoryRecapKey = `victory_recap:${todayStr}`
+  if (!sentTodaySet.has(victoryRecapKey)) {
+    const victoryRecapHour = getVictoryRecapHour(todayStr)
+    if (hour === victoryRecapHour) {
+      // Fenêtre : hier 18h Paris → aujourd'hui 6h Paris
+      const windowStart = parisLocalToUTC(yesterdayStr, 18)
+      const windowEnd = parisLocalToUTC(todayStr, 6)
+
+      const { data: nightWins } = await supabase
+        .from('imf_season_wins')
+        .select('id, map_name, created_at')
+        .gte('created_at', windowStart)
+        .lt('created_at', windowEnd)
+
+      if (nightWins && nightWins.length > 0) {
+        const count = nightWins.length
+        let title: string
+        let body: string
+
+        if (count === 1) {
+          const mapName = nightWins[0].map_name
+          title = '🏆 Victoire IMF hier soir !'
+          body = mapName
+            ? `Bravo les IMF, belle victoire hier soir sur ${mapName} !`
+            : 'Bravo les IMF, belle victoire hier soir !'
+        } else {
+          title = '🏆 Victoires IMF hier soir !'
+          body = `Bravo les IMF, ${count} belles victoires hier soir !`
+        }
+
+        await sendPushToAll(supabase, players, title, body, 'victory_recap')
+        await supabase.from('notification_log').insert({
+          type: 'victory_recap',
+          key: todayStr,
+          sent_at: new Date().toISOString(),
+        })
+        result.victory_recap_sent = count
+      }
+    }
+    result.victory_recap_hour = getVictoryRecapHour(todayStr)
+  }
+
+  if (dayOfWeek === 6) {
+    return new Response(JSON.stringify({ ...result, skipped: 'Samedi' }), { status: 200 })
+  }
+
   // --- 1. Notif jour de jeu ---
   const { data: chosenDate } = await supabase
     .from('chosen_dates')
@@ -145,7 +212,6 @@ Deno.serve(async (_req) => {
   if (chosenDate) {
     const gameDayKey = `game_day:${todayStr}`
     if (!sentTodaySet.has(gameDayKey)) {
-      // Utilise le game_day_hour du premier joueur qui a une préf (ou 18h par défaut)
       const gameDayHour = prefs?.find((p: any) => p.game_day_hour != null)?.game_day_hour ?? 18
       if (hour === gameDayHour) {
         await sendPushToAll(
