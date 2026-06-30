@@ -468,8 +468,8 @@ export default function CalendarScreen() {
             />
             <Text style={[styles.noAvailBtnText, myNoAvailThisWeek && styles.noAvailBtnTextActive]}>
               {myNoAvailThisWeek
-                ? `Annuler "Aucune dispo du ${new Date(currentWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(thisWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}"`
-                : `Je ne suis pas dispo du ${new Date(currentWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s\d{4}$/, '')} au ${new Date(thisWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+                ? `Annuler "Aucune dispo ${getWeekLabel(currentWeekMonday, thisWeekSunday)}"`
+                : `Je ne suis pas dispo ${getWeekLabel(currentWeekMonday, thisWeekSunday)}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -514,8 +514,8 @@ export default function CalendarScreen() {
             />
             <Text style={[styles.noAvailBtnText, myNoAvail && styles.noAvailBtnTextActive]}>
               {myNoAvail
-                ? `Annuler "Aucune dispo du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}"`
-                : `Je ne suis pas dispo du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/\s\d{4}$/, '')} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+                ? `Annuler "Aucune dispo ${getWeekLabel(nextWeekMonday, nextWeekSunday)}"`
+                : `Je ne suis pas dispo ${getWeekLabel(nextWeekMonday, nextWeekSunday)}`}
             </Text>
           </TouchableOpacity>
         </View>
