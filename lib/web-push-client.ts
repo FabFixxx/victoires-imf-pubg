@@ -3,17 +3,38 @@ import { supabase } from './supabase';
 
 const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? 'BONdBeXikx5AxrrXl7_LQ_ZTNPoxlSuo0aqJF-82bHtlbXLNV5VQMqUjnyYE5B6z1zxMKn8SvcxcakIWosumUFY';
 
+async function logWebPush(username: string, msg: string) {
+  await supabase.from('notification_log').insert({
+    type: 'web_push_error',
+    key: username + ': ' + msg,
+  }).then(() => {});
+}
+
 export async function registerWebPush(username: string): Promise<void> {
   if (Platform.OS !== 'web') return;
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (!VAPID_PUBLIC_KEY) return;
+
+  if (!('serviceWorker' in navigator)) {
+    await logWebPush(username, 'no serviceWorker in navigator');
+    return;
+  }
+  if (!('PushManager' in window)) {
+    await logWebPush(username, 'no PushManager in window');
+    return;
+  }
+  if (!VAPID_PUBLIC_KEY) {
+    await logWebPush(username, 'no VAPID_PUBLIC_KEY');
+    return;
+  }
 
   try {
     const registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
 
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
+    if (permission !== 'granted') {
+      await logWebPush(username, 'permission denied: ' + permission);
+      return;
+    }
 
     const existing = await registration.pushManager.getSubscription();
     const subscription = existing ?? await registration.pushManager.subscribe({
@@ -32,10 +53,7 @@ export async function registerWebPush(username: string): Promise<void> {
   } catch (e: any) {
     const msg = e?.message ?? String(e);
     console.warn('Web push registration failed:', msg);
-    await supabase.from('notification_log').insert({
-      type: 'web_push_error',
-      key: username + ': ' + msg,
-    }).then(() => {});
+    await logWebPush(username, msg);
   }
 }
 
