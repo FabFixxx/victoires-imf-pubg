@@ -62,9 +62,8 @@ export async function registerPushToken(username: string): Promise<string | null
     const msg = e?.message ?? String(e);
     console.warn('Push token registration failed:', msg);
     await supabase.from('notification_log').insert({
-      player_username: username,
       type: 'push_token_error',
-      message: msg,
+      key: username + ': ' + msg,
     }).then(() => {});
     return null;
   }
