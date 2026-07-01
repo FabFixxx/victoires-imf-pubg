@@ -323,7 +323,12 @@ export default function DashboardScreen() {
                 <Text style={styles.statsBarValue}>{imfStats ? avg(imfStats.totalDamage, imfStats.totalMatches) : '—'}</Text>
               </View>
             </View>
+          </>
+        )}
 
+        {/* ── Top cartes gagnées ── */}
+        {imfSeason && (
+          <>
             {/* Top 5 cartes */}
             <Text style={styles.listTitle}>TOP CARTES GAGNÉES</Text>
             <View style={styles.listCard}>
@@ -339,34 +344,6 @@ export default function DashboardScreen() {
                     <Text style={styles.listValue}>
                       {m.wins} victoire{m.wins > 1 ? 's' : ''}
                     </Text>
-                  </View>
-                ))
-              )}
-            </View>
-
-            {/* Top Finisher — 4 joueurs */}
-            <Text style={styles.listTitle}>TOP FINISHER</Text>
-            <View style={styles.listCard}>
-              {finisherStats.length === 0 ? (
-                <View style={styles.listRow}>
-                  <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
-                </View>
-              ) : (
-                finisherStats.map((f, idx) => (
-                  <View key={f.username} style={[styles.listRow, idx < finisherStats.length - 1 && styles.listRowBorder]}>
-                    <Text style={[styles.listRank, idx === 0 && f.count > 0 && styles.listRankGold]}>
-                      {idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
-                    </Text>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
-                      <Text style={styles.listLabel}>{getDisplayName(f.username)}</Text>
-                    </View>
-                    <View style={styles.listValueWrap}>
-                      <Ionicons name="skull-outline" size={12} color={f.count > 0 ? Colors.win : Colors.textMuted} />
-                      <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted]}>
-                        {f.count} dernier{f.count > 1 ? 's' : ''} kill
-                      </Text>
-                    </View>
                   </View>
                 ))
               )}
@@ -398,11 +375,47 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+
         {/* ── Dernier match ── */}
         {lastMatch && <MatchCard match={lastMatch} title="Dernier match" />}
 
+
         {/* ── Dernière victoire ── */}
         {lastWin && <MatchCard match={lastWin} title="Dernière victoire" />}
+
+
+        {/* ── Top finisher ── */}
+        {imfSeason && (
+          <>
+            {/* Top Finisher — 4 joueurs */}
+            <Text style={styles.listTitle}>TOP FINISHER</Text>
+            <View style={styles.listCard}>
+              {finisherStats.length === 0 ? (
+                <View style={styles.listRow}>
+                  <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
+                </View>
+              ) : (
+                finisherStats.map((f, idx) => (
+                  <View key={f.username} style={[styles.listRow, idx < finisherStats.length - 1 && styles.listRowBorder]}>
+                    <Text style={[styles.listRank, idx === 0 && f.count > 0 && styles.listRankGold]}>
+                      {idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
+                    </Text>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
+                      <Text style={styles.listLabel}>{getDisplayName(f.username)}</Text>
+                    </View>
+                    <View style={styles.listValueWrap}>
+                      <Ionicons name="skull-outline" size={12} color={f.count > 0 ? Colors.win : Colors.textMuted} />
+                      <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted]}>
+                        {f.count} dernier{f.count > 1 ? 's' : ''} kill
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </>
+        )}
 
         {/* ── Matchs récents IMF ── */}
         {recentTeamMatches.length > 0 && (
