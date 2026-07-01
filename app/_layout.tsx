@@ -65,6 +65,12 @@ export default function RootLayout() {
     return () => clearTimeout(timeout);
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.title = 'Victoires IMF PUBG';
+    }
+  }, []);
+
   const triggerAutoSync = async () => {
     const last = await getLastSync();
     if (last && Date.now() - last.getTime() < 24 * 60 * 60 * 1000) return;
