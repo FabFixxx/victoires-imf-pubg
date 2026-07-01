@@ -281,30 +281,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* ── Mois en cours ── */}
-        <SectionHeader title={`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`} />
-
-        <View style={styles.row}>
-          <StatCard label="Victoires du groupe" value={monthly?.totalWins ?? '—'} accent large />
-        </View>
-
-        <View style={styles.statsBar}>
-          <View style={styles.statsBarItem}>
-            <Text style={styles.statsBarLabel}>Matchs</Text>
-            <Text style={styles.statsBarValue}>{monthly?.totalMatches ?? '—'}</Text>
-          </View>
-          <View style={styles.statsBarDivider} />
-          <View style={styles.statsBarItem}>
-            <Text style={styles.statsBarLabel}>Frags moy.</Text>
-            <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalKills, monthly.totalMatches) : '—'}</Text>
-          </View>
-          <View style={styles.statsBarDivider} />
-          <View style={styles.statsBarItem}>
-            <Text style={styles.statsBarLabel}>Dmg moy.</Text>
-            <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalDamage, monthly.totalMatches) : '—'}</Text>
-          </View>
-        </View>
-
         {/* ── Saison IMF ── */}
         {imfSeason && (
           <>
@@ -397,6 +373,30 @@ export default function DashboardScreen() {
             </View>
           </>
         )}
+
+        {/* ── Mois en cours ── */}
+        <SectionHeader title={`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`} />
+
+        <View style={styles.row}>
+          <StatCard label="Victoires du groupe" value={monthly?.totalWins ?? '—'} accent large />
+        </View>
+
+        <View style={styles.statsBar}>
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Matchs</Text>
+            <Text style={styles.statsBarValue}>{monthly?.totalMatches ?? '—'}</Text>
+          </View>
+          <View style={styles.statsBarDivider} />
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Frags moy.</Text>
+            <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalKills, monthly.totalMatches) : '—'}</Text>
+          </View>
+          <View style={styles.statsBarDivider} />
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Dmg moy.</Text>
+            <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalDamage, monthly.totalMatches) : '—'}</Text>
+          </View>
+        </View>
 
         {/* ── Dernier match ── */}
         {lastMatch && <MatchCard match={lastMatch} title="Dernier match" />}
