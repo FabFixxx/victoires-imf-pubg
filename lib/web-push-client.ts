@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? '';
+const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? 'BONdBeXikx5AxrrXl7_LQ_ZTNPoxlSuo0aqJF-82bHtlbXLNV5VQMqUjnyYE5B6z1zxMKn8SvcxcakIWosumUFY';
 
 export async function registerWebPush(username: string): Promise<void> {
   if (Platform.OS !== 'web') return;
