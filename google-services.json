@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "867628900832",
+    "project_id": "victoires-imf-pubg",
+    "storage_bucket": "victoires-imf-pubg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:867628900832:android:83df246e62eac50fb8cb85",
+        "android_client_info": {
+          "package_name": "com.imf.victoirespubg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCClmy2W_81kRiggdkCP0vM7vhBZPr5R2M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
