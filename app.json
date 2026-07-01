@@ -19,7 +19,8 @@
         "backgroundColor": "#0A0A0A"
       },
       "package": "com.imf.victoirespubg",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",
