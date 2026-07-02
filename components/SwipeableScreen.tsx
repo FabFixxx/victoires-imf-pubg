@@ -2,7 +2,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { View, Platform } from 'react-native';
 
-const TABS = ['/', '/stats', '/calendar', '/settings'];
+const TABS = ['/', '/stats', '/calendar', '/victoires', '/settings'];
 
 function isSwipeEnabled(): boolean {
   if (Platform.OS !== 'web') return true;
