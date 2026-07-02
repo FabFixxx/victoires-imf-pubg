@@ -3,59 +3,20 @@ import { supabase } from './supabase';
 
 const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? 'BCx2eoyWs_QpKBUWdE2X07YHy3pvvx8rVUnj7unJIxHxAfICueIz3p_68iK4uIvakZOFVj0fg9EKgjloHNnuCPo';
 
-async function logWebPush(username: string, msg: string, extra?: Record<string, any>) {
-  const value = extra ? `${msg} | ${JSON.stringify(extra)}` : msg;
-  console.log(`[web-push][${username}] ${value}`);
-  await supabase.from('notification_log').insert({
-    type: 'web_push_debug',
-    key: `${username}: ${value}`,
-    sent_at: new Date().toISOString(),
-  }).then(() => {});
-}
-
 export async function registerWebPush(username: string): Promise<void> {
   if (Platform.OS !== 'web') return;
 
-  await logWebPush(username, 'start registerWebPush', {
-    ua: navigator.userAgent.slice(0, 80),
-    standalone: (navigator as any).standalone ?? 'n/a',
-  });
-
-  if (!('serviceWorker' in navigator)) {
-    await logWebPush(username, 'FAIL: no serviceWorker in navigator');
-    return;
-  }
-  if (!('PushManager' in window)) {
-    await logWebPush(username, 'FAIL: no PushManager in window');
-    return;
-  }
-  if (!VAPID_PUBLIC_KEY) {
-    await logWebPush(username, 'FAIL: no VAPID_PUBLIC_KEY');
-    return;
-  }
-
-  await logWebPush(username, 'serviceWorker + PushManager OK, registering sw.js...');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) return;
 
   try {
     const registration = await navigator.serviceWorker.register('/sw.js');
-    await logWebPush(username, 'SW registered', { scope: registration.scope, state: registration.active?.state ?? 'no active' });
-
     await navigator.serviceWorker.ready;
-    await logWebPush(username, 'SW ready');
 
-    const currentPermission = Notification.permission;
-    await logWebPush(username, 'permission before request: ' + currentPermission);
-
-    const permission = currentPermission === 'granted'
+    const permission = Notification.permission === 'granted'
       ? 'granted'
       : await Notification.requestPermission();
 
-    await logWebPush(username, 'permission after request: ' + permission);
-
-    if (permission !== 'granted') {
-      await logWebPush(username, 'FAIL: permission not granted: ' + permission);
-      return;
-    }
+    if (permission !== 'granted') return;
 
     const existing = await registration.pushManager.getSubscription();
     let subscription = existing;
@@ -68,15 +29,10 @@ export async function registerWebPush(username: string): Promise<void> {
         existingKey.length === currentKey.length &&
         currentKey.every((v, i) => v === existingKey[i]);
 
-      if (keysMatch) {
-        await logWebPush(username, 'existing subscription, VAPID key matches');
-      } else {
-        await logWebPush(username, 'existing subscription but VAPID key mismatch, resubscribing...');
+      if (!keysMatch) {
         await existing.unsubscribe();
         subscription = null;
       }
-    } else {
-      await logWebPush(username, 'no existing subscription, subscribing...');
     }
 
     if (!subscription) {
@@ -87,26 +43,14 @@ export async function registerWebPush(username: string): Promise<void> {
     }
 
     const subJson = subscription.toJSON() as any;
-    const endpoint = subJson.endpoint ?? '';
-    await logWebPush(username, 'subscription obtained', { endpoint: endpoint.slice(0, 60) + '...', hasKeys: !!subJson.keys });
-
-    // Supprime les anciennes subscriptions du user, puis insère la nouvelle
     await supabase.from('web_push_subscriptions').delete().eq('username', username);
-    const { error } = await supabase.from('web_push_subscriptions').insert({
+    await supabase.from('web_push_subscriptions').insert({
       username,
-      endpoint,
+      endpoint: subJson.endpoint ?? '',
       subscription: subJson,
     });
-
-    if (error) {
-      await logWebPush(username, 'FAIL: upsert error', { error: error.message });
-    } else {
-      await logWebPush(username, 'SUCCESS: subscription saved to web_push_subscriptions');
-    }
   } catch (e: any) {
-    const msg = e?.message ?? String(e);
-    console.warn('Web push registration failed:', msg);
-    await logWebPush(username, 'EXCEPTION: ' + msg);
+    console.warn('Web push registration failed:', e?.message ?? String(e));
   }
 }
 
