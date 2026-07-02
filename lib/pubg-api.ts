@@ -668,10 +668,13 @@ export async function getFinisherStats(
   const counts: Record<string, number> = {};
   const lastDate: Record<string, string> = {};
   for (const p of GROUP_PLAYERS) counts[p] = 0;
+  let zoneBleueCount = 0;
 
   if (data) {
     for (const row of data) {
-      if (row.finisher in counts) {
+      if (row.finisher === 'Zone bleue') {
+        zoneBleueCount++;
+      } else if (row.finisher in counts) {
         counts[row.finisher]++;
         if (!lastDate[row.finisher] || row.match_date > lastDate[row.finisher]) {
           lastDate[row.finisher] = row.match_date;
@@ -682,16 +685,19 @@ export async function getFinisherStats(
 
   if (manualWins) {
     for (const w of manualWins) {
-      if (w.finisher && w.finisher in counts) counts[w.finisher]++;
+      if (w.finisher === 'Zone bleue') zoneBleueCount++;
+      else if (w.finisher && w.finisher in counts) counts[w.finisher]++;
     }
   }
 
-  return Object.entries(counts)
+  const playerStats = Object.entries(counts)
     .sort((a, b) => {
       if (b[1] !== a[1]) return b[1] - a[1];
       return (lastDate[b[0]] ?? '') > (lastDate[a[0]] ?? '') ? 1 : -1;
     })
     .map(([username, count]) => ({ username, count }));
+
+  return [...playerStats, { username: 'Zone bleue', count: zoneBleueCount }];
 }
 
 export async function getTopMaps(

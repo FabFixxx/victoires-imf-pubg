@@ -10,6 +10,7 @@ export const Colors = {
   textSecondary: '#E0E0E0',
   textMuted: '#BBBBBB',
   win: '#4CAF50',
+  blueZone: '#5BA4CF',
   danger: '#FF4444',
   tabBar: '#0F0F0F',
   tabBarBorder: '#252525',

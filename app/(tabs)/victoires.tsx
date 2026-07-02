@@ -175,9 +175,9 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
 
       {win.finisher && (
         <View style={styles.finisherRow}>
-          <Ionicons name="skull-outline" size={12} color={Colors.win} style={{ marginTop: 1 }} />
+          <Ionicons name="skull-outline" size={12} color={win.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
           <Text style={styles.finisherText}>
-            Dernier kill : <Text style={styles.finisherName}>{win.finisher}</Text>
+            Dernier kill : <Text style={[styles.finisherName, win.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{win.finisher}</Text>
           </Text>
         </View>
       )}

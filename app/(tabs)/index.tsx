@@ -87,9 +87,9 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
               </Text>
             {match.isWin && match.finisher && (
               <View style={styles.finisherInline}>
-                <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                 <Text style={styles.finisherText}>
-                  Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
+                  Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
                 </Text>
               </View>
             )}
@@ -413,23 +413,31 @@ export default function DashboardScreen() {
                   <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
                 </View>
               ) : (
-                finisherStats.map((f, idx) => (
-                  <View key={f.username} style={[styles.listRow, idx < finisherStats.length - 1 && styles.listRowBorder]}>
-                    <Text style={[styles.listRank, idx === 0 && f.count > 0 && styles.listRankGold]}>
-                      {idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
-                    </Text>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
-                      <Text style={styles.listLabel}>{getDisplayName(f.username)}</Text>
-                    </View>
-                    <View style={styles.listValueWrap}>
-                      <Ionicons name="skull-outline" size={12} color={f.count > 0 ? Colors.win : Colors.textMuted} />
-                      <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted]}>
-                        {f.count} dernier{f.count > 1 ? 's' : ''} kill
+                finisherStats.map((f, idx) => {
+                  const isZone = f.username === 'Zone bleue';
+                  return (
+                    <View key={f.username} style={[styles.listRow, idx < finisherStats.length - 1 && styles.listRowBorder]}>
+                      <Text style={[styles.listRank, !isZone && idx === 0 && f.count > 0 && styles.listRankGold]}>
+                        {!isZone && idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
                       </Text>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {isZone
+                          ? <View style={[styles.playerDot, { backgroundColor: Colors.blueZone }]} />
+                          : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
+                        }
+                        <Text style={[styles.listLabel, isZone && { color: Colors.blueZone }]}>
+                          {isZone ? 'Zone bleue' : getDisplayName(f.username as any)}
+                        </Text>
+                      </View>
+                      <View style={styles.listValueWrap}>
+                        <Ionicons name="skull-outline" size={12} color={f.count > 0 ? (isZone ? Colors.blueZone : Colors.win) : Colors.textMuted} />
+                        <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted, isZone && f.count > 0 && { color: Colors.blueZone }]}>
+                          {f.count} dernier{f.count > 1 ? 's' : ''} kill
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                ))
+                  );
+                })
               )}
             </View>
           </>
@@ -454,9 +462,9 @@ export default function DashboardScreen() {
                       </Text>
                       {match.is_win && match.finisher && (
                         <>
-                          <Ionicons name="skull-outline" size={12} color={Colors.win} style={{ marginTop: 1 }} />
+                          <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                           <Text style={styles.finisherText}>
-                            Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
+                            Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
                           </Text>
                         </>
                       )}

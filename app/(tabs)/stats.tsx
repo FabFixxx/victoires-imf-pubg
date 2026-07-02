@@ -308,9 +308,9 @@ export default function StatsScreen() {
                           </Text>
                           {match.is_win && match.finisher && (
                             <>
-                              <Ionicons name="skull-outline" size={12} color={Colors.win} style={{ marginTop: 1 }} />
+                              <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                               <Text style={styles.matchFinisherText}>
-                                Dernier kill : <Text style={styles.matchFinisherName}>{match.finisher}</Text>
+                                Dernier kill : <Text style={[styles.matchFinisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
                               </Text>
                             </>
                           )}
