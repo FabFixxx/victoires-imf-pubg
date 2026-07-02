@@ -160,13 +160,13 @@ export default function StatsScreen() {
 
             <SectionHeader title="Vue d'ensemble" />
             <View style={styles.row}>
-              <StatCard label="Win Rate" value={`${current.winRate}%`} accent />
+              <StatCard label="Win Rate" value={`${current.winRate}%`} />
               <StatCard label="K/D Ratio" value={current.kd} />
             </View>
 
             <SectionHeader title="Combats" />
             <View style={styles.row}>
-              <StatCard label="Kills totaux" value={current.kills.toLocaleString('fr-FR')} accent />
+              <StatCard label="Kills totaux" value={current.kills.toLocaleString('fr-FR')} />
               <StatCard label="Assists totaux" value={current.assists.toLocaleString('fr-FR')} />
             </View>
             <View style={styles.row}>
@@ -174,7 +174,7 @@ export default function StatsScreen() {
               <StatCard label="Dommages totaux" value={current.damage.toLocaleString('fr-FR')} />
             </View>
             <View style={styles.row}>
-              <StatCard label="Moy. dommages/match" value={current.avgDamage.toLocaleString('fr-FR')} />
+              <StatCard label="Moy. dommages/match" value={current.avgDamage.toLocaleString('fr-FR')} accent />
             </View>
 
             {/* Recent matches */}
