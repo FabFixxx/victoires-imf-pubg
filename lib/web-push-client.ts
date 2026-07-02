@@ -58,12 +58,33 @@ export async function registerWebPush(username: string): Promise<void> {
     }
 
     const existing = await registration.pushManager.getSubscription();
-    await logWebPush(username, existing ? 'existing subscription found' : 'no existing subscription, subscribing...');
+    let subscription = existing;
 
-    const subscription = existing ?? await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+    if (existing) {
+      const currentKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      const existingKeyBuffer = existing.options?.applicationServerKey as ArrayBuffer | null;
+      const existingKey = existingKeyBuffer ? new Uint8Array(existingKeyBuffer) : null;
+      const keysMatch = existingKey &&
+        existingKey.length === currentKey.length &&
+        currentKey.every((v, i) => v === existingKey[i]);
+
+      if (keysMatch) {
+        await logWebPush(username, 'existing subscription, VAPID key matches');
+      } else {
+        await logWebPush(username, 'existing subscription but VAPID key mismatch, resubscribing...');
+        await existing.unsubscribe();
+        subscription = null;
+      }
+    } else {
+      await logWebPush(username, 'no existing subscription, subscribing...');
+    }
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
 
     const subJson = subscription.toJSON() as any;
     const endpoint = subJson.endpoint ?? '';
