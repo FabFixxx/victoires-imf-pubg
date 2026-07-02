@@ -12,13 +12,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
-import { getPlayerStats, PlayerStats, PUBG_MAP_NAMES } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentPlayer } from '../../lib/storage';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
+import { getImfSeasons, ImfSeason } from '../../lib/imf-seasons';
 
 interface RecentMatch {
   match_id: string;
@@ -32,8 +33,47 @@ interface RecentMatch {
   finisher?: string | null;
 }
 
+interface PlayerStats {
+  username: string;
+  kills: number;
+  assists: number;
+  damage: number;
+  wins: number;
+  matches: number;
+  kd: number;
+  avgDamage: number;
+  avgKills: number;
+  winRate: number;
+}
+
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+async function getPlayerStatsBetween(username: string, start: string, end: string): Promise<PlayerStats> {
+  const { data } = await supabase
+    .from('player_match_stats')
+    .select('*')
+    .eq('player_username', username)
+    .gte('match_date', start)
+    .lte('match_date', end);
+
+  if (!data || data.length === 0) {
+    return { username, kills: 0, assists: 0, damage: 0, wins: 0, matches: 0, kd: 0, avgDamage: 0, avgKills: 0, winRate: 0 };
+  }
+
+  const kills = data.reduce((s, r) => s + r.kills, 0);
+  const assists = data.reduce((s, r) => s + r.assists, 0);
+  const damage = Math.round(data.reduce((s, r) => s + r.damage, 0));
+  const wins = data.filter((r) => r.is_win).length;
+  const matches = data.length;
+  const deaths = matches - wins;
+  const kd = Math.round((deaths > 0 ? kills / deaths : kills) * 100) / 100;
+  const avgDamage = Math.round(damage / matches);
+  const avgKills = Math.round((kills / matches) * 10) / 10;
+  const winRate = Math.round((wins / matches) * 100);
+
+  return { username, kills, assists, damage, wins, matches, kd, avgDamage, avgKills, winRate };
+}
 
 export default function StatsScreen() {
   const [selected, setSelected] = useState<PlayerName>(GROUP_PLAYERS[0]);
@@ -41,25 +81,35 @@ export default function StatsScreen() {
   const [recent, setRecent] = useState<RecentMatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [seasons, setSeasons] = useState<ImfSeason[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<ImfSeason | null>(null);
 
-  const loadPlayer = useCallback(async (username: string) => {
+  const loadPlayer = useCallback(async (username: string, season: ImfSeason | null) => {
+    if (!season) return;
     setLoading(true);
+    const start = new Date(season.startDate).toISOString();
+    const end = new Date(season.endDate + 'T23:59:59').toISOString();
+
     const [s, { data: recentMatches }] = await Promise.all([
-      getPlayerStats(username),
+      getPlayerStatsBetween(username, start, end),
       supabase
         .from('player_match_stats')
         .select('*')
         .eq('player_username', username)
+        .gte('match_date', start)
+        .lte('match_date', end)
         .order('match_date', { ascending: false })
         .limit(10),
     ]);
-    setStats((prev) => ({ ...prev, [username]: s }));
+
+    setStats((prev) => ({ ...prev, [`${username}_${season.year}`]: s }));
+
     const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
     const matchIds = sorted.map((m) => m.match_id);
     const { data: cacheRows } = await supabase
       .from('match_cache')
       .select('match_id, map_name, finisher')
-      .in('match_id', matchIds);
+      .in('match_id', matchIds.length ? matchIds : ['__none__']);
     const mapNameById: Record<string, string> = {};
     const finisherById: Record<string, string> = {};
     for (const row of cacheRows ?? []) {
@@ -71,11 +121,21 @@ export default function StatsScreen() {
   }, []);
 
   const handleRefresh = async () => {
+    if (!selectedSeason) return;
     setRefreshing(true);
-    delete (stats as any)[selected];
-    await loadPlayer(selected);
+    const key = `${selected}_${selectedSeason.year}`;
+    setStats((prev) => { const n = { ...prev }; delete n[key]; return n; });
+    await loadPlayer(selected, selectedSeason);
     setRefreshing(false);
   };
+
+  useEffect(() => {
+    getImfSeasons().then((list) => {
+      setSeasons(list);
+      const current = list.find((s) => s.isCurrent) ?? list[0] ?? null;
+      setSelectedSeason(current);
+    });
+  }, []);
 
   useEffect(() => {
     getCurrentPlayer().then((player) => {
@@ -86,10 +146,11 @@ export default function StatsScreen() {
   }, []);
 
   useEffect(() => {
-    loadPlayer(selected);
-  }, [selected, loadPlayer]);
+    if (selectedSeason) loadPlayer(selected, selectedSeason);
+  }, [selected, selectedSeason, loadPlayer]);
 
-  const current = stats[selected];
+  const cacheKey = selectedSeason ? `${selected}_${selectedSeason.year}` : '';
+  const current = stats[cacheKey];
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -107,6 +168,26 @@ export default function StatsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>STATISTIQUES</Text>
       </View>
+
+      {/* Season picker */}
+      {seasons.length > 0 && (
+        <View style={styles.seasonPicker}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seasonPickerContent}>
+            {seasons.map((s) => (
+              <TouchableOpacity
+                key={s.year}
+                onPress={() => setSelectedSeason(s)}
+                style={[styles.seasonTab, selectedSeason?.year === s.year && styles.seasonTabActive]}
+              >
+                <Text style={[styles.seasonTabText, selectedSeason?.year === s.year && styles.seasonTabTextActive]}>
+                  {s.year}
+                </Text>
+                {s.isCurrent && <View style={styles.currentDot} />}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Player tabs */}
       <View style={styles.playerTabs}>
@@ -154,7 +235,7 @@ export default function StatsScreen() {
               </View>
               <View style={styles.heroInfo}>
                 <Text style={styles.heroName}>{getDisplayName(selected)}</Text>
-                <Text style={styles.heroMatches}>{current.matches} matchs FPP</Text>
+                <Text style={styles.heroMatches}>{current.matches} matchs FPP · Saison {selectedSeason?.year}</Text>
               </View>
               <View style={styles.heroWins}>
                 <Text style={styles.heroWinsValue}>{current.wins}</Text>
@@ -250,10 +331,30 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: 3,
   },
+
+  seasonPicker: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  seasonPickerContent: { paddingHorizontal: 12, gap: 4, paddingVertical: 6 },
+  seasonTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  seasonTabActive: { backgroundColor: Colors.primary + '22', borderColor: Colors.primary },
+  seasonTabText: { fontSize: 13, fontWeight: '700', color: Colors.textMuted },
+  seasonTabTextActive: { color: Colors.primary },
+  currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.win },
+
   playerTabs: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 6,
+    marginTop: 8,
     marginBottom: 4,
   },
   tab: {
