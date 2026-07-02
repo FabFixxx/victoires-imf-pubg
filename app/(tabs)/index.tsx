@@ -54,6 +54,11 @@ function avg(total: number, matches: number): string {
   return (total / matches).toFixed(1);
 }
 
+function winRate(wins: number, matches: number): string {
+  if (matches === 0) return '—';
+  return Math.round(wins / matches * 100) + '%';
+}
+
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
@@ -325,6 +330,11 @@ export default function DashboardScreen() {
                 <Text style={styles.statsBarLabel}>Dmg moy.</Text>
                 <Text style={styles.statsBarValue}>{imfStats ? avg(imfStats.totalDamage, imfStats.totalMatches) : '—'}</Text>
               </View>
+              <View style={styles.statsBarDivider} />
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Win rate</Text>
+                <Text style={[styles.statsBarValue, styles.statsBarValueAccent]}>{imfStats ? winRate(imfStats.totalWins, imfStats.totalMatches) : '—'}</Text>
+              </View>
             </View>
           </>
         )}
@@ -375,6 +385,11 @@ export default function DashboardScreen() {
           <View style={styles.statsBarItem}>
             <Text style={styles.statsBarLabel}>Dmg moy.</Text>
             <Text style={styles.statsBarValue}>{monthly ? avg(monthly.totalDamage, monthly.totalMatches) : '—'}</Text>
+          </View>
+          <View style={styles.statsBarDivider} />
+          <View style={styles.statsBarItem}>
+            <Text style={styles.statsBarLabel}>Win rate</Text>
+            <Text style={[styles.statsBarValue, styles.statsBarValueAccent]}>{monthly ? winRate(monthly.totalWins, monthly.totalMatches) : '—'}</Text>
           </View>
         </View>
 
@@ -547,6 +562,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: Colors.text,
+  },
+  statsBarValueAccent: {
+    color: Colors.primary,
   },
   statsBarDivider: {
     width: 1,
