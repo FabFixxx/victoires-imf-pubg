@@ -112,6 +112,18 @@ function getVictoryRecapHour(_dateStr: string): number {
   return 10
 }
 
+const MAP_NAMES: Record<string, string> = {
+  Baltic_Main: 'Erangel', Erangel_Main: 'Erangel',
+  Desert_Main: 'Miramar',
+  Savage_Main: 'Sanhok',
+  DihorOtok_Main: 'Vikendi',
+  Summerland_Main: 'Karakin',
+  Tiger_Main: 'Taego',
+  Kiki_Main: 'Deston',
+  Neon_Main: 'Rondo',
+  Chimera_Main: 'Paramo',
+}
+
 Deno.serve(async (_req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
   const { hour, dayOfWeek, todayStr, yesterdayStr, nextWeekMonday, nextWeekSunday, checkWeekMonday, checkWeekSunday } = getParisDateInfo()
@@ -154,12 +166,26 @@ Deno.serve(async (_req) => {
       const wins = [...uniqueMatchIds.map(id => ({ id })), ...extraManual]
 
       if (wins?.length) {
-        await sendPushToAll(
-          supabase, players,
-          wins.length === 1 ? '🏆 Victoire IMF hier soir !' : '🏆 Victoires IMF hier soir !',
-          wins.length === 1 ? 'Bravo les IMF !' : `Bravo les IMF, ${wins.length} victoires !`,
-          'victory_recap'
-        )
+        let mapName: string | null = null
+        if (wins.length === 1) {
+          // Cherche le nom de carte : d'abord dans match_cache (PUBG), sinon imf_season_wins
+          const matchId = (wins[0] as any).id
+          if (!String(matchId).startsWith('manual_') && matchId) {
+            const { data: cacheRow } = await supabase
+              .from('match_cache').select('map_name').eq('match_id', matchId).single()
+            if (cacheRow?.map_name) mapName = MAP_NAMES[cacheRow.map_name] ?? cacheRow.map_name
+          }
+          if (!mapName) {
+            const { data: manualRow } = await supabase
+              .from('imf_season_wins').select('map_name').eq('win_date', yesterdayStr).limit(1).single()
+            if (manualRow?.map_name) mapName = MAP_NAMES[manualRow.map_name] ?? manualRow.map_name
+          }
+        }
+        const title = wins.length === 1 ? '🏆 Victoire IMF hier soir !' : '🏆 Victoires IMF hier soir !'
+        const body = wins.length === 1
+          ? `Bravo les IMF pour votre victoire${mapName ? ` sur ${mapName}` : ''} hier soir !`
+          : `Bravo les IMF pour vos ${wins.length} victoires hier soir !`
+        await sendPushToAll(supabase, players, title, body, 'victory_recap')
         await supabase.from('notification_log').insert({
           type: 'victory_recap', key: todayStr, sent_at: new Date().toISOString(),
         })
