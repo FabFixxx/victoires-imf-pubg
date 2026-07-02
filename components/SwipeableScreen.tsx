@@ -20,12 +20,11 @@ export function SwipeableScreen({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const currentIndex = TABS.indexOf(pathname);
-  const isCalendarPage = pathname === '/calendar';
 
   const swipe = Gesture.Pan()
     .runOnJS(true)
-    .activeOffsetX(isCalendarPage ? [-12, 12] : [-25, 25])
-    .failOffsetY(isCalendarPage ? [-30, 30] : [-15, 15])
+    .activeOffsetX([-25, 25])
+    .failOffsetY([-15, 15])
     .onEnd((e) => {
       if (currentIndex < 0) return;
       if (e.translationX < -40 || e.velocityX < -600) {
