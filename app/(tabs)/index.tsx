@@ -422,7 +422,7 @@ export default function DashboardScreen() {
                       </Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         {isZone
-                          ? <View style={[styles.playerDot, { backgroundColor: Colors.blueZone }]} />
+                          ? <Ionicons name="flash" size={9} color={Colors.blueZone} />
                           : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
                         }
                         <Text style={[styles.listLabel, isZone && { color: Colors.blueZone }]}>
