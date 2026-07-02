@@ -268,7 +268,7 @@ export default function VictoiresScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Victoires IMF</Text>
+        <Text style={styles.title}>VICTOIRES IMF</Text>
       </View>
 
       <View style={styles.seasonPicker}>
@@ -325,8 +325,8 @@ export default function VictoiresScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: 22, fontWeight: '900', color: Colors.text, letterSpacing: 0.5, textTransform: 'uppercase' },
+  header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
+  title: { fontSize: 22, fontWeight: '900', color: Colors.text, letterSpacing: 3 },
 
   seasonPicker: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
   seasonPickerContent: { paddingHorizontal: 12, gap: 4, paddingVertical: 8 },
