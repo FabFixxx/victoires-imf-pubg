@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { PUBG_MAP_NAMES } from '../../lib/pubg-api';
@@ -266,6 +267,7 @@ export default function VictoiresScreen() {
   };
 
   return (
+    <SwipeableScreen>
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>VICTOIRES IMF</Text>
@@ -320,6 +322,7 @@ export default function VictoiresScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+    </SwipeableScreen>
   );
 }
 
