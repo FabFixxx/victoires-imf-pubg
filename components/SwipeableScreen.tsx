@@ -1,8 +1,19 @@
 import { useRouter, usePathname } from 'expo-router';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 
 const TABS = ['/', '/stats', '/calendar', '/settings'];
+
+function isSwipeEnabled(): boolean {
+  if (Platform.OS !== 'web') return true;
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia?.('(display-mode: standalone)').matches === true ||
+    (navigator as any).standalone === true
+  );
+}
+
+const SWIPE_ENABLED = isSwipeEnabled();
 
 export function SwipeableScreen({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,6 +35,10 @@ export function SwipeableScreen({ children }: { children: React.ReactNode }) {
         if (prev !== currentIndex) router.navigate(TABS[prev] as any);
       }
     });
+
+  if (!SWIPE_ENABLED) {
+    return <View style={{ flex: 1 }}>{children}</View>;
+  }
 
   return (
     <GestureDetector gesture={swipe}>
