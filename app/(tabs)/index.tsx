@@ -41,6 +41,7 @@ interface TeamMatch {
   assists: number;
   damage: number;
   mapName?: string;
+  finisher?: string | null;
 }
 
 const MONTH_NAMES = [
@@ -188,16 +189,18 @@ export default function DashboardScreen() {
     const matchIds = Array.from(matchMap.keys());
     const { data: cacheRows } = await supabase
       .from('match_cache')
-      .select('match_id, map_name')
+      .select('match_id, map_name, finisher')
       .in('match_id', matchIds);
     const mapNameById: Record<string, string> = {};
+    const finisherById: Record<string, string> = {};
     for (const row of cacheRows ?? []) {
       if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
+      if (row.finisher) finisherById[row.match_id] = row.finisher;
     }
     const sorted = Array.from(matchMap.values())
       .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
       .slice(0, 10)
-      .map((m) => ({ ...m, mapName: mapNameById[m.match_id] }));
+      .map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null }));
     setRecentTeamMatches(sorted);
 
     setLoading(false);
@@ -433,6 +436,14 @@ export default function DashboardScreen() {
                     <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
                       {match.is_win ? '#1 🏆' : `#${match.win_place}`}
                     </Text>
+                    {match.is_win && match.finisher && (
+                      <View style={styles.finisherInline}>
+                        <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                        <Text style={styles.finisherText}>
+                          Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.teamMatchStats}>
                     <Text style={styles.teamMatchKills}>{match.kills}K / {match.assists}A</Text>
