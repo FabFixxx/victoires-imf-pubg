@@ -74,37 +74,63 @@ function parisLocalToUTC(dateStr: string, localHour: number): string {
 async function sendPushToAll(supabase: any, players: any[], title: string, body: string, type: string) {
   const payload = { title, body }
 
+  // Expo push (APK Android)
   const expoTokens = players.map(p => p.expo_push_token).filter(Boolean)
+  console.log(`[sendPushToAll] type=${type} | ${players.length} players | ${expoTokens.length} expo tokens`)
   if (expoTokens.length) {
-    await fetch('https://exp.host/--/api/v2/push/send', {
+    const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(expoTokens.map((token: string) => ({
         to: token, ...payload, data: { type }, channelId: 'sessions',
       }))),
     })
+    console.log(`[sendPushToAll] expo push sent, status=${expoRes.status}`)
   }
 
+  // Web push (iOS PWA + navigateurs)
+  // Tous les joueurs sont éligibles au web push, pas seulement ceux sans expo token
   if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-    const usernames = players.filter(p => !p.expo_push_token).map(p => p.username)
-    if (usernames.length) {
-      const { data: webSubs } = await supabase
-        .from('web_push_subscriptions')
-        .select('username, endpoint, subscription')
-        .in('username', usernames)
+    const allUsernames = players.map(p => p.username)
+    console.log(`[sendPushToAll] looking up web subs for: ${allUsernames.join(', ')}`)
 
-      for (const sub of webSubs ?? []) {
-        try {
-          const subJson = sub.subscription as any
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
-            JSON.stringify(payload)
-          )
-        } catch (e) {
-          console.warn('web push failed', sub.username)
-        }
+    const { data: webSubs, error: subError } = await supabase
+      .from('web_push_subscriptions')
+      .select('username, endpoint, subscription')
+      .in('username', allUsernames)
+
+    if (subError) {
+      console.error('[sendPushToAll] web_push_subscriptions query error:', subError.message)
+    }
+
+    console.log(`[sendPushToAll] found ${(webSubs ?? []).length} web subscriptions`)
+
+    for (const sub of webSubs ?? []) {
+      try {
+        const subJson = sub.subscription as any
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
+          JSON.stringify(payload)
+        )
+        console.log(`[sendPushToAll] web push OK: ${sub.username} endpoint=${sub.endpoint.slice(0, 50)}...`)
+        await supabase.from('notification_log').insert({
+          type: 'web_push_sent',
+          key: `${sub.username}:${type}:${new Date().toISOString().slice(0, 10)}`,
+          sent_at: new Date().toISOString(),
+        })
+      } catch (e: any) {
+        const errMsg = e?.message ?? String(e)
+        const statusCode = e?.statusCode ?? e?.status ?? 'unknown'
+        console.error(`[sendPushToAll] web push FAILED: ${sub.username} | status=${statusCode} | ${errMsg}`)
+        await supabase.from('notification_log').insert({
+          type: 'web_push_error',
+          key: `${sub.username}: send failed status=${statusCode} ${errMsg}`,
+          sent_at: new Date().toISOString(),
+        })
       }
     }
+  } else {
+    console.warn('[sendPushToAll] VAPID keys not configured — skipping web push')
   }
 }
 
