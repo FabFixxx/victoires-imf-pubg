@@ -104,16 +104,36 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
       (e) => e._T === 'LogPlayerKillV2' || e._T === 'LogPlayerKill'
     );
     if (killEvents.length === 0) return null;
-    // Exclude self-kills (zone damage) where finisher === victim
+
+    // Sort all kills by timestamp — the very last event ended the match
+    killEvents.sort((a, b) => a._D.localeCompare(b._D));
+    const lastKill = killEvents[killEvents.length - 1];
+
+    // Check if the final kill was a valid player kill
+    const finisherName = lastKill.finisher?.name ?? lastKill.killer?.name;
+    const victimName = lastKill.victim?.name;
+    if (finisherName && finisherName !== victimName) {
+      return finisherName;
+    }
+
+    // Last kill was not a player kill — check if it was the blue zone
+    const isBlueZone =
+      lastKill.damageCauserName === 'BlueZone' ||
+      lastKill.damageTypeCategory === 'Damage_BlueZone' ||
+      (lastKill.finishDamageInfo?.damageCauserName === 'BlueZone') ||
+      // Fallback: no valid finisher at all and no killer name → zone or unknown
+      (!finisherName && !lastKill.killer?.name);
+
+    if (isBlueZone) return 'Zone bleue';
+
+    // Fallback: return last valid player kill if last event was ambiguous
     const validKills = killEvents.filter((e) => {
-      const finisherName = e.finisher?.name ?? e.killer?.name;
-      const victimName = e.victim?.name;
-      return finisherName && finisherName !== victimName;
+      const fn = e.finisher?.name ?? e.killer?.name;
+      return fn && fn !== e.victim?.name;
     });
     if (validKills.length === 0) return null;
-    validKills.sort((a, b) => a._D.localeCompare(b._D));
-    const lastKill = validKills[validKills.length - 1];
-    return lastKill.finisher?.name ?? lastKill.killer?.name ?? null;
+    const lastValid = validKills[validKills.length - 1];
+    return lastValid.finisher?.name ?? lastValid.killer?.name ?? null;
   } catch {
     return null;
   }
