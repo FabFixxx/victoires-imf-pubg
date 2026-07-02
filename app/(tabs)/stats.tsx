@@ -207,7 +207,7 @@ export default function StatsScreen() {
                           </Text>
                           {match.is_win && match.finisher && (
                             <>
-                              <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                              <Ionicons name="skull-outline" size={12} color={Colors.win} style={{ marginTop: 1 }} />
                               <Text style={styles.matchFinisherText}>
                                 Dernier kill : <Text style={styles.matchFinisherName}>{match.finisher}</Text>
                               </Text>

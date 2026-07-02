@@ -454,7 +454,7 @@ export default function DashboardScreen() {
                       </Text>
                       {match.is_win && match.finisher && (
                         <>
-                          <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                          <Ionicons name="skull-outline" size={12} color={Colors.win} style={{ marginTop: 1 }} />
                           <Text style={styles.finisherText}>
                             Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
                           </Text>
