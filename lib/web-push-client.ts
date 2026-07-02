@@ -58,14 +58,9 @@ export async function registerWebPush(username: string): Promise<void> {
     }
 
     const existing = await registration.pushManager.getSubscription();
-    if (existing) {
-      await existing.unsubscribe();
-      await logWebPush(username, 'unsubscribed existing subscription, resubscribing with new key...');
-    } else {
-      await logWebPush(username, 'no existing subscription, subscribing...');
-    }
+    await logWebPush(username, existing ? 'existing subscription found' : 'no existing subscription, subscribing...');
 
-    const subscription = await registration.pushManager.subscribe({
+    const subscription = existing ?? await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
@@ -74,11 +69,13 @@ export async function registerWebPush(username: string): Promise<void> {
     const endpoint = subJson.endpoint ?? '';
     await logWebPush(username, 'subscription obtained', { endpoint: endpoint.slice(0, 60) + '...', hasKeys: !!subJson.keys });
 
-    const { error } = await supabase.from('web_push_subscriptions').upsert({
+    // Supprime les anciennes subscriptions du user, puis insère la nouvelle
+    await supabase.from('web_push_subscriptions').delete().eq('username', username);
+    const { error } = await supabase.from('web_push_subscriptions').insert({
       username,
       endpoint,
       subscription: subJson,
-    }, { onConflict: 'endpoint' });
+    });
 
     if (error) {
       await logWebPush(username, 'FAIL: upsert error', { error: error.message });
