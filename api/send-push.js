@@ -23,6 +23,9 @@ module.exports = async (req, res) => {
     subscriptions.map((sub) => webpush.sendNotification(sub, payload))
   );
 
-  const failed = results.filter((r) => r.status === 'rejected').length;
-  res.status(200).json({ sent: results.length - failed, failed });
+  const errors = results
+    .filter((r) => r.status === 'rejected')
+    .map((r) => ({ message: r.reason?.message, statusCode: r.reason?.statusCode, body: r.reason?.body }));
+  const failed = errors.length;
+  res.status(200).json({ sent: results.length - failed, failed, errors });
 };
