@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? 'BPqhEwW78nBlvnAAhSIf0WYEY0gO7Uyjy1WwhOCmqj7dA0oEue10nECJBtQ2zv0LApuAVUhOIE_onEiJBHt7wQA';
+const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? 'BCx2eoyWs_QpKBUWdE2X07YHy3pvvx8rVUnj7unJIxHxAfICueIz3p_68iK4uIvakZOFVj0fg9EKgjloHNnuCPo';
 
 async function logWebPush(username: string, msg: string, extra?: Record<string, any>) {
   const value = extra ? `${msg} | ${JSON.stringify(extra)}` : msg;
