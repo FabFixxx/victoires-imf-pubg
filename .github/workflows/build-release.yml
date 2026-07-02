@@ -58,29 +58,10 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## Nouveautés v1.0.7
-
-            ### 🏆 Onglet Victoires
-            - Nouvel onglet dédié avec la liste complète des victoires par saison IMF
-            - Sélecteur de saison (2025, 2026…) avec dates de début/fin
-            - Victoires PUBG + victoires saisies manuellement
-            - Détail complet : carte, finisher, joueurs avec kills/dommages
-
-            ### 📊 Stats par saison
-            - Filtrage des statistiques par saison IMF
-            - Sélecteur de saison harmonisé avec l'onglet Victoires
-
-            ### 💀 Zone bleue
-            - Détection automatique quand le dernier ennemi meurt de la zone bleue
-            - "Zone bleue" affiché en bleu dans les matchs récents et l'onglet Victoires
-            - 5e ligne dans le Top Finisher avec icône ⚡
-
-            ### 🔔 Notifications victoires
-            - Envoi à heure fixe : 10h00 (plus d'aléatoire)
-            - Vérifie les victoires dans `player_match_stats` ET `imf_season_wins`
-            - Texte avec nom de la carte pour 1 victoire, compte pour plusieurs
-
-            ### 🎨 Interface
-            - Finisher affiché dans les matchs récents (page Stats)
-            - Win Rate en blanc, accent orange sur Moy. dommages/match uniquement
-            - Icône de notification Android : silhouette IMF blanche sur fond orange
+            ## Nouveautés
+            - 🔔 Correction des notifications push Android : le token n'était jamais enregistré au démarrage
+            - 📲 Token push enregistré automatiquement à l'ouverture de l'app
+            - 🍎 Support des notifications push pour iOS (site web ajouté à l'écran d'accueil)
+            - ❌ Rappel dispo : "Tu n'as pas encore renseigné tes dispos pour la semaine prochaine !"
+            - ✅ Notif quand les 4 ont répondu avec la ou les meilleures dates
+            - 🎮 Notif le jour de la session : "N'oublies pas que ce soir on gagne ! 🏆"
