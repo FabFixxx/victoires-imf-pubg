@@ -333,7 +333,7 @@ export default function DashboardScreen() {
               <View style={styles.statsBarDivider} />
               <View style={styles.statsBarItem}>
                 <Text style={styles.statsBarLabel}>Win rate</Text>
-                <Text style={[styles.statsBarValue, styles.statsBarValueAccent]}>{imfStats ? winRate(imfStats.totalWins, imfStats.totalMatches) : '—'}</Text>
+                <Text style={styles.statsBarValue}>{imfStats ? winRate(imfStats.totalWins, imfStats.totalMatches) : '—'}</Text>
               </View>
             </View>
           </>
@@ -389,7 +389,7 @@ export default function DashboardScreen() {
           <View style={styles.statsBarDivider} />
           <View style={styles.statsBarItem}>
             <Text style={styles.statsBarLabel}>Win rate</Text>
-            <Text style={[styles.statsBarValue, styles.statsBarValueAccent]}>{monthly ? winRate(monthly.totalWins, monthly.totalMatches) : '—'}</Text>
+            <Text style={styles.statsBarValue}>{monthly ? winRate(monthly.totalWins, monthly.totalMatches) : '—'}</Text>
           </View>
         </View>
 
