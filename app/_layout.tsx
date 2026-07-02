@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
@@ -95,49 +96,53 @@ export default function RootLayout() {
 
   if (initState === 'loading') {
     return (
-      <View style={styles.loading}>
-        <StatusBar style="light" />
-        <Text style={styles.appName}>VICTOIRES IMF</Text>
-        <Text style={styles.appNameAccent}>PUBG</Text>
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
-      </View>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={styles.loading}>
+          <StatusBar style="light" />
+          <Text style={styles.appName}>VICTOIRES IMF</Text>
+          <Text style={styles.appNameAccent}>PUBG</Text>
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   if (initState === 'select') {
     return (
-      <SafeAreaView style={styles.selectContainer}>
-        <StatusBar style="light" />
-        <View style={styles.selectHeader}>
-          <Text style={styles.appName}>VICTOIRES IMF</Text>
-          <Text style={styles.appNameAccent}>PUBG</Text>
-          <Text style={styles.selectSubtitle}>Qui es-tu ?</Text>
-        </View>
-        <View style={styles.playerList}>
-          {GROUP_PLAYERS.map((name) => (
-            <TouchableOpacity
-              key={name}
-              style={styles.playerBtn}
-              onPress={() => handleSelectPlayer(name)}
-            >
-              <View style={styles.playerBtnAvatar}>
-                <Text style={styles.playerBtnAvatarText}>{name[0].toUpperCase()}</Text>
-              </View>
-              <Text style={styles.playerBtnText}>{getDisplayName(name)}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </SafeAreaView>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView style={styles.selectContainer}>
+          <StatusBar style="light" />
+          <View style={styles.selectHeader}>
+            <Text style={styles.appName}>VICTOIRES IMF</Text>
+            <Text style={styles.appNameAccent}>PUBG</Text>
+            <Text style={styles.selectSubtitle}>Qui es-tu ?</Text>
+          </View>
+          <View style={styles.playerList}>
+            {GROUP_PLAYERS.map((name) => (
+              <TouchableOpacity
+                key={name}
+                style={styles.playerBtn}
+                onPress={() => handleSelectPlayer(name)}
+              >
+                <View style={styles.playerBtnAvatar}>
+                  <Text style={styles.playerBtnAvatarText}>{name[0].toUpperCase()}</Text>
+                </View>
+                <Text style={styles.playerBtnText}>{getDisplayName(name)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </SafeAreaView>
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
-    </>
+    </GestureHandlerRootView>
   );
 }
 
