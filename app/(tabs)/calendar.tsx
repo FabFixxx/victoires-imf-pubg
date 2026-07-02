@@ -396,7 +396,7 @@ export default function CalendarScreen() {
           minDate={today}
           maxDate={windowEnd}
           firstDay={1}
-          enableSwipeMonths
+          enableSwipeMonths={false}
           theme={{
             backgroundColor: 'transparent',
             calendarBackground: Colors.backgroundSecondary,
