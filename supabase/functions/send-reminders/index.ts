@@ -139,9 +139,19 @@ Deno.serve(async (_req) => {
     if (hour === victoryHour) {
       const start = new Date(new Date(parisLocalToUTC(yesterdayStr, 6)).getTime() + 60000).toISOString()
       const end = parisLocalToUTC(todayStr, 6)
-      const { data: wins } = await supabase
-        .from('imf_season_wins').select('id, map_name')
-        .gte('created_at', start).lt('created_at', end)
+      // Victoires PUBG (player_match_stats)
+      const { data: winRows } = await supabase
+        .from('player_match_stats').select('match_id, match_date')
+        .eq('is_win', true)
+        .gte('match_date', start).lt('match_date', end)
+      const uniqueMatchIds = [...new Set((winRows ?? []).map((r: any) => r.match_id))]
+      const pubgDates = new Set((winRows ?? []).map((r: any) => r.match_date.slice(0, 10)))
+      // Victoires manuelles (imf_season_wins) non couvertes par PUBG
+      const { data: manualRows } = await supabase
+        .from('imf_season_wins').select('id, win_date')
+        .eq('win_date', yesterdayStr)
+      const extraManual = (manualRows ?? []).filter((w: any) => w.win_date && !pubgDates.has(w.win_date))
+      const wins = [...uniqueMatchIds.map(id => ({ id })), ...extraManual]
 
       if (wins?.length) {
         await sendPushToAll(
