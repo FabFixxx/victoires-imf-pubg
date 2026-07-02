@@ -448,17 +448,19 @@ export default function DashboardScreen() {
                       {(() => { const d = new Date(match.match_date); const h = String(d.getHours()).padStart(2, '0'); const m = String(d.getMinutes()).padStart(2, '0'); return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${h}:${m}`; })()}
                       {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
-                    <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
-                      {match.is_win ? '#1 🏆' : `#${match.win_place}`}
-                    </Text>
-                    {match.is_win && match.finisher && (
-                      <View style={styles.finisherInline}>
-                        <Ionicons name="skull-outline" size={12} color={Colors.win} />
-                        <Text style={styles.finisherText}>
-                          Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
-                        </Text>
-                      </View>
-                    )}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
+                        {match.is_win ? '#1 🏆' : `#${match.win_place}`}
+                      </Text>
+                      {match.is_win && match.finisher && (
+                        <>
+                          <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                          <Text style={styles.finisherText}>
+                            Dernier kill : <Text style={styles.finisherName}>{match.finisher}</Text>
+                          </Text>
+                        </>
+                      )}
+                    </View>
                   </View>
                   <View style={styles.teamMatchStats}>
                     <Text style={styles.teamMatchKills}>{match.kills}K / {match.assists}A</Text>
