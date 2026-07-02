@@ -48,6 +48,16 @@ interface PlayerStats {
 
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const MOIS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+function formatSeasonDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatSeasonDates(start: string, end: string, isCurrent: boolean): string {
+  return `${formatSeasonDate(start)} → ${isCurrent ? "aujourd'hui" : formatSeasonDate(end)}`;
+}
 
 async function getPlayerStatsBetween(username: string, start: string, end: string): Promise<PlayerStats> {
   const { data } = await supabase
@@ -171,22 +181,32 @@ export default function StatsScreen() {
 
       {/* Season picker */}
       {seasons.length > 0 && (
-        <View style={styles.seasonPicker}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seasonPickerContent}>
-            {seasons.map((s) => (
-              <TouchableOpacity
-                key={s.year}
-                onPress={() => setSelectedSeason(s)}
-                style={[styles.seasonTab, selectedSeason?.year === s.year && styles.seasonTabActive]}
-              >
-                <Text style={[styles.seasonTabText, selectedSeason?.year === s.year && styles.seasonTabTextActive]}>
-                  {s.year}
-                </Text>
-                {s.isCurrent && <View style={styles.currentDot} />}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        <>
+          <View style={styles.seasonPicker}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seasonPickerContent}>
+              {seasons.map((s) => (
+                <TouchableOpacity
+                  key={s.year}
+                  onPress={() => setSelectedSeason(s)}
+                  style={[styles.seasonTab, selectedSeason?.year === s.year && styles.seasonTabActive]}
+                >
+                  <Text style={[styles.seasonTabText, selectedSeason?.year === s.year && styles.seasonTabTextActive]}>
+                    {s.year}
+                  </Text>
+                  {s.isCurrent && <View style={styles.currentDot} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+          {selectedSeason && (
+            <View style={styles.seasonInfo}>
+              <Ionicons name="calendar-outline" size={12} color={Colors.textMuted} />
+              <Text style={styles.seasonDates}>
+                {formatSeasonDates(selectedSeason.startDate, selectedSeason.endDate, selectedSeason.isCurrent)}
+              </Text>
+            </View>
+          )}
+        </>
       )}
 
       {/* Player tabs */}
@@ -333,22 +353,31 @@ const styles = StyleSheet.create({
   },
 
   seasonPicker: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
-  seasonPickerContent: { paddingHorizontal: 12, gap: 4, paddingVertical: 6 },
+  seasonPickerContent: { paddingHorizontal: 12, gap: 4, paddingVertical: 8 },
   seasonTab: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     borderRadius: 20,
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
   seasonTabActive: { backgroundColor: Colors.primary + '22', borderColor: Colors.primary },
-  seasonTabText: { fontSize: 13, fontWeight: '700', color: Colors.textMuted },
+  seasonTabText: { fontSize: 14, fontWeight: '700', color: Colors.textMuted },
   seasonTabTextActive: { color: Colors.primary },
   currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.win },
+  seasonInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  seasonDates: { fontSize: 11, color: Colors.textMuted },
 
   playerTabs: {
     flexDirection: 'row',
