@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
 
   const errors = results
     .filter((r) => r.status === 'rejected')
-    .map((r) => ({ message: r.reason?.message, statusCode: r.reason?.statusCode, body: r.reason?.body }));
+    .map((r) => String(r.reason));
   const failed = errors.length;
   res.status(200).json({ sent: results.length - failed, failed, errors });
 };
