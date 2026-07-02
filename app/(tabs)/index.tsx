@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   teamMatchLoss: { backgroundColor: Colors.textMuted },
   teamMatchInfo: { flex: 1 },
   teamMatchDate: { fontSize: 12, color: Colors.textSecondary },
-  teamMatchResult: { fontSize: 13, fontWeight: '800', marginTop: 2 },
+  teamMatchResult: { fontSize: 13, fontWeight: '800' },
   teamMatchResultWin: { color: Colors.win },
   teamMatchResultLoss: { color: Colors.textMuted },
   teamMatchStats: { width: 110, alignItems: 'flex-end' },
