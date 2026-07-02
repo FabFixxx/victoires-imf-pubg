@@ -34,6 +34,7 @@ export async function registerWebPush(username: string): Promise<void> {
     return;
   }
 
+  await logWebPush(username, 'VAPID_PUBLIC_KEY used', { key: VAPID_PUBLIC_KEY.slice(0, 20) + '...' });
   await logWebPush(username, 'serviceWorker + PushManager OK, registering sw.js...');
 
   try {
