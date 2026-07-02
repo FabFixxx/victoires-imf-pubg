@@ -18,6 +18,7 @@ import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/playe
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentPlayer } from '../../lib/storage';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
+import { Ionicons } from '@expo/vector-icons';
 
 interface RecentMatch {
   match_id: string;
@@ -28,6 +29,7 @@ interface RecentMatch {
   win_place: number;
   is_win: boolean;
   mapName?: string;
+  finisher?: string | null;
 }
 
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -56,13 +58,15 @@ export default function StatsScreen() {
     const matchIds = sorted.map((m) => m.match_id);
     const { data: cacheRows } = await supabase
       .from('match_cache')
-      .select('match_id, map_name')
+      .select('match_id, map_name, finisher')
       .in('match_id', matchIds);
     const mapNameById: Record<string, string> = {};
+    const finisherById: Record<string, string> = {};
     for (const row of cacheRows ?? []) {
       if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
+      if (row.finisher) finisherById[row.match_id] = row.finisher;
     }
-    setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id] })));
+    setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null })));
     setLoading(false);
   }, []);
 
@@ -192,14 +196,24 @@ export default function StatsScreen() {
                       />
                       <View style={styles.matchInfo}>
                         <Text style={styles.matchDate}>{formatDate(match.match_date)}{match.mapName ? ` · ${match.mapName}` : ''}</Text>
-                        <Text
-                          style={[
-                            styles.matchResult,
-                            match.is_win ? styles.matchResultWin : styles.matchResultLoss,
-                          ]}
-                        >
-                          {match.is_win ? `#1 🏆` : `#${match.win_place}`}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <Text
+                            style={[
+                              styles.matchResult,
+                              match.is_win ? styles.matchResultWin : styles.matchResultLoss,
+                            ]}
+                          >
+                            {match.is_win ? `#1 🏆` : `#${match.win_place}`}
+                          </Text>
+                          {match.is_win && match.finisher && (
+                            <>
+                              <Ionicons name="skull-outline" size={12} color={Colors.win} />
+                              <Text style={styles.matchFinisherText}>
+                                Dernier kill : <Text style={styles.matchFinisherName}>{match.finisher}</Text>
+                              </Text>
+                            </>
+                          )}
+                        </View>
                       </View>
                       <View style={styles.matchStats}>
                         <Text style={styles.matchKills}>
@@ -326,9 +340,11 @@ const styles = StyleSheet.create({
   matchLoss: { backgroundColor: Colors.textMuted },
   matchInfo: { flex: 1 },
   matchDate: { fontSize: 12, color: Colors.textSecondary },
-  matchResult: { fontSize: 13, fontWeight: '800', marginTop: 2 },
+  matchResult: { fontSize: 13, fontWeight: '800' },
   matchResultWin: { color: Colors.win },
   matchResultLoss: { color: Colors.textMuted },
+  matchFinisherText: { fontSize: 12, color: Colors.textSecondary },
+  matchFinisherName: { fontWeight: '800', color: Colors.win },
   matchStats: { width: 110, alignItems: 'flex-end' },
   matchKills: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   matchDmg: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
