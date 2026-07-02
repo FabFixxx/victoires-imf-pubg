@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -85,6 +85,11 @@ export default function CalendarScreen() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [showNoAvailConfirm, setShowNoAvailConfirm] = useState(false);
   const [showNoAvailThisWeekConfirm, setShowNoAvailThisWeekConfirm] = useState(false);
+
+  // Prevent swipe-induced month changes: only allow month navigation via arrow buttons
+  const arrowPressedRef = useRef(false);
+  const lastValidMonthRef = useRef(today.substring(0, 10));
+  const [calendarKey, setCalendarKey] = useState(0);
 
   useEffect(() => {
     getCurrentPlayer().then(setCurrentPlayer_);
@@ -214,6 +219,26 @@ export default function CalendarScreen() {
       deleteAvailabilityForWeek(player, currentWeekMonday, thisWeekSunday),
     ]);
   };
+
+  const handleArrowLeft = useCallback((subtractMonth: () => void) => {
+    arrowPressedRef.current = true;
+    subtractMonth();
+  }, []);
+
+  const handleArrowRight = useCallback((addMonth: () => void) => {
+    arrowPressedRef.current = true;
+    addMonth();
+  }, []);
+
+  const handleMonthChange = useCallback((month: DateData) => {
+    if (arrowPressedRef.current) {
+      arrowPressedRef.current = false;
+      lastValidMonthRef.current = month.dateString.substring(0, 10);
+    } else {
+      // Swipe-induced change — reset Calendar to last valid month
+      setCalendarKey(k => k + 1);
+    }
+  }, []);
 
   const handleChooseDate = async (date: string) => {
     await setChosenDate(nextWeekMonday, date);
@@ -390,6 +415,8 @@ export default function CalendarScreen() {
         </View>
 
         <Calendar
+          key={calendarKey}
+          current={lastValidMonthRef.current}
           onDayPress={handleDayPress}
           markedDates={markedDates}
           markingType="multi-dot"
@@ -397,6 +424,9 @@ export default function CalendarScreen() {
           maxDate={windowEnd}
           firstDay={1}
           enableSwipeMonths={false}
+          onPressArrowLeft={handleArrowLeft}
+          onPressArrowRight={handleArrowRight}
+          onMonthChange={handleMonthChange}
           theme={{
             backgroundColor: 'transparent',
             calendarBackground: Colors.backgroundSecondary,
