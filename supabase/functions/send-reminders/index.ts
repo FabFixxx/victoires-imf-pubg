@@ -28,21 +28,15 @@ function getParisDateInfo() {
   const parisDate = new Date(year, month - 1, day)
   const dayOfWeek = parisDate.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
 
-  // Lundi de cette semaine (semaine Lun-Dim)
   const daysFromMonday = (dayOfWeek + 6) % 7
   const thisMonday = new Date(parisDate)
   thisMonday.setDate(parisDate.getDate() - daysFromMonday)
 
-  // Lundi de la semaine prochaine
+  const thisSunday = new Date(thisMonday)
+  thisSunday.setDate(thisMonday.getDate() + 6)
+
   const nextMonday = new Date(thisMonday)
   nextMonday.setDate(thisMonday.getDate() + 7)
-
-  const fmt = (d: Date) => {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${dd}`
-  }
 
   const nextWeekSunday = new Date(nextMonday)
   nextWeekSunday.setDate(nextMonday.getDate() + 6)
@@ -50,59 +44,50 @@ function getParisDateInfo() {
   const yesterday = new Date(parisDate)
   yesterday.setDate(parisDate.getDate() - 1)
 
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+
+  // Samedi → vérifie la semaine suivante | Dim-Ven → vérifie la semaine en cours
+  const checkWeekMonday = dayOfWeek === 6 ? fmt(nextMonday) : fmt(thisMonday)
+  const checkWeekSunday = dayOfWeek === 6 ? fmt(nextWeekSunday) : fmt(thisSunday)
+
   return {
-    hour,
-    dayOfWeek,
+    hour, dayOfWeek,
     todayStr: fmt(parisDate),
     yesterdayStr: fmt(yesterday),
     nextWeekMonday: fmt(nextMonday),
     nextWeekSunday: fmt(nextWeekSunday),
+    checkWeekMonday,
+    checkWeekSunday,
   }
 }
 
-// Convertit une heure locale Paris (ex: 18) pour une date donnée en UTC ISO string
 function parisLocalToUTC(dateStr: string, localHour: number): string {
-  const guess = new Date(`${dateStr}T${String(localHour).padStart(2, '0')}:00:00Z`)
+  const guess = new Date(`${dateStr}T${String(localHour).padStart(2,'0')}:00:00Z`)
   const parisHourActual = parseInt(new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Paris',
-    hour: '2-digit',
-    hour12: false,
+    timeZone: 'Europe/Paris', hour: '2-digit', hour12: false,
   }).format(guess))
   const diff = parisHourActual - localHour
-  const adjusted = new Date(guess.getTime() - diff * 3600000)
-  return adjusted.toISOString()
+  return new Date(guess.getTime() - diff * 3600000).toISOString()
 }
 
-async function sendPushToAll(
-  supabase: ReturnType<typeof createClient>,
-  players: any[],
-  title: string,
-  body: string,
-  type: string
-) {
+async function sendPushToAll(supabase: any, players: any[], title: string, body: string, type: string) {
   const payload = { title, body }
 
-  // Expo Push (Android)
   const expoTokens = players.map(p => p.expo_push_token).filter(Boolean)
-  if (expoTokens.length > 0) {
+  if (expoTokens.length) {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        expoTokens.map((token: string) => ({
-          to: token,
-          ...payload,
-          data: { type },
-          channelId: 'sessions',
-        }))
-      ),
+      body: JSON.stringify(expoTokens.map((token: string) => ({
+        to: token, ...payload, data: { type }, channelId: 'sessions',
+      }))),
     })
   }
 
-  // Web Push (iOS PWA) — uniquement pour les joueurs sans token Expo
   if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     const usernames = players.filter(p => !p.expo_push_token).map(p => p.username)
-    if (usernames.length > 0) {
+    if (usernames.length) {
       const { data: webSubs } = await supabase
         .from('web_push_subscriptions')
         .select('username, endpoint, subscription')
@@ -116,31 +101,25 @@ async function sendPushToAll(
             JSON.stringify(payload)
           )
         } catch (e) {
-          console.warn(`Web push failed for ${sub.username}:`, e)
+          console.warn('web push failed', sub.username)
         }
       }
     }
   }
 }
 
-// Heure pseudo-aléatoire mais déterministe pour une date donnée (10h-16h)
 function getVictoryRecapHour(dateStr: string): number {
   let hash = 0
   for (const c of dateStr) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff
-  return 10 + (Math.abs(hash) % 7) // 10, 11, 12, 13, 14, 15 ou 16
+  return 10 + (Math.abs(hash) % 7)
 }
 
 Deno.serve(async (_req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-  const { hour, dayOfWeek, todayStr, yesterdayStr, nextWeekMonday, nextWeekSunday } = getParisDateInfo()
+  const { hour, dayOfWeek, todayStr, yesterdayStr, nextWeekMonday, nextWeekSunday, checkWeekMonday, checkWeekSunday } = getParisDateInfo()
 
-  const { data: players } = await supabase
-    .from('players')
-    .select('username, expo_push_token')
-
-  if (!players?.length) {
-    return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
-  }
+  const { data: players } = await supabase.from('players').select('username, expo_push_token')
+  if (!players?.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
 
   const { data: prefs } = await supabase
     .from('notification_preferences')
@@ -153,135 +132,110 @@ Deno.serve(async (_req) => {
 
   const sentTodaySet = new Set((sentTodayLog ?? []).map((s: any) => `${s.type}:${s.key}`))
 
-  const result: Record<string, any> = { hour, dayOfWeek }
+  const result: any = { hour, dayOfWeek, checkWeekMonday, checkWeekSunday }
 
-  // --- 3. Récap victoires de la nuit (avant le skip samedi pour couvrir vendredi soir) ---
-  const victoryRecapKey = `victory_recap:${todayStr}`
-  if (!sentTodaySet.has(victoryRecapKey)) {
-    const victoryRecapHour = getVictoryRecapHour(todayStr)
-    if (hour === victoryRecapHour) {
-      // Fenêtre : hier 6h01 Paris → aujourd'hui 6h00 Paris
-      const windowStart = new Date(new Date(parisLocalToUTC(yesterdayStr, 6)).getTime() + 60000).toISOString()
-      const windowEnd = parisLocalToUTC(todayStr, 6)
+  // --- RECAP VICTOIRES (tous les jours) ---
+  const victoryKey = `victory_recap:${todayStr}`
+  if (!sentTodaySet.has(victoryKey)) {
+    const victoryHour = getVictoryRecapHour(todayStr)
+    if (hour === victoryHour) {
+      const start = new Date(new Date(parisLocalToUTC(yesterdayStr, 6)).getTime() + 60000).toISOString()
+      const end = parisLocalToUTC(todayStr, 6)
+      const { data: wins } = await supabase
+        .from('imf_season_wins').select('id, map_name')
+        .gte('created_at', start).lt('created_at', end)
 
-      const { data: nightWins } = await supabase
-        .from('imf_season_wins')
-        .select('id, map_name, created_at')
-        .gte('created_at', windowStart)
-        .lt('created_at', windowEnd)
-
-      if (nightWins && nightWins.length > 0) {
-        const count = nightWins.length
-        let title: string
-        let body: string
-
-        if (count === 1) {
-          const mapName = nightWins[0].map_name
-          title = '🏆 Victoire IMF hier soir !'
-          body = mapName
-            ? `Bravo les IMF, belle victoire hier soir sur ${mapName} !`
-            : 'Bravo les IMF, belle victoire hier soir !'
-        } else {
-          title = '🏆 Victoires IMF hier soir !'
-          body = `Bravo les IMF, ${count} belles victoires hier soir !`
-        }
-
-        await sendPushToAll(supabase, players, title, body, 'victory_recap')
-        await supabase.from('notification_log').insert({
-          type: 'victory_recap',
-          key: todayStr,
-          sent_at: new Date().toISOString(),
-        })
-        result.victory_recap_sent = count
-      }
-    }
-    result.victory_recap_hour = getVictoryRecapHour(todayStr)
-  }
-
-  if (dayOfWeek === 6) {
-    return new Response(JSON.stringify({ ...result, skipped: 'Samedi' }), { status: 200 })
-  }
-
-  // --- 1. Notif jour de jeu ---
-  const { data: chosenDate } = await supabase
-    .from('chosen_dates')
-    .select('chosen_date')
-    .eq('chosen_date', todayStr)
-    .maybeSingle()
-
-  if (chosenDate) {
-    const gameDayKey = `game_day:${todayStr}`
-    if (!sentTodaySet.has(gameDayKey)) {
-      const gameDayHour = prefs?.find((p: any) => p.game_day_hour != null)?.game_day_hour ?? 18
-      if (hour === gameDayHour) {
+      if (wins?.length) {
         await sendPushToAll(
-          supabase,
-          players,
-          '🎮 IMF - Ce soir c\'est le soir !',
-          'N\'oublies pas que ce soir on gagne ! 🏆',
-          'game_day'
+          supabase, players,
+          wins.length === 1 ? '🏆 Victoire IMF hier soir !' : '🏆 Victoires IMF hier soir !',
+          wins.length === 1 ? 'Bravo les IMF !' : `Bravo les IMF, ${wins.length} victoires !`,
+          'victory_recap'
         )
         await supabase.from('notification_log').insert({
-          type: 'game_day',
-          key: todayStr,
-          sent_at: new Date().toISOString(),
+          type: 'victory_recap', key: todayStr, sent_at: new Date().toISOString(),
         })
-        result.game_day_sent = true
+        result.victory_recap_sent = wins.length
+      }
+    }
+    result.victory_recap_hour = victoryHour
+  }
+
+  // --- SAMEDI AVANT 18H : stop (pas de jeu ni rappel dispo) ---
+  if (dayOfWeek === 6 && hour < 18) {
+    return new Response(JSON.stringify({ ...result, skipped: 'samedi avant 18h' }), { status: 200 })
+  }
+
+  // --- JOUR DE JEU (pas le samedi) ---
+  if (dayOfWeek !== 6) {
+    const { data: chosenDate } = await supabase
+      .from('chosen_dates').select('chosen_date')
+      .eq('chosen_date', todayStr).maybeSingle()
+
+    if (chosenDate) {
+      const key = `game_day:${todayStr}`
+      if (!sentTodaySet.has(key)) {
+        const gameHour = prefs?.find((p: any) => p.game_day_hour != null)?.game_day_hour ?? 18
+        if (hour === gameHour) {
+          await sendPushToAll(supabase, players,
+            `🎮 IMF - Ce soir c'est le soir !`,
+            `N'oublies pas que ce soir on gagne ! 🏆`,
+            'game_day'
+          )
+          await supabase.from('notification_log').insert({
+            type: 'game_day', key: todayStr, sent_at: new Date().toISOString(),
+          })
+          result.game_day_sent = true
+        }
       }
     }
   }
 
-  // --- 2. Rappel disponibilités ---
-  const { data: availabilities } = await supabase
-    .from('player_availability')
-    .select('player_username')
-    .gte('date', nextWeekMonday)
-    .lte('date', nextWeekSunday)
+  // --- RAPPEL DISPONIBILITES ---
+  // Samedi 18h+ → vérifie semaine suivante (checkWeekMonday = nextWeekMonday)
+  // Dim → Ven → vérifie semaine en cours (checkWeekMonday = thisWeekMonday)
+  {
+    const { data: availabilities } = await supabase
+      .from('player_availability').select('player_username')
+      .gte('date', checkWeekMonday).lte('date', checkWeekSunday)
 
-  const { data: noAvails } = await supabase
-    .from('week_no_availability')
-    .select('player_username')
-    .eq('week_start', nextWeekMonday)
+    const { data: noAvails } = await supabase
+      .from('week_no_availability').select('player_username')
+      .eq('week_start', checkWeekMonday)
 
-  const respondedPlayers = new Set([
-    ...(availabilities ?? []).map((a: any) => a.player_username),
-    ...(noAvails ?? []).map((a: any) => a.player_username),
-  ])
+    const answered = new Set([
+      ...(availabilities ?? []).map((a: any) => a.player_username),
+      ...(noAvails ?? []).map((a: any) => a.player_username),
+    ])
 
-  const playersToNotify: string[] = []
-  const keysToLog: string[] = []
+    const toNotify: string[] = []
+    const logs: any[] = []
 
-  for (const player of players) {
-    if (respondedPlayers.has(player.username)) continue
+    for (const player of players) {
+      if (answered.has(player.username)) continue
 
-    const pref = prefs?.find((p: any) => p.player_username === player.username)
-    const reminderHour = pref?.reminder_hour ?? 17
-    if (hour !== reminderHour) continue
+      const pref = prefs?.find((p: any) => p.player_username === player.username)
+      const remindHour = dayOfWeek === 6 ? 18 : (pref?.reminder_hour ?? 17)
+      if (hour !== remindHour) continue
 
-    const key = `${todayStr}_${player.username}`
-    if (sentTodaySet.has(`dispo_reminder:${key}`)) continue
+      const key = `${todayStr}_${player.username}`
+      if (sentTodaySet.has(`dispo_reminder:${key}`)) continue
 
-    playersToNotify.push(player.username)
-    keysToLog.push(key)
-  }
+      toNotify.push(player.username)
+      logs.push({ type: 'dispo_reminder', key, sent_at: new Date().toISOString() })
+    }
 
-  if (playersToNotify.length > 0) {
-    const playersFiltered = players.filter(p => playersToNotify.includes(p.username))
-    await sendPushToAll(
-      supabase,
-      playersFiltered,
-      '❌ Disponibilités IMF',
-      'Tu n\'as pas encore renseigné tes dispos pour la semaine prochaine !',
-      'dispo_reminder'
-    )
-    await supabase.from('notification_log').insert(
-      keysToLog.map(key => ({
-        type: 'dispo_reminder',
-        key,
-        sent_at: new Date().toISOString(),
-      }))
-    )
-    result.dispo_sent = playersToNotify.length
+    if (toNotify.length) {
+      await sendPushToAll(
+        supabase,
+        players.filter(p => toNotify.includes(p.username)),
+        '❌ Disponibilités IMF',
+        `Tu n'as pas encore renseigné tes dispos pour la semaine prochaine !`,
+        'dispo_reminder'
+      )
+      await supabase.from('notification_log').insert(logs)
+      result.dispo_sent = toNotify.length
+    }
   }
 
   return new Response(JSON.stringify(result), { status: 200 })
