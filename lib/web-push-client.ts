@@ -58,9 +58,14 @@ export async function registerWebPush(username: string): Promise<void> {
     }
 
     const existing = await registration.pushManager.getSubscription();
-    await logWebPush(username, existing ? 'existing subscription found' : 'no existing subscription, subscribing...');
+    if (existing) {
+      await existing.unsubscribe();
+      await logWebPush(username, 'unsubscribed existing subscription, resubscribing with new key...');
+    } else {
+      await logWebPush(username, 'no existing subscription, subscribing...');
+    }
 
-    const subscription = existing ?? await registration.pushManager.subscribe({
+    const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
