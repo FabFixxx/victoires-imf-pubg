@@ -108,10 +108,8 @@ async function sendPushToAll(supabase: any, players: any[], title: string, body:
   }
 }
 
-function getVictoryRecapHour(dateStr: string): number {
-  let hash = 0
-  for (const c of dateStr) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff
-  return 10 + (Math.abs(hash) % 7)
+function getVictoryRecapHour(_dateStr: string): number {
+  return 10
 }
 
 Deno.serve(async (_req) => {
