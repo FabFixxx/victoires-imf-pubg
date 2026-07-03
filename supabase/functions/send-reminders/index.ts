@@ -47,9 +47,10 @@ function getParisDateInfo() {
   const fmt = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 
-  // Samedi → vérifie la semaine suivante | Dim-Ven → vérifie la semaine en cours
-  const checkWeekMonday = dayOfWeek === 6 ? fmt(nextMonday) : fmt(thisMonday)
-  const checkWeekSunday = dayOfWeek === 6 ? fmt(nextWeekSunday) : fmt(thisSunday)
+  // Samedi et dimanche → vérifie la semaine suivante | Lun-Ven → vérifie la semaine en cours
+  const checksNextWeek = dayOfWeek === 6 || dayOfWeek === 0
+  const checkWeekMonday = checksNextWeek ? fmt(nextMonday) : fmt(thisMonday)
+  const checkWeekSunday = checksNextWeek ? fmt(nextWeekSunday) : fmt(thisSunday)
 
   return {
     hour, dayOfWeek,
@@ -252,8 +253,8 @@ Deno.serve(async (_req) => {
   }
 
   // --- RAPPEL DISPONIBILITES ---
-  // Samedi 18h+ → vérifie semaine suivante (checkWeekMonday = nextWeekMonday)
-  // Dim → Ven → vérifie semaine en cours (checkWeekMonday = thisWeekMonday)
+  // Samedi 18h+ et dimanche → vérifie semaine suivante (checkWeekMonday = nextWeekMonday)
+  // Lun → Ven → vérifie semaine en cours (checkWeekMonday = thisWeekMonday)
   {
     const { data: availabilities } = await supabase
       .from('player_availability').select('player_username')
