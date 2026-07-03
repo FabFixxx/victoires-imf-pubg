@@ -4,15 +4,5 @@
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron-daily-reminder",
-      "schedule": "0 15 * * 0-5"
-    },
-    {
-      "path": "/api/cron-game-day",
-      "schedule": "0 16 * * *"
-    }
   ]
 }
