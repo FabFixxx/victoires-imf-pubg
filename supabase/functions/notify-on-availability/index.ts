@@ -107,15 +107,9 @@ function buildNotif(fourVote: string[], threeVote: string[]): { title: string; b
       body: `Plusieurs dates possibles : ${[first, ...others].join(', ')}. La date retenue est le ${first} !`,
     }
   }
-  if (threeVote.length > 0) {
-    return {
-      title: '✅ Tout le monde a répondu !',
-      body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !`,
-    }
-  }
   return {
     title: '✅ Tout le monde a répondu !',
-    body: 'Aucune date commune trouvée.',
+    body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !`,
   }
 }
 
@@ -217,8 +211,10 @@ Deno.serve(async (req) => {
         await setChosenDateAuto(supabase, weekStart, fourVote[0])
       }
 
-      const { title, body } = buildNotif(fourVote, threeVote)
-      await sendToAll(supabase, title, body)
+      if (fourVote.length > 0 || threeVote.length > 0) {
+        const { title, body } = buildNotif(fourVote, threeVote)
+        await sendToAll(supabase, title, body)
+      }
     }
 
     return new Response('ok')

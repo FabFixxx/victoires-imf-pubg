@@ -60,6 +60,7 @@ function getParisDateInfo() {
     nextWeekSunday: fmt(nextWeekSunday),
     checkWeekMonday,
     checkWeekSunday,
+    checksNextWeek,
   }
 }
 
@@ -153,7 +154,7 @@ const MAP_NAMES: Record<string, string> = {
 
 Deno.serve(async (_req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-  const { hour, dayOfWeek, todayStr, yesterdayStr, nextWeekMonday, nextWeekSunday, checkWeekMonday, checkWeekSunday } = getParisDateInfo()
+  const { hour, dayOfWeek, todayStr, yesterdayStr, nextWeekMonday, nextWeekSunday, checkWeekMonday, checkWeekSunday, checksNextWeek } = getParisDateInfo()
 
   const { data: players } = await supabase.from('players').select('username, expo_push_token')
   if (!players?.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
@@ -210,7 +211,7 @@ Deno.serve(async (_req) => {
         }
         const title = wins.length === 1 ? '🏆 Victoire IMF hier soir !' : '🏆 Victoires IMF hier soir !'
         const body = wins.length === 1
-          ? `Bravo les IMF pour votre victoire${mapName ? ` sur ${mapName}` : ''} hier soir !`
+          ? `Bravo les IMF pour votre victoire sur ${mapName} hier soir !`
           : `Bravo les IMF pour vos ${wins.length} victoires hier soir !`
         await sendPushToAll(supabase, players, title, body, 'victory_recap')
         await supabase.from('notification_log').insert({
@@ -287,11 +288,12 @@ Deno.serve(async (_req) => {
     }
 
     if (toNotify.length) {
+      const weekWording = checksNextWeek ? 'la semaine prochaine' : 'cette semaine'
       await sendPushToAll(
         supabase,
         players.filter(p => toNotify.includes(p.username)),
         '❌ Disponibilités IMF',
-        `Tu n'as pas encore renseigné tes dispos pour la semaine prochaine !`,
+        `Tu n'as pas encore renseigné tes dispos pour ${weekWording} !`,
         'dispo_reminder'
       )
       await supabase.from('notification_log').insert(logs)
