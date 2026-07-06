@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { PUBG_MAP_NAMES } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { getImfSeasons, ImfSeason } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
@@ -227,6 +227,8 @@ export default function VictoiresScreen() {
   const [seasons, setSeasons] = useState<ImfSeason[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [victories, setVictories] = useState<Victory[]>([]);
+  const [finisherStats, setFinisherStats] = useState<{ username: string; count: number }[]>([]);
+  const [topMaps, setTopMaps] = useState<{ mapName: string; wins: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -234,8 +236,14 @@ export default function VictoiresScreen() {
 
   const loadVictories = useCallback(async (season: ImfSeason) => {
     setLoading(true);
-    const wins = await getVictoriesForSeason(season.year, season.startDate, season.endDate);
+    const [wins, fs, maps] = await Promise.all([
+      getVictoriesForSeason(season.year, season.startDate, season.endDate),
+      getFinisherStats(season.startDate, season.endDate, season.manualWinsDetail),
+      getTopMaps(season.startDate, season.endDate, season.manualWinsDetail),
+    ]);
     setVictories(wins);
+    setFinisherStats(fs);
+    setTopMaps(maps);
     setLoading(false);
   }, []);
 
@@ -304,6 +312,66 @@ export default function VictoiresScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
       >
+        {currentSeason && (
+          <>
+            {/* ── Top cartes gagnées ── */}
+            <Text style={styles.listTitle}>TOP CARTES GAGNÉES</Text>
+            <View style={styles.listCard}>
+              {topMaps.length === 0 ? (
+                <View style={styles.listRow}>
+                  <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
+                </View>
+              ) : (
+                topMaps.map((m, idx) => (
+                  <View key={m.mapName} style={[styles.listRow, idx < topMaps.length - 1 && styles.listRowBorder]}>
+                    <Text style={styles.listRank}>#{idx + 1}</Text>
+                    <Text style={styles.listLabel}>{m.mapName}</Text>
+                    <Text style={styles.listValue}>
+                      {m.wins} victoire{m.wins > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* ── Top finisher ── */}
+            <Text style={styles.listTitle}>TOP FINISHER</Text>
+            <View style={styles.listCard}>
+              {finisherStats.length === 0 ? (
+                <View style={styles.listRow}>
+                  <Text style={styles.listEmpty}>Aucune donnée — synchro requise</Text>
+                </View>
+              ) : (
+                finisherStats.map((f, idx) => {
+                  const isZone = f.username === 'Zone bleue';
+                  return (
+                    <View key={f.username} style={[styles.listRow, idx < finisherStats.length - 1 && styles.listRowBorder]}>
+                      <Text style={[styles.listRank, !isZone && idx === 0 && f.count > 0 && styles.listRankGold]}>
+                        {!isZone && idx === 0 && f.count > 0 ? '🏆' : `#${idx + 1}`}
+                      </Text>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {isZone
+                          ? <Ionicons name="flash" size={9} color={Colors.blueZone} />
+                          : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
+                        }
+                        <Text style={[styles.listLabel, isZone && { color: Colors.blueZone }]}>
+                          {isZone ? 'Zone bleue' : getDisplayName(f.username as any)}
+                        </Text>
+                      </View>
+                      <View style={styles.listValueWrap}>
+                        <Ionicons name="skull-outline" size={12} color={f.count > 0 ? (isZone ? Colors.blueZone : Colors.win) : Colors.textMuted} />
+                        <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted, isZone && f.count > 0 && { color: Colors.blueZone }]}>
+                          {f.count} dernier{f.count > 1 ? 's' : ''} kill
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </>
+        )}
+
         {loading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
         ) : victories.length === 0 ? (
@@ -363,6 +431,66 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 12, gap: 10, paddingBottom: 32 },
 
   countRow: { alignItems: 'flex-end', paddingHorizontal: 4, paddingBottom: 4 },
+
+  listTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: Colors.textMuted,
+    marginBottom: 6,
+    marginTop: 2,
+  },
+  listCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 10,
+  },
+  listRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.cardBorder,
+  },
+  listRank: {
+    width: 26,
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+  listRankGold: { color: Colors.primary },
+  listLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  listValueWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  listValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  listValueMuted: {
+    color: Colors.textMuted,
+    fontWeight: '500',
+  },
+  listEmpty: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+  },
   countText: { fontSize: 11, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   empty: { flex: 1, alignItems: 'center', marginTop: 60 },
