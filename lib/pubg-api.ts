@@ -697,7 +697,9 @@ export async function getFinisherStats(
     })
     .map(([username, count]) => ({ username, count }));
 
-  return [...playerStats, { username: 'Zone bleue', count: zoneBleueCount }];
+  return zoneBleueCount > 0
+    ? [...playerStats, { username: 'Zone bleue', count: zoneBleueCount }]
+    : playerStats;
 }
 
 export async function getTopMaps(
