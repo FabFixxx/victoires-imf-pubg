@@ -37,35 +37,53 @@ import {
 } from '../../lib/availability';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 
+// Le groupe joue depuis la France : "aujourd'hui" doit toujours correspondre au jour
+// calendaire en France, meme si un joueur est a l'etranger (ex: Canada), sinon chaque
+// joueur calcule un "lundi de la semaine" different selon son propre fuseau horaire et
+// les disponibilites finissent rangees sous des semaines differentes (bug vecu en prod).
 function getToday(): string {
-  return new Date().toISOString().split('T')[0];
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
+}
+
+// Parse une date "YYYY-MM-DD" en Date LOCALE (pas minuit UTC) pour que getDay()/setDate()
+// restent coherents quel que soit le fuseau horaire de l'appareil.
+function parseDateStr(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function addMonths(date: string, months: number): string {
-  const d = new Date(date);
+  const d = parseDateStr(date);
   d.setMonth(d.getMonth() + months);
-  return d.toISOString().split('T')[0];
+  return formatDateStr(d);
 }
 
 const JOURS_LONG = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MOIS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
+  const d = parseDateStr(dateStr);
   return `${JOURS_LONG[d.getDay()]} ${d.getDate()} ${MOIS_LONG[d.getMonth()]}`;
 }
 
 function getMondayOf(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = parseDateStr(dateStr);
   const day = d.getDay();
   d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().split('T')[0];
+  return formatDateStr(d);
 }
 
 function addDaysToStr(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
+  const d = parseDateStr(dateStr);
   d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  return formatDateStr(d);
 }
 
 export default function CalendarScreen() {
