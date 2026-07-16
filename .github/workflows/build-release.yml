@@ -58,9 +58,5 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## Nouveautés
-            - 🏆 Top cartes gagnées et top finisher ajoutés en haut de l'onglet Victoires (comme sur l'accueil), pour la saison sélectionnée
-            - 🎯 Zone bleue masquée du classement des finishers tant qu'elle n'a aucun kill à son actif
-            - 🔔 Textes de notifications simplifiés (la carte jouée est toujours connue désormais)
-            - 📅 Le rappel de dispo du dimanche vérifie aussi la semaine suivante (comme le samedi après 18h)
-            - 🧹 Suppression d'anciens rappels de dispo en double (crons Vercel obsolètes)
+            ## Correctifs
+            - 🌍 Corrige un décalage d'un jour dans le calcul de "cette semaine" pour les joueurs dans un fuseau horaire éloigné de la France (ex: Amérique du Nord) — les disponibilités étaient rangées sous une semaine différente de celle des autres joueurs, les rendant invisibles mutuellement
