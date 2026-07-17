@@ -2,7 +2,7 @@
   "expo": {
     "name": "Victoires IMF PUBG",
     "slug": "victoires-imf-pubg",
-    "version": "1.0.10",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -21,7 +21,7 @@
       "package": "com.imf.victoirespubg",
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
-      "versionCode": 10
+      "versionCode": 11
     },
     "web": {
       "favicon": "./assets/favicon.png",
