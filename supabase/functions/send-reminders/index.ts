@@ -142,10 +142,22 @@ function getVictoryRecapHour(_dateStr: string): number {
 
 const GROUP_PLAYERS = ['petittom', 'Nicotom', 'FabFix', 'Jibby37']
 
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00Z')
+  const day = d.getUTCDay()
+  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day))
+  return d.toISOString().split('T')[0]
+}
+
 function getWeekEnd(weekStart: string): string {
   const d = new Date(weekStart + 'T12:00:00Z')
   d.setUTCDate(d.getUTCDate() + 6)
   return d.toISOString().split('T')[0]
+}
+
+function fireAt(sentAt: string): number {
+  const voteTime = new Date(sentAt).getTime()
+  return (Math.floor((voteTime + 30 * 60 * 1000) / (60 * 60 * 1000)) + 1) * (60 * 60 * 1000)
 }
 
 function formatDate(dateStr: string): string {
@@ -200,20 +212,65 @@ Deno.serve(async (_req) => {
   const { data: players } = await supabase.from('players').select('username, expo_push_token')
   if (!players?.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
 
+  const now = Date.now()
+
+  // --- PENDING DATE_4VOTES (debounce "Session confirmée" / "Nouvelle possibilité") ---
+  const { data: allDatePending } = await supabase
+    .from('notification_log').select('key, sent_at').eq('type', 'date_4votes_pending')
+  const datePendingReady = (allDatePending ?? [])
+    .filter((e: any) => now >= fireAt(e.sent_at))
+    .sort((a: any, b: any) => a.key.localeCompare(b.key)) // traite les dates dans l'ordre chronologique
+
+  for (const entry of datePendingReady) {
+    const date = entry.key
+    const ws = getWeekStart(date)
+    const we = getWeekEnd(ws)
+
+    // Supprimer le pending dans tous les cas
+    await supabase.from('notification_log').delete().eq('type', 'date_4votes_pending').eq('key', date)
+
+    // Re-vérifier que la date a encore 4 votes
+    const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', date)
+    const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username)
+    const stillFour = GROUP_PLAYERS.every((p) => playersOnDay.includes(p))
+    if (!stillFour) continue
+
+    // Claim atomique
+    const { error: claimError } = await supabase.from('notification_log').insert({ type: 'date_4votes', key: date })
+    if (claimError) continue // Déjà traité
+
+    // Première ou deuxième date de la semaine ?
+    const { data: weekVotes } = await supabase
+      .from('notification_log').select('key').eq('type', 'date_4votes').gte('key', ws).lte('key', we)
+    const isNewSession = (weekVotes ?? []).filter((n: any) => n.key !== date).length > 0
+
+    if (isNewSession) {
+      // Swap auto-retain si la nouvelle date est antérieure
+      const { data: currentRetained } = await supabase
+        .from('notification_log').select('key').eq('type', 'retained_session').gte('key', ws).lte('key', we)
+      const retainedKeys = (currentRetained ?? []).map((r: any) => r.key).sort()
+      const earliestRetained = retainedKeys[0]
+      if (!earliestRetained || date < earliestRetained) {
+        await supabase.from('notification_log').upsert({ type: 'retained_session', key: date }, { onConflict: 'type,key', ignoreDuplicates: true })
+        if (earliestRetained) await supabase.from('notification_log').delete().eq('type', 'retained_session').eq('key', earliestRetained)
+      }
+      await sendPushToAll(supabase, players, '🎉 Nouvelle possibilité de session IMF !', `Tout le monde est aussi dispo le ${formatDate(date)} !`, 'new_date_4votes')
+    } else {
+      // Première date → auto-retenir
+      await supabase.from('notification_log').upsert({ type: 'retained_session', key: date }, { onConflict: 'type,key', ignoreDuplicates: true })
+      const { data: weekRows } = await supabase.from('player_availability').select('player_username, date').gte('date', ws).lte('date', we)
+      const allFourDates = groupByDate(weekRows ?? []).filter((d) => d.players.length >= GROUP_PLAYERS.length).map((d) => d.date).sort()
+      const { title, body } = buildWeekCompleteNotif(allFourDates, [])
+      await sendPushToAll(supabase, players, title, body, 'date_4votes')
+    }
+  }
+
   // --- PENDING WEEK_COMPLETE ---
   // fire_at = prochaine heure pleine après (vote_time + 30 min)
-  // formule : floor((vote_time + 30min) / 1h) * 1h + 1h
   // Si re-vote, sent_at est mis à jour dans notify-on-availability → fire_at se décale.
-  const now = Date.now()
   const { data: allPending } = await supabase
-    .from('notification_log')
-    .select('key, sent_at')
-    .eq('type', 'week_complete_pending')
-  const pendingList = (allPending ?? []).filter((entry: any) => {
-    const voteTime = new Date(entry.sent_at).getTime()
-    const fireAt = (Math.floor((voteTime + 30 * 60 * 1000) / (60 * 60 * 1000)) + 1) * (60 * 60 * 1000)
-    return now >= fireAt
-  })
+    .from('notification_log').select('key, sent_at').eq('type', 'week_complete_pending')
+  const pendingList = (allPending ?? []).filter((entry: any) => now >= fireAt(entry.sent_at))
 
   for (const entry of pendingList ?? []) {
     const ws = entry.key
@@ -229,11 +286,13 @@ Deno.serve(async (_req) => {
 
     if (claimError) continue // Déjà traité
 
-    // Vérifier si date_4votes a été envoyée pendant le délai
+    // Skip si date_4votes (confirmé) ou date_4votes_pending (en attente) pour cette semaine
     const { data: fourVoteNotifs } = await supabase
       .from('notification_log').select('key').eq('type', 'date_4votes').gte('key', ws).lte('key', we)
+    const { data: fourVotePending } = await supabase
+      .from('notification_log').select('key').eq('type', 'date_4votes_pending').gte('key', ws).lte('key', we)
 
-    if (fourVoteNotifs && fourVoteNotifs.length > 0) continue // date_4votes a géré la semaine
+    if ((fourVoteNotifs ?? []).length > 0 || (fourVotePending ?? []).length > 0) continue
 
     // Fetch données fraîches et envoyer la notif
     const { data: freshRows } = await supabase

@@ -139,81 +139,17 @@ Deno.serve(async (req) => {
     const allFourOnDate = GROUP_PLAYERS.every((p) => playersOnDay.includes(p))
 
     if (allFourOnDate) {
-      // Vérifier si une date_4votes a déjà été envoyée pour cette semaine (= nouvelle session)
-      const { data: existingWeekNotifs } = await supabase
-        .from('notification_log')
-        .select('key')
-        .eq('type', 'date_4votes')
-        .gte('key', weekStart)
-        .lte('key', weekEnd)
+      // Si déjà notifié (date_4votes = claim final posé par send-reminders) → rien à faire
+      const { data: existingVote } = await supabase
+        .from('notification_log').select('key').eq('type', 'date_4votes').eq('key', date).maybeSingle()
+      if (existingVote) return new Response('ok - already notified for this date')
 
-      const isNewSession = (existingWeekNotifs ?? []).length > 0
-
-      const { error } = await supabase
-        .from('notification_log')
-        .insert({ type: 'date_4votes', key: date })
-
-      if (!error) {
-        if (isNewSession) {
-          // Deuxième date (ou plus) à 4 votes cette semaine → notif "Nouvelle possibilité"
-          // Si la nouvelle date est antérieure à toutes les dates déjà retenues → swap auto-retain
-          const { data: currentRetained } = await supabase
-            .from('notification_log')
-            .select('key')
-            .eq('type', 'retained_session')
-            .gte('key', weekStart)
-            .lte('key', weekEnd)
-
-          const retainedKeys = (currentRetained ?? []).map((r: any) => r.key).sort()
-          const earliestRetained = retainedKeys[0]
-
-          if (!earliestRetained || date < earliestRetained) {
-            // La nouvelle date est plus proche → elle devient l'auto-retenue
-            await supabase.from('notification_log').upsert(
-              { type: 'retained_session', key: date },
-              { onConflict: 'type,key', ignoreDuplicates: true }
-            )
-            // Retirer l'ancienne date auto-retenue
-            if (earliestRetained) {
-              await supabase.from('notification_log').delete()
-                .eq('type', 'retained_session')
-                .eq('key', earliestRetained)
-            }
-          }
-
-          await sendToAll(
-            supabase,
-            '🎉 Nouvelle possibilité de session IMF !',
-            `Tout le monde est aussi dispo le ${formatDate(date)} !`,
-          )
-          return new Response('ok - new_date_4votes notif sent')
-        }
-
-        // Première date à 4 votes → auto-retenir + notif "Session confirmée"
-        await supabase.from('notification_log').upsert(
-          { type: 'retained_session', key: date },
-          { onConflict: 'type,key', ignoreDuplicates: true }
-        )
-        const { data: weekRows } = await supabase
-          .from('player_availability')
-          .select('player_username, date')
-          .gte('date', weekStart)
-          .lte('date', weekEnd)
-
-        const weekAvail = groupByDate(weekRows ?? [])
-        const allFourDates = weekAvail
-          .filter((d) => d.players.length === 4)
-          .map((d) => d.date)
-          .sort()
-
-        const retenue = allFourDates[0] ?? date
-        await setChosenDateAuto(supabase, weekStart, retenue)
-
-        const { title, body } = buildNotif(allFourDates, [])
-        await sendToAll(supabase, title, body)
-        return new Response('ok - date_4votes notif sent')
-      }
-      return new Response('ok - already notified for this date')
+      // Planifier avec debounce : upsert pour mettre à jour sent_at si re-vote
+      await supabase.from('notification_log').upsert(
+        { type: 'date_4votes_pending', key: date, sent_at: new Date().toISOString() },
+        { onConflict: 'type,key' }
+      )
+      return new Response('ok - date_4votes_pending scheduled/updated')
     }
 
     // --- Check 2 : les 4 ont-ils tous répondu cette semaine (dispos ou aucune dispo) ? ---
