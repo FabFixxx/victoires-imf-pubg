@@ -67,4 +67,4 @@ jobs:
             ## 🐛 Correctifs
             - Plusieurs décalages de date/heure liés au fuseau horaire corrigés (victoires, saisons, dates affichées) — impactait surtout les joueurs à l'étranger
             - Une session retenue qui perdait un vote restait affichée comme confirmée sans pouvoir être corrigée — réparé
-            - Diverses corrections de fiabilité (petites races entre écrans, gestion des erreurs réseau silencieuses)
+            - Diverses corrections de fiabilité (petits bugs d'affichage liés à des chargements réseau qui revenaient dans le désordre, gestion des erreurs réseau silencieuses)
