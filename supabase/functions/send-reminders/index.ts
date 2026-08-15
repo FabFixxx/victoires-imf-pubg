@@ -200,13 +200,20 @@ Deno.serve(async (_req) => {
   const { data: players } = await supabase.from('players').select('username, expo_push_token')
   if (!players?.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
 
-  // --- PENDING WEEK_COMPLETE (différé 15 min depuis notify-on-availability) ---
-  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
-  const { data: pendingList } = await supabase
+  // --- PENDING WEEK_COMPLETE ---
+  // fire_at = prochaine heure pleine après (vote_time + 30 min)
+  // formule : floor((vote_time + 30min) / 1h) * 1h + 1h
+  // Si re-vote, sent_at est mis à jour dans notify-on-availability → fire_at se décale.
+  const now = Date.now()
+  const { data: allPending } = await supabase
     .from('notification_log')
     .select('key, sent_at')
     .eq('type', 'week_complete_pending')
-    .lt('sent_at', fifteenMinAgo)
+  const pendingList = (allPending ?? []).filter((entry: any) => {
+    const voteTime = new Date(entry.sent_at).getTime()
+    const fireAt = (Math.floor((voteTime + 30 * 60 * 1000) / (60 * 60 * 1000)) + 1) * (60 * 60 * 1000)
+    return now >= fireAt
+  })
 
   for (const entry of pendingList ?? []) {
     const ws = entry.key

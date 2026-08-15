@@ -246,14 +246,16 @@ Deno.serve(async (req) => {
       return new Response('ok - date_4votes already notified this week')
     }
 
-    // Planifier une notification différée : le cron send-reminders l'enverra après 15 min.
-    // La contrainte UNIQUE(type, key) garantit qu'un seul pending est créé par semaine.
-    const { error: pendingError } = await supabase
+    // Planifier une notification différée : le cron send-reminders l'enverra à la prochaine
+    // heure pleine après (maintenant + 30 min). Upsert pour mettre à jour sent_at si re-vote.
+    await supabase
       .from('notification_log')
-      .insert({ type: 'week_complete_pending', key: weekStart })
+      .upsert(
+        { type: 'week_complete_pending', key: weekStart, sent_at: new Date().toISOString() },
+        { onConflict: 'type,key' }
+      )
 
-    if (pendingError) return new Response('ok - week_complete_pending already scheduled')
-    return new Response('ok - week_complete_pending scheduled, will fire in ~15min')
+    return new Response('ok - week_complete_pending scheduled/updated')
   } catch (e) {
     console.error(e)
     return new Response('error: ' + String(e), { status: 500 })
