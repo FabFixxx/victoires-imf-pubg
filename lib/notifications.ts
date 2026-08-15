@@ -52,10 +52,19 @@ export async function registerPushToken(username: string): Promise<string | null
 
     const token = tokenData.data;
 
-    await supabase
+    // .select() pour détecter le cas silencieux où `username` ne correspond à aucune ligne
+    // (0 ligne affectée) : sans ça, l'appel semble réussir alors que rien n'est persisté.
+    const { data: updated, error } = await supabase
       .from('players')
       .update({ expo_push_token: token })
-      .eq('username', username);
+      .eq('username', username)
+      .select('username');
+
+    if (error) {
+      console.error('[registerPushToken] update failed:', error.message);
+    } else if (!updated || updated.length === 0) {
+      console.warn(`[registerPushToken] aucune ligne "players" pour username="${username}" — token non persisté`);
+    }
 
     return token;
   } catch (e: any) {

@@ -60,14 +60,16 @@ export async function getImfSeasonForYear(year: number): Promise<ImfSeason | nul
 }
 
 export async function upsertImfSeason(year: number, startDate: string): Promise<void> {
-  await supabase.from('imf_seasons').upsert(
+  const { error } = await supabase.from('imf_seasons').upsert(
     { year, start_date: startDate },
     { onConflict: 'year' }
   );
+  if (error) console.error('[upsertImfSeason] failed:', error.message);
 }
 
 export async function deleteImfSeason(year: number): Promise<void> {
-  await supabase.from('imf_seasons').delete().eq('year', year);
+  const { error } = await supabase.from('imf_seasons').delete().eq('year', year);
+  if (error) console.error('[deleteImfSeason] failed:', error.message);
 }
 
 export async function getManualWins(year: number): Promise<ManualWin[]> {
@@ -85,16 +87,18 @@ export async function addManualWin(
   finisher: string | null,
   winDate: string | null
 ): Promise<void> {
-  await supabase.from('imf_season_wins').insert({
+  const { error } = await supabase.from('imf_season_wins').insert({
     year,
     map_name: mapName,
     finisher,
     win_date: winDate,
   });
+  if (error) console.error('[addManualWin] failed:', error.message);
 }
 
 export async function deleteManualWin(id: string): Promise<void> {
-  await supabase.from('imf_season_wins').delete().eq('id', id);
+  const { error } = await supabase.from('imf_season_wins').delete().eq('id', id);
+  if (error) console.error('[deleteManualWin] failed:', error.message);
 }
 
 export async function updateManualWin(
@@ -103,9 +107,10 @@ export async function updateManualWin(
   finisher: string | null,
   winDate: string | null
 ): Promise<void> {
-  await supabase.from('imf_season_wins').update({
+  const { error } = await supabase.from('imf_season_wins').update({
     map_name: mapName,
     finisher,
     win_date: winDate,
   }).eq('id', id);
+  if (error) console.error('[updateManualWin] failed:', error.message);
 }

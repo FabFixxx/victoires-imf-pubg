@@ -43,12 +43,20 @@ export async function registerWebPush(username: string): Promise<void> {
     }
 
     const subJson = subscription.toJSON() as any;
-    await supabase.from('web_push_subscriptions').delete().eq('username', username);
-    await supabase.from('web_push_subscriptions').insert({
-      username,
-      endpoint: subJson.endpoint ?? '',
-      subscription: subJson,
-    });
+    // Upsert d'abord (atomique sur `endpoint`, qui est UNIQUE) : si ça échoue, l'ancien abonnement
+    // n'est pas perdu. Le nettoyage des anciens endpoints du même joueur (ex: ancien appareil)
+    // n'a lieu qu'après confirmation que le nouveau est bien persisté.
+    const { error: upsertError } = await supabase.from('web_push_subscriptions').upsert(
+      { username, endpoint: subJson.endpoint ?? '', subscription: subJson },
+      { onConflict: 'endpoint' }
+    );
+    if (upsertError) {
+      console.error('[registerWebPush] upsert failed:', upsertError.message);
+    } else {
+      await supabase.from('web_push_subscriptions').delete()
+        .eq('username', username)
+        .neq('endpoint', subJson.endpoint ?? '');
+    }
   } catch (e: any) {
     console.warn('Web push registration failed:', e?.message ?? String(e));
   }

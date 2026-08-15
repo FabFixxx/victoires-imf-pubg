@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import webpush from 'npm:web-push'
 
 const GROUP_PLAYERS = ['petittom', 'Nicotom', 'FabFix', 'Jibby37']
 
@@ -17,105 +16,37 @@ function getWeekEnd(weekStart: string): string {
   return d.toISOString().split('T')[0]
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
-}
-
-function groupByDate(rows: { player_username: string; date: string }[]) {
-  const byDate: Record<string, string[]> = {}
-  for (const row of rows) {
-    const d = typeof row.date === 'string' ? row.date.split('T')[0] : String(row.date)
-    if (!byDate[d]) byDate[d] = []
-    byDate[d].push(row.player_username)
-  }
-  return Object.entries(byDate).map(([date, players]) => ({ date, players }))
-}
-
-async function sendToAll(supabase: ReturnType<typeof createClient>, title: string, body: string) {
-  const { data: players } = await supabase
-    .from('players')
-    .select('expo_push_token')
-    .not('expo_push_token', 'is', null)
-
-  const tokens = (players ?? []).map((p: any) => p.expo_push_token).filter(Boolean)
-  if (tokens.length > 0) {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        tokens.map((token: string) => ({
-          to: token,
-          title,
-          body,
-          sound: 'default',
-          data: { type: 'availability_update' },
-          channelId: 'sessions',
-        }))
-      ),
-    })
-  }
-
-  const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')
-  const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')
-  if (vapidPublic && vapidPrivate) {
-    webpush.setVapidDetails('mailto:fabien.wagner@gmail.com', vapidPublic, vapidPrivate)
-    const { data: subs } = await supabase.from('web_push_subscriptions').select('*')
-    for (const sub of subs ?? []) {
-      try {
-        const subJson = sub.subscription as any
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
-          JSON.stringify({ title, body })
-        )
-      } catch {
-        await supabase.from('web_push_subscriptions').delete().eq('endpoint', sub.endpoint)
-      }
-    }
-  }
-}
-
-// Définit la date retenue pour une semaine (auto, ne pas écraser une sélection manuelle)
-async function setChosenDateAuto(supabase: ReturnType<typeof createClient>, weekStart: string, chosenDate: string) {
-  const { data: existing } = await supabase
-    .from('chosen_dates')
-    .select('is_manual')
-    .eq('week_start', weekStart)
-    .maybeSingle()
-
-  if (existing?.is_manual) return // Ne pas écraser un choix manuel
-
-  await supabase.from('chosen_dates').upsert(
-    { week_start: weekStart, chosen_date: chosenDate, is_manual: false },
-    { onConflict: 'week_start' }
-  )
-}
-
-// Construit le titre et le corps de la notification
-function buildNotif(fourVote: string[], threeVote: string[]): { title: string; body: string } {
-  if (fourVote.length === 1) {
-    return {
-      title: '✅ Session IMF confirmée !',
-      body: `Tout le monde est dispo le ${formatDate(fourVote[0])} !`,
-    }
-  }
-  if (fourVote.length > 1) {
-    const [first, ...others] = fourVote.map(formatDate)
-    return {
-      title: '✅ Session IMF confirmée !',
-      body: `Plusieurs dates possibles : ${[first, ...others].join(', ')}. La date retenue est le ${first} !`,
-    }
-  }
-  return {
-    title: '✅ Tout le monde a répondu !',
-    body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !`,
-  }
-}
-
 Deno.serve(async (req) => {
   try {
     const payload = await req.json()
+
+    // Trigger DELETE (retrait d'un vote) : nettoie retained_session si la date retenue
+    // n'a plus 4 votes. Le trigger INSERT existant envoie la ligne brute (sans wrapper),
+    // celui-ci envoie { event: 'DELETE', record: {...} } pour être distingué ici.
+    if (payload.event === 'DELETE') {
+      const oldRecord = payload.record
+      if (!oldRecord?.date) return new Response('ok - no date on delete')
+
+      const deletedDate: string = typeof oldRecord.date === 'string' ? oldRecord.date.split('T')[0] : String(oldRecord.date)
+
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      )
+
+      const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', deletedDate)
+      const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username)
+      const stillFour = GROUP_PLAYERS.every((p) => playersOnDay.includes(p))
+
+      if (!stillFour) {
+        await supabase.from('notification_log').delete().eq('type', 'retained_session').eq('key', deletedDate)
+        // Un pending "session confirmée" en cours pour cette date n'a plus lieu d'être
+        await supabase.from('notification_log').delete().eq('type', 'date_4votes_pending').eq('key', deletedDate)
+      }
+
+      return new Response('ok - delete handled')
+    }
+
     const record = payload.record ?? payload
     if (!record || !record.date) return new Response('no record', { status: 400 })
 
@@ -170,7 +101,7 @@ Deno.serve(async (req) => {
 
     if (!allResponded) return new Response('ok - not all responded yet')
 
-    // Vérifier qu'une notif date_4votes n'a pas déjà été envoyée cette semaine
+    // Vérifier qu'une notif date_4votes (confirmée ou en attente) n'existe pas déjà cette semaine
     const { data: fourVoteNotifs } = await supabase
       .from('notification_log')
       .select('key')
@@ -178,8 +109,15 @@ Deno.serve(async (req) => {
       .gte('key', weekStart)
       .lte('key', weekEnd)
 
-    if (fourVoteNotifs && fourVoteNotifs.length > 0) {
-      return new Response('ok - date_4votes already notified this week')
+    const { data: fourVotePending } = await supabase
+      .from('notification_log')
+      .select('key')
+      .eq('type', 'date_4votes_pending')
+      .gte('key', weekStart)
+      .lte('key', weekEnd)
+
+    if ((fourVoteNotifs?.length ?? 0) > 0 || (fourVotePending?.length ?? 0) > 0) {
+      return new Response('ok - date_4votes already handled this week')
     }
 
     // Planifier une notification différée : le cron send-reminders l'enverra à la prochaine

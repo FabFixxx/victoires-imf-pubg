@@ -371,7 +371,7 @@ export default function SettingsScreen() {
                   <Ionicons name="game-controller-outline" size={16} color={Colors.textMuted} />
                   <View>
                     <Text style={styles.notifLabel}>Rappel soir de session</Text>
-                    <Text style={styles.notifSub}>Le jour de la date retenue</Text>
+                    <Text style={styles.notifSub}>Le jour de chaque date retenue</Text>
                   </View>
                 </View>
                 <View style={styles.hourPicker}>
@@ -461,11 +461,11 @@ export default function SettingsScreen() {
                     )}
                   </View>
                   <Text style={styles.seasonDate}>
-                    Début : {new Date(season.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    Début : {new Date(season.startDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </Text>
                   {!season.isCurrent && (
                     <Text style={styles.seasonDate}>
-                      Fin : {new Date(season.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      Fin : {new Date(season.endDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </Text>
                   )}
                   {season.manualWinsDetail.length > 0 && (

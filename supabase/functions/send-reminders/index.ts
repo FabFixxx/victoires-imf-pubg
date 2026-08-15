@@ -229,6 +229,9 @@ Deno.serve(async (_req) => {
     // Supprimer le pending dans tous les cas
     await supabase.from('notification_log').delete().eq('type', 'date_4votes_pending').eq('key', date)
 
+    // Date passée (pending resté bloqué trop longtemps) → ne pas notifier
+    if (date < todayStr) continue
+
     // Re-vérifier que la date a encore 4 votes
     const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', date)
     const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username)
@@ -379,7 +382,7 @@ Deno.serve(async (_req) => {
   }
 
   // --- JOUR DE JEU (pas le samedi) ---
-  // On vérifie notification_log (date_4votes) plutôt que chosen_dates :
+  // On vérifie notification_log (retained_session) plutôt que chosen_dates :
   // ainsi la notif part automatiquement les 2 jours si 2 sessions sont confirmées.
   if (dayOfWeek !== 6) {
     const { data: todayVotes } = await supabase
@@ -389,7 +392,20 @@ Deno.serve(async (_req) => {
       .eq('key', todayStr)
       .maybeSingle()
 
+    // Revalidation défensive : le trigger DELETE peut avoir raté un retrait de vote
+    // (ou n'être pas encore déployé). On ne notifie jamais un jour qui n'a plus 4 dispos,
+    // et on nettoie au passage la session retenue devenue obsolète.
+    let stillFourToday = false
     if (todayVotes) {
+      const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', todayStr)
+      const playersToday = (dayRows ?? []).map((r: any) => r.player_username)
+      stillFourToday = GROUP_PLAYERS.every((p) => playersToday.includes(p))
+      if (!stillFourToday) {
+        await supabase.from('notification_log').delete().eq('type', 'retained_session').eq('key', todayStr)
+      }
+    }
+
+    if (todayVotes && stillFourToday) {
       const key = `game_day:${todayStr}`
       if (!sentTodaySet.has(key)) {
         const gameHour = prefs?.find((p: any) => p.game_day_hour != null)?.game_day_hour ?? 18

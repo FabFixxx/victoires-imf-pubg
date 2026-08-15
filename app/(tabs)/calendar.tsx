@@ -101,6 +101,7 @@ export default function CalendarScreen() {
   const [retainedDates, setRetainedDates] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [togglingRetained, setTogglingRetained] = useState<string | null>(null);
   const [showNoAvailConfirm, setShowNoAvailConfirm] = useState(false);
   const [showNoAvailThisWeekConfirm, setShowNoAvailThisWeekConfirm] = useState(false);
 
@@ -130,6 +131,23 @@ export default function CalendarScreen() {
     setRetainedDates(new Set(retained));
     setRefreshing(false);
   }, []);
+
+  // Une session retenue qui repasse sous 4 votes (vote retiré, y compris par un autre joueur)
+  // ne doit plus être considérée comme retenue : sinon le badge RETENUE reste affiché sans
+  // pouvoir être désélectionné, et "Ce soir on joue" pourrait partir sur un jour incomplet.
+  useEffect(() => {
+    const stale = [...retainedDates].filter((date) => {
+      const day = availability.find((d) => d.date === date);
+      return !day || day.players.length < GROUP_PLAYERS.length;
+    });
+    if (stale.length === 0) return;
+    setRetainedDates((prev) => {
+      const next = new Set(prev);
+      stale.forEach((d) => next.delete(d));
+      return next;
+    });
+    stale.forEach((d) => removeRetainedSession(d));
+  }, [availability]);
 
   const handleDayPress = async (day: DateData) => {
     if (!currentPlayer) return;
@@ -260,12 +278,18 @@ export default function CalendarScreen() {
   }, []);
 
   const handleToggleRetained = async (date: string) => {
-    if (retainedDates.has(date)) {
-      setRetainedDates((prev) => { const next = new Set(prev); next.delete(date); return next; });
-      await removeRetainedSession(date);
-    } else {
-      setRetainedDates((prev) => new Set([...prev, date]));
-      await addRetainedSession(date);
+    if (togglingRetained) return;
+    setTogglingRetained(date);
+    try {
+      if (retainedDates.has(date)) {
+        setRetainedDates((prev) => { const next = new Set(prev); next.delete(date); return next; });
+        await removeRetainedSession(date);
+      } else {
+        setRetainedDates((prev) => new Set([...prev, date]));
+        await addRetainedSession(date);
+      }
+    } finally {
+      setTogglingRetained(null);
     }
   };
 
@@ -314,11 +338,6 @@ export default function CalendarScreen() {
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
   }, [availability]);
 
-  // Dates avec 4 votes semaine prochaine (pour sélection date retenue)
-  const fourVoteDatesNextWeek = useMemo(() => {
-    return bestNextWeek.filter((d) => d.players.length >= GROUP_PLAYERS.length).sort((a, b) => a.date.localeCompare(b.date));
-  }, [bestNextWeek]);
-
   // Qui a répondu pour la semaine PROCHAINE (dispo ou aucune dispo)
   const playersWithNextWeekAvail = useMemo(() => {
     return new Set(
@@ -364,8 +383,8 @@ export default function CalendarScreen() {
                 <TouchableOpacity
                   key={day.date}
                   style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenu && styles.bestDateRowChosen]}
-                  onPress={isPerfect ? () => handleToggleRetained(day.date) : undefined}
-                  activeOpacity={isPerfect ? 0.7 : 1}
+                  onPress={(isPerfect || isRetenu) ? () => handleToggleRetained(day.date) : undefined}
+                  activeOpacity={(isPerfect || isRetenu) ? 0.7 : 1}
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
@@ -408,8 +427,8 @@ export default function CalendarScreen() {
                 <TouchableOpacity
                   key={day.date}
                   style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenu && styles.bestDateRowChosen]}
-                  onPress={isPerfect ? () => handleToggleRetained(day.date) : undefined}
-                  activeOpacity={isPerfect ? 0.7 : 1}
+                  onPress={(isPerfect || isRetenu) ? () => handleToggleRetained(day.date) : undefined}
+                  activeOpacity={(isPerfect || isRetenu) ? 0.7 : 1}
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
@@ -695,11 +714,6 @@ const styles = StyleSheet.create({
   bestDateLabelPerfect: { color: '#FFD700' },
   bestDateDots: { flexDirection: 'row', gap: 4 },
   playerDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5 },
-  perfectBadge: {
-    backgroundColor: Colors.win + '22', borderWidth: 1, borderColor: Colors.win,
-    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
-  },
-  perfectBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.win, letterSpacing: 0.5 },
   retenubadge: {
     backgroundColor: Colors.win + '33', borderWidth: 1, borderColor: Colors.win,
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
@@ -715,12 +729,6 @@ const styles = StyleSheet.create({
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
   countBadgeText: { fontSize: 11, fontWeight: '800', color: Colors.primary },
-  chosenHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: Colors.cardBorder,
-  },
-  chosenHintText: { fontSize: 12, color: Colors.textMuted },
   emptyRow: { padding: 16, alignItems: 'center' },
   emptyText: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
   confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },

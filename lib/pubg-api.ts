@@ -22,7 +22,7 @@ function appendLog(msg: string) {
   syncLogBuffer = [...syncLogBuffer.slice(-(MAX_LOG_LINES - 1)), { time, msg }];
 }
 
-async function fetchPUBG(endpoint: string) {
+async function fetchPUBG(endpoint: string, retries = 1): Promise<any> {
   // Sur web : proxy Vercel pour éviter les erreurs CORS sur les 429
   // Sur natif (APK) : appel direct, pas de contrainte CORS
   const res = Platform.OS === 'web'
@@ -30,7 +30,16 @@ async function fetchPUBG(endpoint: string) {
     : await fetch(`${PUBG_BASE_URL}${endpoint}`, {
         headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: 'application/vnd.api+json' },
       });
-  if (res.status === 429) throw new Error('Rate limit PUBG — réessaie dans quelques minutes');
+  if (res.status === 429) {
+    // Un 429 isolé ne doit pas faire planter tout l'appelant (resolvePlayerIds, fetch des
+    // matchs IMF, etc. n'ont pas de garde-fou externe comme la boucle de sync principale) :
+    // on retente une fois après le délai de pacing standard avant d'abandonner.
+    if (retries > 0) {
+      await sleep(RATE_LIMIT_DELAY);
+      return fetchPUBG(endpoint, retries - 1);
+    }
+    throw new Error('Rate limit PUBG — réessaie dans quelques minutes');
+  }
   if (!res.ok) throw new Error(`PUBG API ${res.status}: ${endpoint}`);
   return res.json();
 }
@@ -589,28 +598,27 @@ export interface LastMatch {
   players: { username: string; kills: number; assists: number; damage: number }[];
 }
 
-export async function getLastMatch(): Promise<LastMatch | null> {
-  const { data } = await supabase
-    .from('player_match_stats')
-    .select('match_id, match_date, is_win, kills, assists, damage, player_username, win_place')
-    .order('match_date', { ascending: false })
-    .limit(20);
-
+// Partagé par getLastMatch/getLastWin : les deux ne diffèrent que par leur requête source
+// et par le fait qu'un "getLastWin" est toujours une victoire (pas besoin de is_win/win_place).
+async function buildLastMatchFromRows(
+  data: { match_id: string; match_date: string; kills: number; assists: number; damage: number; player_username: string; is_win?: boolean; win_place?: number }[],
+  opts: { forceWin?: boolean } = {}
+): Promise<LastMatch | null> {
   if (!data || data.length === 0) return null;
 
   const latestMatchId = data[0].match_id;
   const rows = data.filter((r) => r.match_id === latestMatchId);
-  const isWin = rows.some((r) => r.is_win);
+  const isWin = opts.forceWin ? true : rows.some((r) => r.is_win);
 
   const { data: cacheRow } = await supabase
     .from('match_cache')
     .select('finisher, map_name, data')
     .eq('match_id', latestMatchId)
-    .single();
+    .maybeSingle();
 
-  const allPlayers: { winPlace: number }[] = cacheRow?.data?.players ?? [];
-  const totalTeams = allPlayers.length > 0 ? Math.max(...allPlayers.map((p) => p.winPlace)) : null;
-  const placement = rows[0]?.win_place ?? null;
+  const allPlayers: { winPlace?: number }[] = cacheRow?.data?.players ?? [];
+  const totalTeams = allPlayers.length > 0 ? Math.max(...allPlayers.map((p) => p.winPlace ?? 1)) : null;
+  const placement = opts.forceWin ? 1 : (rows[0]?.win_place ?? null);
 
   return {
     matchId: latestMatchId,
@@ -627,6 +635,16 @@ export async function getLastMatch(): Promise<LastMatch | null> {
       damage: Math.round(r.damage),
     })),
   };
+}
+
+export async function getLastMatch(): Promise<LastMatch | null> {
+  const { data } = await supabase
+    .from('player_match_stats')
+    .select('match_id, match_date, is_win, kills, assists, damage, player_username, win_place')
+    .order('match_date', { ascending: false })
+    .limit(20);
+
+  return buildLastMatchFromRows(data ?? []);
 }
 
 export async function getTopFinisher(startDate?: string, endDate?: string): Promise<{ username: string; count: number } | null> {
@@ -756,35 +774,7 @@ export async function getLastWin(): Promise<LastMatch | null> {
     .order('match_date', { ascending: false })
     .limit(20);
 
-  if (!data || data.length === 0) return null;
-
-  const latestMatchId = data[0].match_id;
-  const rows = data.filter((r) => r.match_id === latestMatchId);
-
-  const { data: cacheRow } = await supabase
-    .from('match_cache')
-    .select('finisher, map_name, data')
-    .eq('match_id', latestMatchId)
-    .single();
-
-  const allPlayers: { winPlace: number }[] = cacheRow?.data?.players ?? [];
-  const totalTeams = allPlayers.length > 0 ? Math.max(...allPlayers.map((p) => p.winPlace)) : null;
-
-  return {
-    matchId: latestMatchId,
-    matchDate: new Date(data[0].match_date),
-    isWin: true,
-    finisher: cacheRow?.finisher ?? null,
-    mapName: cacheRow?.map_name ? (PUBG_MAP_NAMES[cacheRow.map_name] ?? cacheRow.map_name) : null,
-    placement: 1,
-    totalTeams,
-    players: rows.map((r) => ({
-      username: r.player_username,
-      kills: r.kills,
-      assists: r.assists,
-      damage: Math.round(r.damage),
-    })),
-  };
+  return buildLastMatchFromRows(data ?? [], { forceWin: true });
 }
 
 export interface AllPlayersStats {

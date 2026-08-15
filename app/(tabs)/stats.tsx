@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -94,11 +94,18 @@ export default function StatsScreen() {
   const [seasons, setSeasons] = useState<ImfSeason[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<ImfSeason | null>(null);
 
+  // Compteur de requêtes : évite qu'un changement rapide de joueur laisse une réponse réseau
+  // périmée écraser recent/loading avec les données d'un joueur qui n'est plus sélectionné.
+  const requestIdRef = useRef(0);
+
   const loadPlayer = useCallback(async (username: string, season: ImfSeason | null) => {
     if (!season) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
-    const start = new Date(season.startDate).toISOString();
-    const end = new Date(season.endDate + 'T23:59:59').toISOString();
+    // Ancrage UTC explicite : sinon `end` (sans 'Z') est interprété dans le fuseau local de
+    // l'appareil, ce qui décale la frontière de saison selon qui exécute la requête.
+    const start = new Date(season.startDate + 'T00:00:00Z').toISOString();
+    const end = new Date(season.endDate + 'T23:59:59Z').toISOString();
 
     const [s, { data: recentMatches }] = await Promise.all([
       getPlayerStatsBetween(username, start, end),
@@ -112,6 +119,8 @@ export default function StatsScreen() {
         .limit(10),
     ]);
 
+    if (requestIdRef.current !== requestId) return; // une requête plus récente a pris le relais
+
     setStats((prev) => ({ ...prev, [`${username}_${season.year}`]: s }));
 
     const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
@@ -120,6 +129,9 @@ export default function StatsScreen() {
       .from('match_cache')
       .select('match_id, map_name, finisher')
       .in('match_id', matchIds.length ? matchIds : ['__none__']);
+
+    if (requestIdRef.current !== requestId) return;
+
     const mapNameById: Record<string, string> = {};
     const finisherById: Record<string, string> = {};
     for (const row of cacheRows ?? []) {
@@ -140,19 +152,18 @@ export default function StatsScreen() {
   };
 
   useEffect(() => {
-    getImfSeasons().then((list) => {
-      setSeasons(list);
-      const current = list.find((s) => s.isCurrent) ?? list[0] ?? null;
-      setSelectedSeason(current);
-    });
-  }, []);
-
-  useEffect(() => {
-    getCurrentPlayer().then((player) => {
-      if (player && GROUP_PLAYERS.includes(player as PlayerName)) {
-        setSelected(player as PlayerName);
-      }
-    });
+    // Résoudre saisons + joueur courant ensemble avant de déclencher le premier loadPlayer,
+    // pour éviter un chargement initial gaspillé sur GROUP_PLAYERS[0] avant que le vrai joueur soit connu.
+    Promise.all([getImfSeasons(), getCurrentPlayer()])
+      .then(([list, player]) => {
+        setSeasons(list);
+        const current = list.find((s) => s.isCurrent) ?? list[0] ?? null;
+        setSelectedSeason(current);
+        if (player && GROUP_PLAYERS.includes(player as PlayerName)) {
+          setSelected(player as PlayerName);
+        }
+      })
+      .catch((e) => console.error('[StatsScreen] init failed:', e));
   }, []);
 
   useEffect(() => {

@@ -30,10 +30,20 @@ export default function RootLayout() {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    const timeout = setTimeout(() => setInitState('select'), 3000);
+    // `settled` départage qui décide en premier entre le timeout de secours et la résolution
+    // du storage : sans ça, un storage lent qui répond juste après le timeout pouvait faire
+    // basculer l'utilisateur de l'écran "Qui es-tu ?" vers l'app tout seul, sans qu'il ait rien fait.
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setInitState('select');
+    }, 3000);
     (async () => {
       try {
         const player = await getCurrentPlayer();
+        if (settled) return;
+        settled = true;
         clearTimeout(timeout);
         if (!player) {
           setInitState('select');
@@ -56,14 +66,16 @@ export default function RootLayout() {
                 },
               ]
             );
-          });
+          }).catch((e) => console.error('[RootLayout] checkForUpdate failed:', e));
         }
       } catch {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeout);
         setInitState('select');
       }
     })();
-    return () => clearTimeout(timeout);
+    return () => { settled = true; clearTimeout(timeout); };
   }, []);
 
   useEffect(() => {

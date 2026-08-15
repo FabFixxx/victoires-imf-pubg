@@ -19,7 +19,9 @@ function formatDate(iso: string): string {
 }
 
 function formatDateTime(iso: string): string {
-  const d = new Date(iso);
+  // Les dates sans heure (victoires manuelles, ex: "2026-08-15") n'ont pas de composant temps :
+  // parsées telles quelles elles tombent à minuit UTC et affichent une heure fantôme (01h/02h) en local.
+  const d = new Date(iso.includes('T') ? iso : iso + 'T12:00:00');
   const h = d.getHours().toString().padStart(2, '0');
   const m = d.getMinutes().toString().padStart(2, '0');
   return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} · ${h}h${m}`;
@@ -29,8 +31,11 @@ function formatSeasonDates(start: string, end: string, isCurrent: boolean): stri
   return `${formatDate(start)} → ${isCurrent ? "aujourd'hui" : formatDate(end)}`;
 }
 
-function toDateStr(iso: string): string {
-  return iso.slice(0, 10);
+// Date calendaire en heure de Paris (le groupe joue depuis la France), pas en UTC brut :
+// un match qui finit après minuit heure française mais avant minuit UTC doit compter sur le bon jour.
+function toParisDateStr(iso: string): string {
+  const d = iso.includes('T') ? new Date(iso) : new Date(iso + 'T12:00:00Z');
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(d);
 }
 
 interface WinPlayer {
@@ -51,8 +56,10 @@ interface Victory {
 }
 
 async function getVictoriesForSeason(year: number, startDate: string, endDate: string): Promise<Victory[]> {
-  const start = new Date(startDate).toISOString();
-  const end = new Date(endDate + 'T23:59:59').toISOString();
+  // Forcer un ancrage UTC explicite : sinon `end` (sans 'Z') est interprété dans le fuseau local
+  // de l'appareil exécutant le code, ce qui décale la frontière de saison selon qui déclenche la requête.
+  const start = new Date(startDate + 'T00:00:00Z').toISOString();
+  const end = new Date(endDate + 'T23:59:59Z').toISOString();
 
   // PUBG victories from match cache
   const { data: statsRows } = await supabase
@@ -113,7 +120,7 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
     .filter(Boolean) as Victory[];
 
   // Dates already covered by PUBG victories
-  const coveredDates = new Set(pubgVictories.map((v) => toDateStr(v.matchDate!)));
+  const coveredDates = new Set(pubgVictories.map((v) => toParisDateStr(v.matchDate!)));
 
   // Manual wins from imf_season_wins not already covered
   const { data: manualRows } = await supabase
@@ -124,7 +131,7 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
   const manualVictories: Victory[] = (manualRows ?? [])
     .filter((w) => {
       if (!w.win_date) return true; // no date → always include (can't deduplicate)
-      return !coveredDates.has(toDateStr(w.win_date));
+      return !coveredDates.has(toParisDateStr(w.win_date));
     })
     .map((w) => ({
       key: `manual_${w.id}`,
@@ -137,9 +144,12 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
     }));
 
   const all = [...pubgVictories, ...manualVictories];
+  // Tri ascendant (plus ancien en premier) : les entrées sans date sont placées en TÊTE ici
+  // pour qu'après le .reverse() à l'affichage (plus récent en premier), elles se retrouvent
+  // en QUEUE de liste au lieu d'être affichées comme les plus récentes.
   all.sort((a, b) => {
-    if (!a.matchDate) return 1;
-    if (!b.matchDate) return -1;
+    if (!a.matchDate) return -1;
+    if (!b.matchDate) return 1;
     return new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime();
   });
   return all;
@@ -159,7 +169,7 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
             )}
           </View>
           <Text style={styles.cardDate}>
-            {win.matchDate ? formatDateTime(win.matchDate) : 'Date inconnue'}
+            {win.matchDate ? (win.isManual ? formatDate(win.matchDate) : formatDateTime(win.matchDate)) : 'Date inconnue'}
           </Text>
         </View>
         <View style={styles.cardHeaderRight}>
@@ -257,6 +267,9 @@ export default function VictoiresScreen() {
       } else {
         setLoading(false);
       }
+    }).catch((e) => {
+      console.error('[VictoiresScreen] getImfSeasons failed:', e);
+      setLoading(false);
     });
   }, [loadVictories]);
 
