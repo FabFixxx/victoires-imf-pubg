@@ -14,7 +14,9 @@ const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 function formatDate(iso: string): string {
-  const d = new Date(iso);
+  // Sans ancrage, une date sans heure ("2026-08-15") tombe à minuit UTC et peut afficher
+  // le jour précédent en heure locale (fuseau négatif, ex: appareil au Canada).
+  const d = new Date(iso.includes('T') ? iso : iso + 'T12:00:00');
   return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`;
 }
 

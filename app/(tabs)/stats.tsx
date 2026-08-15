@@ -51,7 +51,9 @@ const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août'
 const MOIS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
 function formatSeasonDate(dateStr: string): string {
-  const d = new Date(dateStr);
+  // Sans ancrage, une date sans heure ("2026-08-15") tombe à minuit UTC et peut afficher
+  // le jour précédent en heure locale (fuseau négatif, ex: appareil au Canada).
+  const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00');
   return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS_LONG[d.getMonth()]} ${d.getFullYear()}`;
 }
 

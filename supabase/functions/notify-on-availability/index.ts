@@ -42,6 +42,9 @@ Deno.serve(async (req) => {
         await supabase.from('notification_log').delete().eq('type', 'retained_session').eq('key', deletedDate)
         // Un pending "session confirmée" en cours pour cette date n'a plus lieu d'être
         await supabase.from('notification_log').delete().eq('type', 'date_4votes_pending').eq('key', deletedDate)
+        // Retirer aussi la claim finale : sinon, si les 4 votes reviennent plus tard dans la
+        // semaine, Check 1 la trouve déjà "notifiée" et ne planifie plus rien silencieusement.
+        await supabase.from('notification_log').delete().eq('type', 'date_4votes').eq('key', deletedDate)
       }
 
       return new Response('ok - delete handled')

@@ -294,7 +294,7 @@ export default function DashboardScreen() {
           <>
             <SectionHeader
               title={`Saison IMF ${imfSeason.year}`}
-              subtitle={`Depuis le ${new Date(imfSeason.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}
+              subtitle={`Depuis le ${new Date(imfSeason.startDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}
             />
 
             {imfSeason.manualWinsDetail.length > 0 || (imfStats && imfStats.totalWins > 0) ? (
