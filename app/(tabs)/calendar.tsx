@@ -369,7 +369,7 @@ export default function CalendarScreen() {
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
-                      {isRetenu && <Ionicons name="star" size={13} color={Colors.win} style={{ marginRight: 4 }} />}
+                      {isRetenu && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
                       <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
                         {formatDate(day.date)}
                       </Text>
@@ -413,7 +413,7 @@ export default function CalendarScreen() {
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
-                      {isRetenu && <Ionicons name="star" size={13} color={Colors.win} style={{ marginRight: 4 }} />}
+                      {isRetenu && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
                       <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
                         {formatDate(day.date)}
                       </Text>
