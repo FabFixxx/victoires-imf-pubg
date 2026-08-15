@@ -139,12 +139,32 @@ Deno.serve(async (req) => {
     const allFourOnDate = GROUP_PLAYERS.every((p) => playersOnDay.includes(p))
 
     if (allFourOnDate) {
+      // Vérifier si une date_4votes a déjà été envoyée pour cette semaine (= nouvelle session)
+      const { data: existingWeekNotifs } = await supabase
+        .from('notification_log')
+        .select('key')
+        .eq('type', 'date_4votes')
+        .gte('key', weekStart)
+        .lte('key', weekEnd)
+
+      const isNewSession = (existingWeekNotifs ?? []).length > 0
+
       const { error } = await supabase
         .from('notification_log')
         .insert({ type: 'date_4votes', key: date })
 
       if (!error) {
-        // Chercher d'autres dates 4 votes dans la semaine
+        if (isNewSession) {
+          // Deuxième date (ou plus) à 4 votes cette semaine → notif "Nouvelle possibilité"
+          await sendToAll(
+            supabase,
+            '🎉 Nouvelle possibilité de session IMF !',
+            `Tout le monde est aussi dispo le ${formatDate(date)} !`,
+          )
+          return new Response('ok - new_date_4votes notif sent')
+        }
+
+        // Première date à 4 votes → notif "Session confirmée"
         const { data: weekRows } = await supabase
           .from('player_availability')
           .select('player_username, date')
@@ -157,7 +177,6 @@ Deno.serve(async (req) => {
           .map((d) => d.date)
           .sort()
 
-        // Date retenue = la plus proche parmi les dates à 4 votes
         const retenue = allFourDates[0] ?? date
         await setChosenDateAuto(supabase, weekStart, retenue)
 

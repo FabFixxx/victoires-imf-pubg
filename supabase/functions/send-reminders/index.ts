@@ -313,12 +313,17 @@ Deno.serve(async (_req) => {
   }
 
   // --- JOUR DE JEU (pas le samedi) ---
+  // On vérifie notification_log (date_4votes) plutôt que chosen_dates :
+  // ainsi la notif part automatiquement les 2 jours si 2 sessions sont confirmées.
   if (dayOfWeek !== 6) {
-    const { data: chosenDate } = await supabase
-      .from('chosen_dates').select('chosen_date')
-      .eq('chosen_date', todayStr).maybeSingle()
+    const { data: todayVotes } = await supabase
+      .from('notification_log')
+      .select('key')
+      .eq('type', 'date_4votes')
+      .eq('key', todayStr)
+      .maybeSingle()
 
-    if (chosenDate) {
+    if (todayVotes) {
       const key = `game_day:${todayStr}`
       if (!sentTodaySet.has(key)) {
         const gameHour = prefs?.find((p: any) => p.game_day_hour != null)?.game_day_hour ?? 18
