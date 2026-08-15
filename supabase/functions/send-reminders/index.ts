@@ -140,6 +140,47 @@ function getVictoryRecapHour(_dateStr: string): number {
   return 10
 }
 
+const GROUP_PLAYERS = ['petittom', 'Nicotom', 'FabFix', 'Jibby37']
+
+function getWeekEnd(weekStart: string): string {
+  const d = new Date(weekStart + 'T12:00:00Z')
+  d.setUTCDate(d.getUTCDate() + 6)
+  return d.toISOString().split('T')[0]
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  })
+}
+
+function groupByDate(rows: { player_username: string; date: string }[]) {
+  const byDate: Record<string, string[]> = {}
+  for (const row of rows) {
+    const d = typeof row.date === 'string' ? row.date.split('T')[0] : String(row.date)
+    if (!byDate[d]) byDate[d] = []
+    byDate[d].push(row.player_username)
+  }
+  return Object.entries(byDate).map(([date, ps]) => ({ date, players: ps }))
+}
+
+function buildWeekCompleteNotif(fourVote: string[], threeVote: string[]): { title: string; body: string } {
+  if (fourVote.length === 1) {
+    return { title: '✅ Session IMF confirmée !', body: `Tout le monde est dispo le ${formatDate(fourVote[0])} !` }
+  }
+  if (fourVote.length > 1) {
+    const dates = fourVote.map(formatDate)
+    return { title: '✅ Session IMF confirmée !', body: `Plusieurs dates possibles : ${dates.join(', ')}. La date retenue est le ${dates[0]} !` }
+  }
+  return { title: '✅ Tout le monde a répondu !', body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !` }
+}
+
+async function setChosenDateAuto(supabase: any, weekStart: string, chosenDate: string) {
+  const { data: existing } = await supabase.from('chosen_dates').select('is_manual').eq('week_start', weekStart).maybeSingle()
+  if (existing?.is_manual) return
+  await supabase.from('chosen_dates').upsert({ week_start: weekStart, chosen_date: chosenDate, is_manual: false }, { onConflict: 'week_start' })
+}
+
 const MAP_NAMES: Record<string, string> = {
   Baltic_Main: 'Erangel', Erangel_Main: 'Erangel',
   Desert_Main: 'Miramar',
@@ -158,6 +199,49 @@ Deno.serve(async (_req) => {
 
   const { data: players } = await supabase.from('players').select('username, expo_push_token')
   if (!players?.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
+
+  // --- PENDING WEEK_COMPLETE (différé 15 min depuis notify-on-availability) ---
+  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+  const { data: pendingList } = await supabase
+    .from('notification_log')
+    .select('key, sent_at')
+    .eq('type', 'week_complete_pending')
+    .lt('sent_at', fifteenMinAgo)
+
+  for (const entry of pendingList ?? []) {
+    const ws = entry.key
+    const we = getWeekEnd(ws)
+
+    // Claim atomique : insert week_complete (UNIQUE constraint = mutex)
+    const { error: claimError } = await supabase
+      .from('notification_log')
+      .insert({ type: 'week_complete', key: ws })
+
+    // Supprimer le pending dans tous les cas (traité ou déjà claim par une autre exécution)
+    await supabase.from('notification_log').delete().eq('type', 'week_complete_pending').eq('key', ws)
+
+    if (claimError) continue // Déjà traité
+
+    // Vérifier si date_4votes a été envoyée pendant le délai
+    const { data: fourVoteNotifs } = await supabase
+      .from('notification_log').select('key').eq('type', 'date_4votes').gte('key', ws).lte('key', we)
+
+    if (fourVoteNotifs && fourVoteNotifs.length > 0) continue // date_4votes a géré la semaine
+
+    // Fetch données fraîches et envoyer la notif
+    const { data: freshRows } = await supabase
+      .from('player_availability').select('player_username, date').gte('date', ws).lte('date', we)
+
+    const weekAvail = groupByDate(freshRows ?? [])
+    const fourVote = weekAvail.filter((d) => d.players.length >= GROUP_PLAYERS.length).map((d) => d.date).sort()
+    const threeVote = weekAvail.filter((d) => d.players.length === GROUP_PLAYERS.length - 1).map((d) => d.date).sort()
+
+    if (fourVote.length > 0) await setChosenDateAuto(supabase, ws, fourVote[0])
+    if (fourVote.length > 0 || threeVote.length > 0) {
+      const { title, body } = buildWeekCompleteNotif(fourVote, threeVote)
+      await sendPushToAll(supabase, players, title, body, 'week_complete')
+    }
+  }
 
   const { data: prefs } = await supabase
     .from('notification_preferences')

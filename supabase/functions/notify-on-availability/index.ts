@@ -187,56 +187,25 @@ Deno.serve(async (req) => {
     if (!allResponded) return new Response('ok - not all responded yet')
 
     // Vérifier qu'une notif date_4votes n'a pas déjà été envoyée cette semaine
-    const checkFourVoteNotifs = async () => {
-      const { data } = await supabase
-        .from('notification_log')
-        .select('key')
-        .eq('type', 'date_4votes')
-        .gte('key', weekStart)
-        .lte('key', weekEnd)
-      return (data ?? []).length > 0
-    }
+    const { data: fourVoteNotifs } = await supabase
+      .from('notification_log')
+      .select('key')
+      .eq('type', 'date_4votes')
+      .gte('key', weekStart)
+      .lte('key', weekEnd)
 
-    if (await checkFourVoteNotifs()) {
+    if (fourVoteNotifs && fourVoteNotifs.length > 0) {
       return new Response('ok - date_4votes already notified this week')
     }
 
-    // Grace period : attendre 30s pour laisser arriver les inserts en rafale du même joueur.
-    // Si une date à 4 votes émerge pendant ce délai (Check 1), elle prend la main.
-    await new Promise((r) => setTimeout(r, 30_000))
-
-    // Re-vérifier après le délai
-    if (await checkFourVoteNotifs()) {
-      return new Response('ok - date_4votes notified during grace period, week_complete skipped')
-    }
-
-    // Re-fetch les dispos à jour après le délai
-    const { data: freshWeekRows } = await supabase
-      .from('player_availability')
-      .select('player_username, date')
-      .gte('date', weekStart)
-      .lte('date', weekEnd)
-
-    const { error } = await supabase
+    // Planifier une notification différée : le cron send-reminders l'enverra après 15 min.
+    // La contrainte UNIQUE(type, key) garantit qu'un seul pending est créé par semaine.
+    const { error: pendingError } = await supabase
       .from('notification_log')
-      .insert({ type: 'week_complete', key: weekStart })
+      .insert({ type: 'week_complete_pending', key: weekStart })
 
-    if (!error) {
-      const weekAvail = groupByDate(freshWeekRows ?? [])
-      const fourVote = weekAvail.filter((d) => d.players.length === 4).map((d) => d.date).sort()
-      const threeVote = weekAvail.filter((d) => d.players.length === 3).map((d) => d.date).sort()
-
-      if (fourVote.length > 0) {
-        await setChosenDateAuto(supabase, weekStart, fourVote[0])
-      }
-
-      if (fourVote.length > 0 || threeVote.length > 0) {
-        const { title, body } = buildNotif(fourVote, threeVote)
-        await sendToAll(supabase, title, body)
-      }
-    }
-
-    return new Response('ok')
+    if (pendingError) return new Response('ok - week_complete_pending already scheduled')
+    return new Response('ok - week_complete_pending scheduled, will fire in ~15min')
   } catch (e) {
     console.error(e)
     return new Response('error: ' + String(e), { status: 500 })
