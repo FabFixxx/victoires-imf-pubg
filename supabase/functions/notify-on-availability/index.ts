@@ -156,7 +156,31 @@ Deno.serve(async (req) => {
       if (!error) {
         if (isNewSession) {
           // Deuxième date (ou plus) à 4 votes cette semaine → notif "Nouvelle possibilité"
-          // Pas d'auto-retain : laisse l'utilisateur choisir (la 1ère reste RETENUE par défaut)
+          // Si la nouvelle date est antérieure à toutes les dates déjà retenues → swap auto-retain
+          const { data: currentRetained } = await supabase
+            .from('notification_log')
+            .select('key')
+            .eq('type', 'retained_session')
+            .gte('key', weekStart)
+            .lte('key', weekEnd)
+
+          const retainedKeys = (currentRetained ?? []).map((r: any) => r.key).sort()
+          const earliestRetained = retainedKeys[0]
+
+          if (!earliestRetained || date < earliestRetained) {
+            // La nouvelle date est plus proche → elle devient l'auto-retenue
+            await supabase.from('notification_log').upsert(
+              { type: 'retained_session', key: date },
+              { onConflict: 'type,key', ignoreDuplicates: true }
+            )
+            // Retirer l'ancienne date auto-retenue
+            if (earliestRetained) {
+              await supabase.from('notification_log').delete()
+                .eq('type', 'retained_session')
+                .eq('key', earliestRetained)
+            }
+          }
+
           await sendToAll(
             supabase,
             '🎉 Nouvelle possibilité de session IMF !',
