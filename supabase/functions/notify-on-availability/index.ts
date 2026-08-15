@@ -187,23 +187,42 @@ Deno.serve(async (req) => {
     if (!allResponded) return new Response('ok - not all responded yet')
 
     // Vérifier qu'une notif date_4votes n'a pas déjà été envoyée cette semaine
-    const { data: weekNotifs } = await supabase
-      .from('notification_log')
-      .select('key')
-      .eq('type', 'date_4votes')
-      .gte('key', weekStart)
-      .lte('key', weekEnd)
+    const checkFourVoteNotifs = async () => {
+      const { data } = await supabase
+        .from('notification_log')
+        .select('key')
+        .eq('type', 'date_4votes')
+        .gte('key', weekStart)
+        .lte('key', weekEnd)
+      return (data ?? []).length > 0
+    }
 
-    if (weekNotifs && weekNotifs.length > 0) {
+    if (await checkFourVoteNotifs()) {
       return new Response('ok - date_4votes already notified this week')
     }
+
+    // Grace period : attendre 30s pour laisser arriver les inserts en rafale du même joueur.
+    // Si une date à 4 votes émerge pendant ce délai (Check 1), elle prend la main.
+    await new Promise((r) => setTimeout(r, 30_000))
+
+    // Re-vérifier après le délai
+    if (await checkFourVoteNotifs()) {
+      return new Response('ok - date_4votes notified during grace period, week_complete skipped')
+    }
+
+    // Re-fetch les dispos à jour après le délai
+    const { data: freshWeekRows } = await supabase
+      .from('player_availability')
+      .select('player_username, date')
+      .gte('date', weekStart)
+      .lte('date', weekEnd)
 
     const { error } = await supabase
       .from('notification_log')
       .insert({ type: 'week_complete', key: weekStart })
 
     if (!error) {
-      const weekAvail = groupByDate(weekRows ?? [])
+      const weekAvail = groupByDate(freshWeekRows ?? [])
       const fourVote = weekAvail.filter((d) => d.players.length === 4).map((d) => d.date).sort()
       const threeVote = weekAvail.filter((d) => d.players.length === 3).map((d) => d.date).sort()
 
