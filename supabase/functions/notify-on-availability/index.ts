@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
       if (!error) {
         if (isNewSession) {
           // Deuxième date (ou plus) à 4 votes cette semaine → notif "Nouvelle possibilité"
+          // Pas d'auto-retain : laisse l'utilisateur choisir (la 1ère reste RETENUE par défaut)
           await sendToAll(
             supabase,
             '🎉 Nouvelle possibilité de session IMF !',
@@ -164,7 +165,11 @@ Deno.serve(async (req) => {
           return new Response('ok - new_date_4votes notif sent')
         }
 
-        // Première date à 4 votes → notif "Session confirmée"
+        // Première date à 4 votes → auto-retenir + notif "Session confirmée"
+        await supabase.from('notification_log').upsert(
+          { type: 'retained_session', key: date },
+          { onConflict: 'type,key', ignoreDuplicates: true }
+        )
         const { data: weekRows } = await supabase
           .from('player_availability')
           .select('player_username, date')

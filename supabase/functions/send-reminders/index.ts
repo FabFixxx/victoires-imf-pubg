@@ -319,7 +319,7 @@ Deno.serve(async (_req) => {
     const { data: todayVotes } = await supabase
       .from('notification_log')
       .select('key')
-      .eq('type', 'date_4votes')
+      .eq('type', 'retained_session')
       .eq('key', todayStr)
       .maybeSingle()
 

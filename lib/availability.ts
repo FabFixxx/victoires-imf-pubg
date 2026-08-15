@@ -110,6 +110,31 @@ export async function setChosenDate(weekStart: string, chosenDate: string): Prom
   );
 }
 
+// ── Sessions retenues ──
+
+export async function getRetainedSessions(weekStart: string, weekEnd: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('notification_log')
+    .select('key')
+    .eq('type', 'retained_session')
+    .gte('key', weekStart)
+    .lte('key', weekEnd);
+  return (data ?? []).map((r: any) => r.key);
+}
+
+export async function addRetainedSession(date: string): Promise<void> {
+  await supabase.from('notification_log').upsert(
+    { type: 'retained_session', key: date },
+    { onConflict: 'type,key', ignoreDuplicates: true }
+  );
+}
+
+export async function removeRetainedSession(date: string): Promise<void> {
+  await supabase.from('notification_log').delete()
+    .eq('type', 'retained_session')
+    .eq('key', date);
+}
+
 // ── Préférences de notifications ──
 
 export interface NotificationPrefs {

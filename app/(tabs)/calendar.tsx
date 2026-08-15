@@ -29,11 +29,11 @@ import {
   removeNoAvailability,
   deleteAvailabilityForWeek,
   getNoAvailability,
-  getChosenDate,
-  setChosenDate,
+  getRetainedSessions,
+  addRetainedSession,
+  removeRetainedSession,
   PLAYER_COLORS,
   DayAvailability,
-  ChosenDate,
 } from '../../lib/availability';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 
@@ -98,7 +98,7 @@ export default function CalendarScreen() {
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
   const [noAvailPlayers, setNoAvailPlayers] = useState<string[]>([]);
   const [noAvailThisWeekPlayers, setNoAvailThisWeekPlayers] = useState<string[]>([]);
-  const [chosenDate, setChosenDateState] = useState<ChosenDate | null>(null);
+  const [retainedDates, setRetainedDates] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [showNoAvailConfirm, setShowNoAvailConfirm] = useState(false);
@@ -117,16 +117,17 @@ export default function CalendarScreen() {
   const loadAll = useCallback(async () => {
     setRefreshing(true);
     const weekMonday = getMondayOf(getToday());
-    const [data, noAvail, noAvailThis, chosen] = await Promise.all([
-      getAvailability(weekMonday, addMonths(getToday(), 3)),
+    const windowEndDate = addMonths(getToday(), 3);
+    const [data, noAvail, noAvailThis, retained] = await Promise.all([
+      getAvailability(weekMonday, windowEndDate),
       getNoAvailability(nextWeekMonday),
       getNoAvailability(weekMonday),
-      getChosenDate(nextWeekMonday),
+      getRetainedSessions(weekMonday, windowEndDate),
     ]);
     setAvailability(data);
     setNoAvailPlayers(noAvail);
     setNoAvailThisWeekPlayers(noAvailThis);
-    setChosenDateState(chosen);
+    setRetainedDates(new Set(retained));
     setRefreshing(false);
   }, []);
 
@@ -258,9 +259,14 @@ export default function CalendarScreen() {
     }
   }, []);
 
-  const handleChooseDate = async (date: string) => {
-    await setChosenDate(nextWeekMonday, date);
-    setChosenDateState({ weekStart: nextWeekMonday, chosenDate: date, isManual: true });
+  const handleToggleRetained = async (date: string) => {
+    if (retainedDates.has(date)) {
+      setRetainedDates((prev) => { const next = new Set(prev); next.delete(date); return next; });
+      await removeRetainedSession(date);
+    } else {
+      setRetainedDates((prev) => new Set([...prev, date]));
+      await addRetainedSession(date);
+    }
   };
 
   const markedDates = useMemo(() => {
@@ -268,7 +274,7 @@ export default function CalendarScreen() {
     for (const day of availability) {
       const isAllFour = day.players.length >= GROUP_PLAYERS.length;
       const isMine = day.players.includes(currentPlayer ?? '');
-      const isChosen = chosenDate?.chosenDate === day.date;
+      const isChosen = retainedDates.has(day.date);
       result[day.date] = {
         dots: day.players.map((p) => ({
           key: p,
@@ -353,12 +359,17 @@ export default function CalendarScreen() {
               </View>
             ) : bestThisWeek.map((day) => {
               const isPerfect = day.players.length >= GROUP_PLAYERS.length;
-              const isRetenue = chosenDate?.chosenDate === day.date;
+              const isRetenu = retainedDates.has(day.date);
               return (
-                <View key={day.date} style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenue && styles.bestDateRowChosen]}>
+                <TouchableOpacity
+                  key={day.date}
+                  style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenu && styles.bestDateRowChosen]}
+                  onPress={isPerfect ? () => handleToggleRetained(day.date) : undefined}
+                  activeOpacity={isPerfect ? 0.7 : 1}
+                >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
-                      {isRetenue && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
+                      {isRetenu && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
                       <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
                         {formatDate(day.date)}
                       </Text>
@@ -369,14 +380,12 @@ export default function CalendarScreen() {
                       ))}
                     </View>
                   </View>
-                  {isRetenue ? (
+                  {isRetenu ? (
                     <View style={styles.retenubadge}><Text style={styles.retenuBadgeText}>RETENUE</Text></View>
-                  ) : isPerfect ? (
-                    <View style={styles.perfectBadge}><Text style={styles.perfectBadgeText}>PARFAIT</Text></View>
                   ) : (
                     <View style={styles.countBadge}><Text style={styles.countBadgeText}>{day.players.length}/4</Text></View>
                   )}
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -392,17 +401,17 @@ export default function CalendarScreen() {
               </View>
             ) : bestNextWeek.map((day) => {
               const isPerfect = day.players.length >= GROUP_PLAYERS.length;
-              const isRetenue = chosenDate?.chosenDate === day.date;
+              const isRetenu = retainedDates.has(day.date);
               return (
                 <TouchableOpacity
                   key={day.date}
-                  style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenue && styles.bestDateRowChosen]}
-                  onPress={isPerfect ? () => handleChooseDate(day.date) : undefined}
+                  style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenu && styles.bestDateRowChosen]}
+                  onPress={isPerfect ? () => handleToggleRetained(day.date) : undefined}
                   activeOpacity={isPerfect ? 0.7 : 1}
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
-                      {isRetenue && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
+                      {isRetenu && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
                       <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
                         {formatDate(day.date)}
                       </Text>
@@ -413,22 +422,14 @@ export default function CalendarScreen() {
                       ))}
                     </View>
                   </View>
-                  {isRetenue ? (
+                  {isRetenu ? (
                     <View style={styles.retenubadge}><Text style={styles.retenuBadgeText}>RETENUE</Text></View>
-                  ) : isPerfect ? (
-                    <View style={styles.perfectBadge}><Text style={styles.perfectBadgeText}>PARFAIT</Text></View>
                   ) : (
                     <View style={styles.countBadge}><Text style={styles.countBadgeText}>{day.players.length}/4</Text></View>
                   )}
                 </TouchableOpacity>
               );
             })}
-            {fourVoteDatesNextWeek.length > 1 && (
-              <View style={styles.chosenHint}>
-                <Ionicons name="information-circle-outline" size={13} color={Colors.textMuted} />
-                <Text style={styles.chosenHintText}>Appuie sur une date PARFAIT pour la retenir</Text>
-              </View>
-            )}
           </View>
         </View>
 
