@@ -283,12 +283,12 @@ export default function CalendarScreen() {
         })),
         marked: true,
         selected: isAllFour || isMine || isChosen,
-        selectedColor: isChosen ? '#FFD700' + '55' : isAllFour ? '#4CAF5066' : Colors.primary + '33',
+        selectedColor: isChosen ? Colors.win + '55' : isAllFour ? '#FFD70066' : Colors.primary + '33',
         selectedTextColor: Colors.text,
       };
     }
     return result;
-  }, [availability, currentPlayer, chosenDate]);
+  }, [availability, currentPlayer, retainedDates]);
 
   const getWeekLabel = (mondayStr: string, sundayStr: string) => {
     const mon = new Date(mondayStr + 'T12:00:00');
@@ -369,7 +369,7 @@ export default function CalendarScreen() {
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
-                      {isRetenu && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
+                      {isRetenu && <Ionicons name="star" size={13} color={Colors.win} style={{ marginRight: 4 }} />}
                       <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
                         {formatDate(day.date)}
                       </Text>
@@ -382,6 +382,8 @@ export default function CalendarScreen() {
                   </View>
                   {isRetenu ? (
                     <View style={styles.retenubadge}><Text style={styles.retenuBadgeText}>RETENUE</Text></View>
+                  ) : isPerfect ? (
+                    <View style={styles.fourFourBadge}><Text style={styles.fourFourBadgeText}>4/4</Text></View>
                   ) : (
                     <View style={styles.countBadge}><Text style={styles.countBadgeText}>{day.players.length}/4</Text></View>
                   )}
@@ -411,7 +413,7 @@ export default function CalendarScreen() {
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
-                      {isRetenu && <Ionicons name="star" size={13} color="#FFD700" style={{ marginRight: 4 }} />}
+                      {isRetenu && <Ionicons name="star" size={13} color={Colors.win} style={{ marginRight: 4 }} />}
                       <Text style={[styles.bestDateLabel, isPerfect && styles.bestDateLabelPerfect]}>
                         {formatDate(day.date)}
                       </Text>
@@ -424,6 +426,8 @@ export default function CalendarScreen() {
                   </View>
                   {isRetenu ? (
                     <View style={styles.retenubadge}><Text style={styles.retenuBadgeText}>RETENUE</Text></View>
+                  ) : isPerfect ? (
+                    <View style={styles.fourFourBadge}><Text style={styles.fourFourBadgeText}>4/4</Text></View>
                   ) : (
                     <View style={styles.countBadge}><Text style={styles.countBadgeText}>{day.players.length}/4</Text></View>
                   )}
@@ -683,12 +687,12 @@ const styles = StyleSheet.create({
     padding: 12, paddingHorizontal: 14,
     borderBottomWidth: 1, borderBottomColor: Colors.cardBorder, gap: 10,
   },
-  bestDateRowPerfect: { backgroundColor: '#4CAF5011' },
-  bestDateRowChosen: { backgroundColor: '#FFD70011' },
+  bestDateRowPerfect: { backgroundColor: '#FFD70011' },
+  bestDateRowChosen: { backgroundColor: '#4CAF5011' },
   bestDateInfo: { flex: 1, gap: 6 },
   bestDateTitleRow: { flexDirection: 'row', alignItems: 'center' },
   bestDateLabel: { fontSize: 13, fontWeight: '600', color: Colors.text },
-  bestDateLabelPerfect: { color: Colors.win },
+  bestDateLabelPerfect: { color: '#FFD700' },
   bestDateDots: { flexDirection: 'row', gap: 4 },
   playerDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5 },
   perfectBadge: {
@@ -697,10 +701,15 @@ const styles = StyleSheet.create({
   },
   perfectBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.win, letterSpacing: 0.5 },
   retenubadge: {
-    backgroundColor: '#FFD700' + '33', borderWidth: 1, borderColor: '#FFD700',
+    backgroundColor: Colors.win + '33', borderWidth: 1, borderColor: Colors.win,
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
-  retenuBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFD700', letterSpacing: 0.5 },
+  retenuBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.win, letterSpacing: 0.5 },
+  fourFourBadge: {
+    backgroundColor: '#FFD70033', borderWidth: 1, borderColor: '#FFD700',
+    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  fourFourBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFD700' },
   countBadge: {
     backgroundColor: Colors.primary + '22', borderWidth: 1, borderColor: Colors.primary,
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
