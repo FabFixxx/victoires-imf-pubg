@@ -7,9 +7,11 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
@@ -31,6 +33,7 @@ import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
 import { supabase } from '../../lib/supabase';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
+import { getRecentNotifications, markNotificationsAsRead, NotificationHistoryItem } from '../../lib/notifications';
 
 interface TeamMatch {
   match_id: string;
@@ -140,6 +143,29 @@ export default function DashboardScreen() {
   const [syncMsg, setSyncMsg] = useState('');
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNotifModal, setShowNotifModal] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationHistoryItem[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const params = useLocalSearchParams<{ openNotifications?: string }>();
+  const handledNotifParamRef = useRef(false);
+
+  const handleOpenNotifications = useCallback(async () => {
+    setShowNotifModal(true);
+    setLoadingNotifs(true);
+    const items = await getRecentNotifications();
+    setNotifications(items);
+    setLoadingNotifs(false);
+    await markNotificationsAsRead();
+  }, []);
+
+  // Ouverture directe sur cette page au tap d'une notif (voir app/_layout.tsx). Le guard par
+  // ref évite de rouvrir la modale si le composant se re-rend sans que le param ait changé.
+  useEffect(() => {
+    if (params.openNotifications === '1' && !handledNotifParamRef.current) {
+      handledNotifParamRef.current = true;
+      handleOpenNotifications();
+    }
+  }, [params.openNotifications, handleOpenNotifications]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -264,16 +290,21 @@ export default function DashboardScreen() {
             <Text style={styles.appTitle}>VICTOIRES IMF</Text>
             <Text style={styles.appTitleAccent}>PUBG</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.syncBtn, syncing && styles.syncBtnActive]}
-            onPress={handleSync}
-          >
-            {syncing ? (
-              <ActivityIndicator size="small" color={Colors.primary} />
-            ) : (
-              <Ionicons name="refresh" size={20} color={Colors.primary} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.notifBtn} onPress={handleOpenNotifications}>
+              <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.syncBtn, syncing && styles.syncBtnActive]}
+              onPress={handleSync}
+            >
+              {syncing ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Ionicons name="refresh" size={20} color={Colors.primary} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.syncStatus}>
@@ -482,6 +513,35 @@ export default function DashboardScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* ── Modal notifications ── */}
+      <Modal visible={showNotifModal} transparent animationType="slide">
+        <View style={styles.notifModalOverlay}>
+          <View style={styles.notifModalContent}>
+            <View style={styles.notifModalHeader}>
+              <Text style={styles.notifModalTitle}>Notifications</Text>
+              <TouchableOpacity onPress={() => setShowNotifModal(false)}>
+                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {loadingNotifs ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginVertical: 24 }} />
+            ) : notifications.length === 0 ? (
+              <Text style={styles.notifEmpty}>Aucune notification pour le moment</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {notifications.map((item, i) => (
+                  <View key={item.id} style={[styles.notifItem, i < notifications.length - 1 && styles.notifItemBorder]}>
+                    <Text style={styles.notifItemTitle}>{item.title}</Text>
+                    <Text style={styles.notifItemBody}>{item.body}</Text>
+                    <Text style={styles.notifItemDate}>{formatMatchDate(new Date(item.sent_at))}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
     </SwipeableScreen>
   );
@@ -509,6 +569,21 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     letterSpacing: 6,
     lineHeight: 40,
+  },
+  headerActions: {
+    flexDirection: 'column',
+    gap: 8,
+    alignItems: 'center',
+  },
+  notifBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   syncBtn: {
     width: 42,
@@ -722,4 +797,21 @@ const styles = StyleSheet.create({
   playerName: { fontSize: 13, fontWeight: '700', color: Colors.text },
   playerKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
   playerDmg: { fontSize: 11, color: Colors.textMuted },
+  notifModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  notifModalContent: {
+    backgroundColor: Colors.card,
+    borderTopLeftRadius: 16, borderTopRightRadius: 16,
+    padding: 20, paddingBottom: 36, maxHeight: '80%',
+  },
+  notifModalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 16,
+  },
+  notifModalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
+  notifEmpty: { fontSize: 13, color: Colors.textMuted, textAlign: 'center', paddingVertical: 24 },
+  notifItem: { paddingVertical: 12, gap: 4 },
+  notifItemBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  notifItemTitle: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  notifItemBody: { fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  notifItemDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
 });

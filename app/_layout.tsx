@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
@@ -11,16 +11,26 @@ import {
   Alert,
   Linking,
   Platform,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Notifications from 'expo-notifications';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
-import { registerPushToken } from '../lib/notifications';
+import { registerPushToken, ensureNotificationViewBootstrapped, refreshAppBadge } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 import { checkForUpdate } from '../lib/update-check';
 import { registerWebPush } from '../lib/web-push-client';
+
+// Ouvre directement la page des notifications quand l'utilisateur tape sur un push
+// dont le data.screen le demande (voir sendPushToAll côté edge function).
+function openNotificationsIfRequested(data: any) {
+  if (data?.screen === 'notifications') {
+    router.push({ pathname: '/(tabs)', params: { openNotifications: '1' } });
+  }
+}
 
 type InitState = 'loading' | 'select' | 'ready';
 
@@ -53,6 +63,7 @@ export default function RootLayout() {
           registerPushToken(player);
           registerWebPush(player);
           triggerAutoSync();
+          ensureNotificationViewBootstrapped().then(refreshAppBadge);
           checkForUpdate().then((info) => {
             if (!info || Platform.OS === 'web') return;
             Alert.alert(
@@ -104,7 +115,30 @@ export default function RootLayout() {
     registerPushToken(name);
     registerWebPush(name);
     triggerAutoSync();
+    ensureNotificationViewBootstrapped().then(refreshAppBadge);
   };
+
+  // Tap sur une notif reçue pendant que l'app tourne (foreground/background) → navigation.
+  // Cold-start via tap géré séparément par getLastNotificationResponseAsync ci-dessous.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      openNotificationsIfRequested(response.notification.request.content.data);
+    });
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) openNotificationsIfRequested(response.notification.request.content.data);
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Le badge de l'app peut devenir périmé si l'app reste en arrière-plan pendant qu'une
+  // notif arrive : on le resynchronise à chaque retour au premier plan.
+  useEffect(() => {
+    if (initState !== 'ready') return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshAppBadge();
+    });
+    return () => sub.remove();
+  }, [initState]);
 
   if (initState === 'loading') {
     return (

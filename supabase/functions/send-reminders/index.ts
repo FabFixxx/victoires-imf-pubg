@@ -74,7 +74,12 @@ function parisLocalToUTC(dateStr: string, localHour: number): string {
 }
 
 async function sendPushToAll(supabase: any, players: any[], title: string, body: string, type: string) {
+  // data.screen indique au client d'ouvrir directement la page des notifications au tap
+  const data = { type, screen: 'notifications' }
   const payload = { title, body }
+
+  // Historique consulté depuis l'app (page notifications + badge de non-lu)
+  await supabase.from('notification_history').insert({ title, body, type })
 
   // Expo push (APK Android)
   const expoTokens = players.map(p => p.expo_push_token).filter(Boolean)
@@ -84,7 +89,7 @@ async function sendPushToAll(supabase: any, players: any[], title: string, body:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(expoTokens.map((token: string) => ({
-        to: token, ...payload, data: { type }, channelId: 'sessions',
+        to: token, ...payload, data, channelId: 'sessions',
       }))),
     })
     console.log(`[sendPushToAll] expo push sent, status=${expoRes.status}`)
@@ -112,7 +117,7 @@ async function sendPushToAll(supabase: any, players: any[], title: string, body:
         const subJson = sub.subscription as any
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
-          JSON.stringify(payload)
+          JSON.stringify({ ...payload, url: '/?openNotifications=1' })
         )
         console.log(`[sendPushToAll] web push OK: ${sub.username} endpoint=${sub.endpoint.slice(0, 50)}...`)
         await supabase.from('notification_log').insert({
