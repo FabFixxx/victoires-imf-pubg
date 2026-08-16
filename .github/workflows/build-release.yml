@@ -60,6 +60,10 @@ jobs:
           body: |
             ## 🎮 Nouveautés
             - Nouvelle notification "Session annulée !" : si une session retenue tombe sous 4 joueurs disponibles, ou si quelqu'un désélectionne manuellement la date retenue, tout le monde est prévenu — le message s'adapte selon le cas (vote retiré ou juste désélectionnée)
+            - Nouvelle page "Notifications" (icône cloche sur l'accueil) : consulte tes dernières notifications reçues, avec une pastille rouge sur la cloche et un badge sur l'icône de l'app tant qu'il y a du non-lu
+            - Taper sur une notification reçue ouvre directement l'app sur cette nouvelle page
 
             ## 🐛 Correctifs
             - Corrigé un bug qui empêchait parfois la notif "Session annulée" de partir (l'app et le serveur essayaient tous les deux de nettoyer la même donnée, et l'app était plus rapide — le serveur ne détectait alors plus rien à signaler)
+            - Le statut lu/non-lu des notifications est maintenant fiable et suivi par joueur — il survit à une réinstallation de l'app (avant, tout redevenait "non lu" à chaque réinstall)
+            - Diverses corrections de fiabilité sur le système de notifications (ordre de traitement, badge qui se vidait trop tôt, comptage du non-lu)
