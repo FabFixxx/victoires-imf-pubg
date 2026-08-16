@@ -28,7 +28,7 @@ import {
   MonthlyStats,
   LastMatch,
 } from '../../lib/pubg-api';
-import { getLastSync, setLastSync, getLastNotificationView } from '../../lib/storage';
+import { getLastSync, setLastSync, getCurrentPlayer } from '../../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
@@ -180,14 +180,19 @@ export default function DashboardScreen() {
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [refreshingNotifs, setRefreshingNotifs] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
-  const [lastViewedAt, setLastViewedAt] = useState<Date | null>(null);
+  const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
   const params = useLocalSearchParams<{ openNotifications?: string }>();
   const handledNotifParamRef = useRef(false);
 
-  const refreshUnreadDot = useCallback(async () => {
-    const count = await getUnreadNotificationCount();
-    setHasUnread(count > 0);
+  useEffect(() => {
+    getCurrentPlayer().then(setCurrentPlayer);
   }, []);
+
+  const refreshUnreadDot = useCallback(async () => {
+    if (!currentPlayer) return;
+    const count = await getUnreadNotificationCount(currentPlayer);
+    setHasUnread(count > 0);
+  }, [currentPlayer]);
 
   useEffect(() => {
     refreshUnreadDot();
@@ -200,34 +205,33 @@ export default function DashboardScreen() {
   const openingNotifsRef = useRef(false);
 
   const handleOpenNotifications = useCallback(async () => {
-    if (openingNotifsRef.current) return; // évite un double-tap rapide sur la cloche
+    if (openingNotifsRef.current || !currentPlayer) return; // évite un double-tap rapide sur la cloche
     openingNotifsRef.current = true;
     setShowNotifModal(true);
     setLoadingNotifs(true);
-    // Le repère "dernière consultation" (et donc le badge/pastille) n'est mis à jour qu'à la
-    // FERMETURE (voir handleCloseNotifications) — pas ici à l'ouverture. Tant que la page est
-    // affichée, le badge doit rester visible pour montrer ce qui vient d'arriver ; il ne
-    // s'efface qu'une fois qu'on quitte la page.
-    const previousView = await getLastNotificationView();
-    setLastViewedAt(previousView);
-    const items = await getRecentNotifications();
+    // Le statut lu/non-lu (table notification_reads, par joueur) n'est écrit qu'à la
+    // FERMETURE (voir handleCloseNotifications) — pas ici à l'ouverture. Tant que la page
+    // est affichée, le badge doit rester visible pour montrer ce qui vient d'arriver ; il
+    // ne s'efface qu'une fois qu'on quitte la page.
+    const items = await getRecentNotifications(currentPlayer);
     setNotifications(items);
     setLoadingNotifs(false);
     openingNotifsRef.current = false;
-  }, []);
+  }, [currentPlayer]);
 
   const handleCloseNotifications = useCallback(() => {
     setShowNotifModal(false);
     setHasUnread(false);
-    markNotificationsAsRead();
-  }, []);
+    if (currentPlayer) markNotificationsAsRead(currentPlayer, notifications.map((n) => n.id));
+  }, [currentPlayer, notifications]);
 
   const handleRefreshNotifications = useCallback(async () => {
+    if (!currentPlayer) return;
     setRefreshingNotifs(true);
-    const items = await getRecentNotifications();
+    const items = await getRecentNotifications(currentPlayer);
     setNotifications(items);
     setRefreshingNotifs(false);
-  }, []);
+  }, [currentPlayer]);
 
   // Ouverture directe sur cette page au tap d'une notif (voir app/_layout.tsx). Le guard par
   // ref évite de rouvrir la modale si le composant se re-rend sans que le param ait changé.
@@ -625,7 +629,7 @@ export default function DashboardScreen() {
                   <View key={group.label}>
                     <Text style={styles.notifGroupLabel}>{group.label.toUpperCase()}</Text>
                     {group.items.map((item, i) => {
-                      const isUnread = lastViewedAt ? new Date(item.sent_at) > lastViewedAt : false;
+                      const isUnread = !item.isRead;
                       return (
                         <View
                           key={item.id}

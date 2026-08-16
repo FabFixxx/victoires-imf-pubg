@@ -3,7 +3,6 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
-import { getLastNotificationView, setLastNotificationView } from './storage';
 
 // In Expo Go, push notifications require a standalone/EAS build.
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
@@ -85,10 +84,14 @@ export interface NotificationHistoryItem {
   body: string;
   type: string | null;
   sent_at: string;
+  isRead: boolean;
 }
 
-export async function getRecentNotifications(limit = 30): Promise<NotificationHistoryItem[]> {
-  const { data, error } = await supabase
+// Lecture par joueur (table notification_reads), pas un simple repère temporel local :
+// survit à une réinstallation de l'app et se synchronise si un joueur utilise plusieurs
+// appareils (PWA + APK par exemple), contrairement à un timestamp stocké en AsyncStorage.
+export async function getRecentNotifications(username: string, limit = 30): Promise<NotificationHistoryItem[]> {
+  const { data: notifs, error } = await supabase
     .from('notification_history')
     .select('id, title, body, type, sent_at')
     .order('sent_at', { ascending: false })
@@ -97,34 +100,33 @@ export async function getRecentNotifications(limit = 30): Promise<NotificationHi
     console.error('[getRecentNotifications] failed:', error.message);
     return [];
   }
-  return data ?? [];
+  if (!notifs || notifs.length === 0) return [];
+
+  const ids = notifs.map((n: any) => n.id);
+  const { data: reads, error: readsError } = await supabase
+    .from('notification_reads')
+    .select('notification_id')
+    .eq('player_username', username)
+    .in('notification_id', ids);
+  if (readsError) console.error('[getRecentNotifications] reads lookup failed:', readsError.message);
+  const readIds = new Set((reads ?? []).map((r: any) => r.notification_id));
+
+  return notifs.map((n: any) => ({ ...n, isRead: readIds.has(n.id) }));
 }
 
-// null = pas encore initialisé (avant cette fonctionnalité) : on ne compte alors rien comme non
-// lu, pour ne pas noyer l'utilisateur sous tout l'historique passé au premier lancement.
-export async function getUnreadNotificationCount(): Promise<number> {
-  const lastView = await getLastNotificationView();
-  if (!lastView) return 0;
-  const { count, error } = await supabase
-    .from('notification_history')
-    .select('id', { count: 'exact', head: true })
-    .gt('sent_at', lastView.toISOString());
-  if (error) {
-    console.error('[getUnreadNotificationCount] failed:', error.message);
-    return 0;
+export async function getUnreadNotificationCount(username: string): Promise<number> {
+  const items = await getRecentNotifications(username, 100);
+  return items.filter((i) => !i.isRead).length;
+}
+
+export async function markNotificationsAsRead(username: string, notificationIds: string[]): Promise<void> {
+  if (notificationIds.length > 0) {
+    const rows = notificationIds.map((id) => ({ player_username: username, notification_id: id }));
+    const { error } = await supabase
+      .from('notification_reads')
+      .upsert(rows, { onConflict: 'player_username,notification_id', ignoreDuplicates: true });
+    if (error) console.error('[markNotificationsAsRead] failed:', error.message);
   }
-  return count ?? 0;
-}
-
-// Initialise le repère "dernière consultation" à maintenant s'il n'existe pas encore
-// (premier lancement après l'ajout de cette fonctionnalité).
-export async function ensureNotificationViewBootstrapped(): Promise<void> {
-  const lastView = await getLastNotificationView();
-  if (!lastView) await setLastNotificationView(new Date());
-}
-
-export async function markNotificationsAsRead(): Promise<void> {
-  await setLastNotificationView(new Date());
   await updateAppBadge(0);
 }
 
@@ -148,8 +150,8 @@ export async function updateAppBadge(count: number): Promise<void> {
   } catch {}
 }
 
-export async function refreshAppBadge(): Promise<void> {
-  const count = await getUnreadNotificationCount();
+export async function refreshAppBadge(username: string): Promise<void> {
+  const count = await getUnreadNotificationCount(username);
   await updateAppBadge(count);
 }
 

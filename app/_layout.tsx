@@ -19,7 +19,7 @@ import * as Notifications from 'expo-notifications';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
-import { registerPushToken, ensureNotificationViewBootstrapped, refreshAppBadge } from '../lib/notifications';
+import { registerPushToken, refreshAppBadge } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 import { checkForUpdate } from '../lib/update-check';
 import { registerWebPush } from '../lib/web-push-client';
@@ -63,7 +63,7 @@ export default function RootLayout() {
           registerPushToken(player);
           registerWebPush(player);
           triggerAutoSync();
-          ensureNotificationViewBootstrapped().then(refreshAppBadge);
+          refreshAppBadge(player);
           checkForUpdate().then((info) => {
             if (!info || Platform.OS === 'web') return;
             Alert.alert(
@@ -115,7 +115,7 @@ export default function RootLayout() {
     registerPushToken(name);
     registerWebPush(name);
     triggerAutoSync();
-    ensureNotificationViewBootstrapped().then(refreshAppBadge);
+    refreshAppBadge(name);
   };
 
   // Tap sur une notif reçue pendant que l'app tourne (foreground/background) → navigation.
@@ -139,12 +139,12 @@ export default function RootLayout() {
   // Le badge de l'app peut devenir périmé si l'app reste en arrière-plan pendant qu'une
   // notif arrive : on le resynchronise à chaque retour au premier plan.
   useEffect(() => {
-    if (initState !== 'ready') return;
+    if (initState !== 'ready' || !currentPlayer) return;
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshAppBadge();
+      if (state === 'active') refreshAppBadge(currentPlayer);
     });
     return () => sub.remove();
-  }, [initState]);
+  }, [initState, currentPlayer]);
 
   if (initState === 'loading') {
     return (
