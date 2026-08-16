@@ -28,7 +28,7 @@ import {
   MonthlyStats,
   LastMatch,
 } from '../../lib/pubg-api';
-import { getLastSync, setLastSync } from '../../lib/storage';
+import { getLastSync, setLastSync, getLastNotificationView } from '../../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
@@ -73,6 +73,51 @@ function formatMatchDate(date: Date): string {
   const h = String(date.getHours()).padStart(2, '0');
   const m = String(date.getMinutes()).padStart(2, '0');
   return `${weekday} ${day} ${month} ${h}:${m}`;
+}
+
+function isSameCalendarDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// Regroupe la liste par jour calendaire (pas une fenêtre glissante de 24h) pour un
+// affichage "Aujourd'hui / Hier / Plus ancien" cohérent avec ce que l'utilisateur voit.
+function groupNotificationsByDay(items: NotificationHistoryItem[]): { label: string; items: NotificationHistoryItem[] }[] {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const buckets: Record<string, NotificationHistoryItem[]> = { "Aujourd'hui": [], Hier: [], 'Plus ancien': [] };
+  for (const item of items) {
+    const d = new Date(item.sent_at);
+    if (isSameCalendarDay(d, now)) buckets["Aujourd'hui"].push(item);
+    else if (isSameCalendarDay(d, yesterday)) buckets.Hier.push(item);
+    else buckets['Plus ancien'].push(item);
+  }
+  return Object.entries(buckets)
+    .filter(([, list]) => list.length > 0)
+    .map(([label, list]) => ({ label, items: list }));
+}
+
+// Dans "Aujourd'hui"/"Hier" l'heure seule suffit (le groupe donne déjà le jour) ;
+// dans "Plus ancien" il faut la date complète.
+function formatNotifItemTime(dateStr: string, groupLabel: string): string {
+  const d = new Date(dateStr);
+  if (groupLabel === 'Plus ancien') return formatMatchDate(d);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+const NOTIF_TYPE_ICON: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
+  date_4votes: { name: 'checkmark-circle', color: Colors.win },
+  new_date_4votes: { name: 'calendar', color: '#FFD700' },
+  week_complete: { name: 'checkmark-done-circle', color: Colors.win },
+  session_cancelled: { name: 'close-circle', color: Colors.danger },
+  game_day: { name: 'game-controller', color: Colors.primary },
+  dispo_reminder: { name: 'alert-circle', color: Colors.textMuted },
+  victory_recap: { name: 'trophy', color: Colors.win },
+};
+
+function getNotifIcon(type: string | null): { name: keyof typeof Ionicons.glyphMap; color: string } {
+  return (type && NOTIF_TYPE_ICON[type]) || { name: 'notifications', color: Colors.textMuted };
 }
 
 function MatchCard({ match, title }: { match: LastMatch; title: string }) {
@@ -147,7 +192,9 @@ export default function DashboardScreen() {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [notifications, setNotifications] = useState<NotificationHistoryItem[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [refreshingNotifs, setRefreshingNotifs] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [lastViewedAt, setLastViewedAt] = useState<Date | null>(null);
   const params = useLocalSearchParams<{ openNotifications?: string }>();
   const handledNotifParamRef = useRef(false);
 
@@ -168,10 +215,21 @@ export default function DashboardScreen() {
     setShowNotifModal(true);
     setHasUnread(false);
     setLoadingNotifs(true);
+    // Capturer l'ancien repère AVANT de marquer comme lu : sert à distinguer les items
+    // non lus dans la liste elle-même (sinon tout paraîtrait "lu" une fois le repère mis à jour).
+    const previousView = await getLastNotificationView();
+    setLastViewedAt(previousView);
     const items = await getRecentNotifications();
     setNotifications(items);
     setLoadingNotifs(false);
     await markNotificationsAsRead();
+  }, []);
+
+  const handleRefreshNotifications = useCallback(async () => {
+    setRefreshingNotifs(true);
+    const items = await getRecentNotifications();
+    setNotifications(items);
+    setRefreshingNotifs(false);
   }, []);
 
   // Ouverture directe sur cette page au tap d'une notif (voir app/_layout.tsx). Le guard par
@@ -536,9 +594,15 @@ export default function DashboardScreen() {
       </ScrollView>
 
       {/* ── Modal notifications ── */}
-      <Modal visible={showNotifModal} transparent animationType="slide">
-        <View style={styles.notifModalOverlay}>
-          <View style={styles.notifModalContent}>
+      <Modal visible={showNotifModal} transparent animationType="slide" onRequestClose={() => setShowNotifModal(false)}>
+        <TouchableOpacity
+          style={styles.notifModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNotifModal(false)}
+        >
+          {/* activeOpacity=1 + onPress vide : intercepte le tap pour qu'il ne remonte pas
+              jusqu'à l'overlay et ne ferme pas la modale quand on tape le contenu lui-même */}
+          <TouchableOpacity activeOpacity={1} style={styles.notifModalContent} onPress={() => {}}>
             <View style={styles.notifModalHeader}>
               <Text style={styles.notifModalTitle}>Notifications</Text>
               <TouchableOpacity onPress={() => setShowNotifModal(false)}>
@@ -550,18 +614,47 @@ export default function DashboardScreen() {
             ) : notifications.length === 0 ? (
               <Text style={styles.notifEmpty}>Aucune notification pour le moment</Text>
             ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {notifications.map((item, i) => (
-                  <View key={item.id} style={[styles.notifItem, i < notifications.length - 1 && styles.notifItemBorder]}>
-                    <Text style={styles.notifItemTitle}>{item.title}</Text>
-                    <Text style={styles.notifItemBody}>{item.body}</Text>
-                    <Text style={styles.notifItemDate}>{formatMatchDate(new Date(item.sent_at))}</Text>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl refreshing={refreshingNotifs} onRefresh={handleRefreshNotifications} tintColor={Colors.primary} />
+                }
+              >
+                {groupNotificationsByDay(notifications).map((group) => (
+                  <View key={group.label}>
+                    <Text style={styles.notifGroupLabel}>{group.label.toUpperCase()}</Text>
+                    {group.items.map((item, i) => {
+                      const icon = getNotifIcon(item.type);
+                      const isUnread = lastViewedAt ? new Date(item.sent_at) > lastViewedAt : false;
+                      return (
+                        <View
+                          key={item.id}
+                          style={[
+                            styles.notifItem,
+                            i < group.items.length - 1 && styles.notifItemBorder,
+                            isUnread && styles.notifItemUnread,
+                          ]}
+                        >
+                          <View style={styles.notifItemIcon}>
+                            <Ionicons name={icon.name} size={18} color={icon.color} />
+                          </View>
+                          <View style={styles.notifItemMain}>
+                            <View style={styles.notifItemTitleRow}>
+                              {isUnread && <View style={styles.notifItemUnreadDot} />}
+                              <Text style={[styles.notifItemTitle, isUnread && styles.notifItemTitleUnread]}>{item.title}</Text>
+                            </View>
+                            <Text style={styles.notifItemBody}>{item.body}</Text>
+                            <Text style={styles.notifItemDate}>{formatNotifItemTime(item.sent_at, group.label)}</Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
                 ))}
               </ScrollView>
             )}
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>
@@ -849,9 +942,19 @@ const styles = StyleSheet.create({
   },
   notifModalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
   notifEmpty: { fontSize: 13, color: Colors.textMuted, textAlign: 'center', paddingVertical: 24 },
-  notifItem: { paddingVertical: 12, gap: 4 },
+  notifGroupLabel: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 1.2,
+    color: Colors.textMuted, marginTop: 14, marginBottom: 4,
+  },
+  notifItem: { paddingVertical: 12, gap: 4, flexDirection: 'row' },
   notifItemBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  notifItemUnread: { backgroundColor: Colors.primary + '0d' },
+  notifItemIcon: { width: 26, alignItems: 'center', paddingTop: 1 },
+  notifItemMain: { flex: 1, gap: 4 },
+  notifItemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  notifItemUnreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.danger },
   notifItemTitle: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  notifItemTitleUnread: { fontWeight: '800' },
   notifItemBody: { fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
   notifItemDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
 });
