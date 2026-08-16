@@ -59,12 +59,7 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             ## 🎮 Nouveautés
-            - Possibilité d'avoir 2 sessions de jeu confirmées la même semaine (ex: vendredi ET lundi) — notif "Nouvelle possibilité de session" quand une 2e date atteint 4 dispos
-            - Nouveau système de sessions "retenues" : tape sur une date à 4/4 pour la marquer RETENUE (et inversement) — la notif "Ce soir on joue" ne part que sur les jours retenus
-            - Nouveaux badges couleur sur le calendrier : orange (3/4), jaune (4/4), vert (RETENUE)
-            - Les notifications de dispo attendent désormais un peu (jusqu'à 1h) avant de partir, pour laisser le temps à tout le monde de finir de voter et éviter les notifs contradictoires à la suite
+            - Nouvelle notification "Session annulée !" : si une session retenue tombe sous 4 joueurs disponibles, ou si quelqu'un désélectionne manuellement la date retenue, tout le monde est prévenu — le message s'adapte selon le cas (vote retiré ou juste désélectionnée)
 
             ## 🐛 Correctifs
-            - Plusieurs décalages de date/heure liés au fuseau horaire corrigés (victoires, saisons, dates affichées) — impactait surtout les joueurs à l'étranger
-            - Une session retenue qui perdait un vote restait affichée comme confirmée sans pouvoir être corrigée — réparé
-            - Diverses corrections de fiabilité (petits bugs d'affichage liés à des chargements réseau qui revenaient dans le désordre, gestion des erreurs réseau silencieuses)
+            - Corrigé un bug qui empêchait parfois la notif "Session annulée" de partir (l'app et le serveur essayaient tous les deux de nettoyer la même donnée, et l'app était plus rapide — le serveur ne détectait alors plus rien à signaler)
