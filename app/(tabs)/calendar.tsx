@@ -133,8 +133,14 @@ export default function CalendarScreen() {
   }, []);
 
   // Une session retenue qui repasse sous 4 votes (vote retiré, y compris par un autre joueur)
-  // ne doit plus être considérée comme retenue : sinon le badge RETENUE reste affiché sans
-  // pouvoir être désélectionné, et "Ce soir on joue" pourrait partir sur un jour incomplet.
+  // ne doit plus être affichée comme retenue localement — mais on n'écrit PAS ce nettoyage
+  // en base ici. Le trigger DB (DELETE) + l'edge function notify-on-availability sont
+  // l'unique source de vérité pour cette suppression : ils vérifient si la date était
+  // retenue AVANT de nettoyer, pour déclencher la notif "Session annulée !". Si le client
+  // supprimait aussi la ligne ici, il gagnait quasi toujours la course contre le trajet
+  // serveur (trigger → HTTP → edge function), et l'edge function trouvait la ligne déjà
+  // effacée — la notif ne partait alors jamais (bug constaté en prod, vote retiré par
+  // Jibby37 sur une date retenue, aucune notif envoyée).
   useEffect(() => {
     const stale = [...retainedDates].filter((date) => {
       const day = availability.find((d) => d.date === date);
@@ -146,7 +152,6 @@ export default function CalendarScreen() {
       stale.forEach((d) => next.delete(d));
       return next;
     });
-    stale.forEach((d) => removeRetainedSession(d));
   }, [availability]);
 
   const handleDayPress = async (day: DateData) => {
