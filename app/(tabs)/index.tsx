@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,7 +34,7 @@ import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
 import { supabase } from '../../lib/supabase';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
-import { getRecentNotifications, markNotificationsAsRead, NotificationHistoryItem } from '../../lib/notifications';
+import { getRecentNotifications, markNotificationsAsRead, getUnreadNotificationCount, NotificationHistoryItem } from '../../lib/notifications';
 
 interface TeamMatch {
   match_id: string;
@@ -146,11 +147,26 @@ export default function DashboardScreen() {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [notifications, setNotifications] = useState<NotificationHistoryItem[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const params = useLocalSearchParams<{ openNotifications?: string }>();
   const handledNotifParamRef = useRef(false);
 
+  const refreshUnreadDot = useCallback(async () => {
+    const count = await getUnreadNotificationCount();
+    setHasUnread(count > 0);
+  }, []);
+
+  useEffect(() => {
+    refreshUnreadDot();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshUnreadDot();
+    });
+    return () => sub.remove();
+  }, [refreshUnreadDot]);
+
   const handleOpenNotifications = useCallback(async () => {
     setShowNotifModal(true);
+    setHasUnread(false);
     setLoadingNotifs(true);
     const items = await getRecentNotifications();
     setNotifications(items);
@@ -293,6 +309,11 @@ export default function DashboardScreen() {
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.notifBtn} onPress={handleOpenNotifications}>
               <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
+              {hasUnread && (
+                <View style={styles.notifDot}>
+                  <Text style={styles.notifDotText}>!</Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.syncBtn, syncing && styles.syncBtnActive]}
@@ -584,6 +605,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.danger,
+    borderWidth: 1.5,
+    borderColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifDotText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: 10,
   },
   syncBtn: {
     width: 42,
