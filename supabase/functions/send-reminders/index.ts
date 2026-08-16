@@ -240,12 +240,12 @@ Deno.serve(async (_req) => {
 
     const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', date)
     const remaining = (dayRows ?? []).length
-    await sendPushToAll(
-      supabase, players,
-      '❌ Session annulée !',
-      `Attention, la session retenue du ${formatDate(date)} n'est plus possible ! (plus que ${remaining} joueur${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}).`,
-      'session_cancelled'
-    )
+    // Toujours 4/4 disponibles → untoggle manuel du badge RETENUE, pas de vote retiré.
+    // "plus que N disponibles" n'aurait aucun sens dans ce cas (personne n'a annulé sa dispo).
+    const body = remaining >= GROUP_PLAYERS.length
+      ? `Attention, la session du ${formatDate(date)} n'est plus retenue !`
+      : `Attention, la session retenue du ${formatDate(date)} n'est plus possible ! (plus que ${remaining} joueur${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}).`
+    await sendPushToAll(supabase, players, '❌ Session annulée !', body, 'session_cancelled')
   }
 
   // --- PENDING DATE_4VOTES (debounce "Session confirmée" / "Nouvelle possibilité") ---
