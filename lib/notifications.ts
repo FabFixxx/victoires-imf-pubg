@@ -129,6 +129,19 @@ export async function markNotificationsAsRead(): Promise<void> {
 }
 
 export async function updateAppBadge(count: number): Promise<void> {
+  // Web (PWA ajoutée à l'écran d'accueil, iOS 16.4+) : Badging API standard du navigateur,
+  // pas l'API native — setBadgeCountAsync d'expo-notifications n'est pas fiable sur web.
+  if (Platform.OS === 'web') {
+    try {
+      const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+      if (nav && 'setAppBadge' in nav) {
+        if (count > 0) await nav.setAppBadge(count);
+        else await nav.clearAppBadge();
+      }
+    } catch {}
+    return;
+  }
+
   if (isExpoGo) return;
   try {
     await Notifications.setBadgeCountAsync(count);
