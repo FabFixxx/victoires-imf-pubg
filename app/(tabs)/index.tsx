@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
@@ -197,7 +197,11 @@ export default function DashboardScreen() {
     return () => sub.remove();
   }, [refreshUnreadDot]);
 
+  const openingNotifsRef = useRef(false);
+
   const handleOpenNotifications = useCallback(async () => {
+    if (openingNotifsRef.current) return; // évite un double-tap rapide sur la cloche
+    openingNotifsRef.current = true;
     setShowNotifModal(true);
     setHasUnread(false);
     setLoadingNotifs(true);
@@ -209,6 +213,7 @@ export default function DashboardScreen() {
     setNotifications(items);
     setLoadingNotifs(false);
     await markNotificationsAsRead();
+    openingNotifsRef.current = false;
   }, []);
 
   const handleRefreshNotifications = useCallback(async () => {
@@ -220,10 +225,14 @@ export default function DashboardScreen() {
 
   // Ouverture directe sur cette page au tap d'une notif (voir app/_layout.tsx). Le guard par
   // ref évite de rouvrir la modale si le composant se re-rend sans que le param ait changé.
+  // On nettoie ensuite le paramètre de l'URL (router.replace) : sans ça, sur web, l'URL reste
+  // "/?openNotifications=1" et un simple F5 remonte le composant (le ref repart à false) tout
+  // en gardant ce paramètre dans l'URL — rouvrant la modale alors que l'utilisateur n'a rien tapé.
   useEffect(() => {
     if (params.openNotifications === '1' && !handledNotifParamRef.current) {
       handledNotifParamRef.current = true;
       handleOpenNotifications();
+      router.replace('/(tabs)');
     }
   }, [params.openNotifications, handleOpenNotifications]);
 

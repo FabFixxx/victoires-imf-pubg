@@ -50,6 +50,10 @@ Deno.serve(async (req) => {
         // Retirer aussi la claim finale : sinon, si les 4 votes reviennent plus tard dans la
         // semaine, Check 1 la trouve déjà "notifiée" et ne planifie plus rien silencieusement.
         await supabase.from('notification_log').delete().eq('type', 'date_4votes').eq('key', deletedDate)
+        // Symétrique : sans ça, une 2e annulation sur la même date plus tard dans la semaine
+        // (retenue -> annulée -> re-retenue -> annulée à nouveau) ne serait jamais notifiée,
+        // le mutex de la 1re annulation bloquant silencieusement l'insert de la 2e.
+        await supabase.from('notification_log').delete().eq('type', 'session_cancelled').eq('key', deletedDate)
 
         if (wasRetained) {
           // Debounce comme les autres notifs : planifier plutôt qu'envoyer tout de suite.

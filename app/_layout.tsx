@@ -125,7 +125,13 @@ export default function RootLayout() {
       openNotificationsIfRequested(response.notification.request.content.data);
     });
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) openNotificationsIfRequested(response.notification.request.content.data);
+      if (response) {
+        openNotificationsIfRequested(response.notification.request.content.data);
+        // Sans ça, cette réponse mémorisée par le système est rejouée à CHAQUE redémarrage
+        // de l'app tant qu'aucun nouveau tap n'a lieu — l'app rouvrirait sans arrêt la page
+        // notifications même quand l'utilisateur n'a rien tapé cette fois.
+        Notifications.clearLastNotificationResponseAsync();
+      }
     });
     return () => sub.remove();
   }, []);
