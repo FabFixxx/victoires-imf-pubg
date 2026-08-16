@@ -115,6 +115,15 @@ export async function removeRetainedSession(date: string): Promise<void> {
     .eq('type', 'retained_session')
     .eq('key', date);
   if (error) console.error('[removeRetainedSession] failed:', error.message);
+
+  // Debounce comme les autres notifs : planifie "Session annulée !" au lieu d'envoyer
+  // tout de suite. send-reminders traitera ce pending à la prochaine heure pleine et
+  // annulera l'envoi si la date a été re-retenue entre-temps (re-toggle, re-vote).
+  const { error: pendingError } = await supabase.from('notification_log').upsert(
+    { type: 'session_cancelled_pending', key: date, sent_at: new Date().toISOString() },
+    { onConflict: 'type,key' }
+  );
+  if (pendingError) console.error('[removeRetainedSession] pending schedule failed:', pendingError.message);
 }
 
 // ── Préférences de notifications ──

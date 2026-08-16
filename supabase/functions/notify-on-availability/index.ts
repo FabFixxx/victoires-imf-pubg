@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import webpush from 'npm:web-push'
 
 const GROUP_PLAYERS = ['petittom', 'Nicotom', 'FabFix', 'Jibby37']
 
@@ -15,55 +14,6 @@ function getWeekEnd(weekStart: string): string {
   const d = new Date(weekStart + 'T12:00:00Z')
   d.setUTCDate(d.getUTCDate() + 6)
   return d.toISOString().split('T')[0]
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
-}
-
-async function sendToAll(supabase: ReturnType<typeof createClient>, title: string, body: string) {
-  const { data: players } = await supabase
-    .from('players')
-    .select('expo_push_token')
-    .not('expo_push_token', 'is', null)
-
-  const tokens = (players ?? []).map((p: any) => p.expo_push_token).filter(Boolean)
-  if (tokens.length > 0) {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        tokens.map((token: string) => ({
-          to: token,
-          title,
-          body,
-          sound: 'default',
-          data: { type: 'availability_update' },
-          channelId: 'sessions',
-        }))
-      ),
-    })
-  }
-
-  const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')
-  const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')
-  if (vapidPublic && vapidPrivate) {
-    webpush.setVapidDetails('mailto:fabien.wagner@gmail.com', vapidPublic, vapidPrivate)
-    const { data: subs } = await supabase.from('web_push_subscriptions').select('*')
-    for (const sub of subs ?? []) {
-      try {
-        const subJson = sub.subscription as any
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: subJson.keys?.p256dh, auth: subJson.keys?.auth } },
-          JSON.stringify({ title, body })
-        )
-      } catch {
-        await supabase.from('web_push_subscriptions').delete().eq('endpoint', sub.endpoint)
-      }
-    }
-  }
 }
 
 Deno.serve(async (req) => {
@@ -102,17 +52,13 @@ Deno.serve(async (req) => {
         await supabase.from('notification_log').delete().eq('type', 'date_4votes').eq('key', deletedDate)
 
         if (wasRetained) {
-          // Mutex : n'envoyer "Session annulée" qu'une seule fois pour cette date
-          const { error: claimError } = await supabase
-            .from('notification_log').insert({ type: 'session_cancelled', key: deletedDate })
-          if (!claimError) {
-            const remaining = playersOnDay.length
-            await sendToAll(
-              supabase,
-              '❌ Session annulée !',
-              `Attention, la session retenue du ${formatDate(deletedDate)} n'est plus possible ! (plus que ${remaining} joueur${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}).`
-            )
-          }
+          // Debounce comme les autres notifs : planifier plutôt qu'envoyer tout de suite.
+          // send-reminders traitera ce pending à la prochaine heure pleine (sent_at + 30min)
+          // et revérifiera que la date n'a pas été re-retenue entre-temps.
+          await supabase.from('notification_log').upsert(
+            { type: 'session_cancelled_pending', key: deletedDate, sent_at: new Date().toISOString() },
+            { onConflict: 'type,key' }
+          )
         }
       }
 

@@ -214,6 +214,40 @@ Deno.serve(async (_req) => {
 
   const now = Date.now()
 
+  // --- PENDING SESSION_CANCELLED (debounce "Session annulée !") ---
+  // Planifié soit par notify-on-availability (vote retiré sur une date retenue),
+  // soit par le client (toggle manuel RETENUE -> 4/4). Même formule de debounce que
+  // les autres pendings. Revérifie juste avant l'envoi que la date n'a pas été
+  // re-retenue entre-temps (re-toggle manuel ou nouveau vote qui la re-confirme).
+  const { data: allCancelPending } = await supabase
+    .from('notification_log').select('key, sent_at').eq('type', 'session_cancelled_pending')
+  const cancelPendingReady = (allCancelPending ?? []).filter((e: any) => now >= fireAt(e.sent_at))
+
+  for (const entry of cancelPendingReady) {
+    const date = entry.key
+
+    await supabase.from('notification_log').delete().eq('type', 'session_cancelled_pending').eq('key', date)
+
+    if (date < todayStr) continue // date passée, plus pertinent de notifier
+
+    const { data: stillRetained } = await supabase
+      .from('notification_log').select('key').eq('type', 'retained_session').eq('key', date).maybeSingle()
+    if (stillRetained) continue // re-retenue entre-temps, annulation obsolète
+
+    // Mutex : n'envoyer qu'une fois par date
+    const { error: claimError } = await supabase.from('notification_log').insert({ type: 'session_cancelled', key: date })
+    if (claimError) continue
+
+    const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', date)
+    const remaining = (dayRows ?? []).length
+    await sendPushToAll(
+      supabase, players,
+      '❌ Session annulée !',
+      `Attention, la session retenue du ${formatDate(date)} n'est plus possible ! (plus que ${remaining} joueur${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}).`,
+      'session_cancelled'
+    )
+  }
+
   // --- PENDING DATE_4VOTES (debounce "Session confirmée" / "Nouvelle possibilité") ---
   const { data: allDatePending } = await supabase
     .from('notification_log').select('key, sent_at').eq('type', 'date_4votes_pending')
