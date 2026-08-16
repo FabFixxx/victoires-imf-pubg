@@ -106,20 +106,6 @@ function formatNotifItemTime(dateStr: string, groupLabel: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-const NOTIF_TYPE_ICON: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  date_4votes: { name: 'checkmark-circle', color: Colors.win },
-  new_date_4votes: { name: 'calendar', color: '#FFD700' },
-  week_complete: { name: 'checkmark-done-circle', color: Colors.win },
-  session_cancelled: { name: 'close-circle', color: Colors.danger },
-  game_day: { name: 'game-controller', color: Colors.primary },
-  dispo_reminder: { name: 'alert-circle', color: Colors.textMuted },
-  victory_recap: { name: 'trophy', color: Colors.win },
-};
-
-function getNotifIcon(type: string | null): { name: keyof typeof Ionicons.glyphMap; color: string } {
-  return (type && NOTIF_TYPE_ICON[type]) || { name: 'notifications', color: Colors.textMuted };
-}
-
 function MatchCard({ match, title }: { match: LastMatch; title: string }) {
   const totalKills = match.players.reduce((s, p) => s + p.kills, 0);
   const totalAssists = match.players.reduce((s, p) => s + p.assists, 0);
@@ -624,7 +610,6 @@ export default function DashboardScreen() {
                   <View key={group.label}>
                     <Text style={styles.notifGroupLabel}>{group.label.toUpperCase()}</Text>
                     {group.items.map((item, i) => {
-                      const icon = getNotifIcon(item.type);
                       const isUnread = lastViewedAt ? new Date(item.sent_at) > lastViewedAt : false;
                       return (
                         <View
@@ -635,9 +620,6 @@ export default function DashboardScreen() {
                             isUnread && styles.notifItemUnread,
                           ]}
                         >
-                          <View style={styles.notifItemIcon}>
-                            <Ionicons name={icon.name} size={18} color={icon.color} />
-                          </View>
                           <View style={styles.notifItemMain}>
                             <View style={styles.notifItemTitleRow}>
                               {isUnread && <View style={styles.notifItemUnreadDot} />}
@@ -949,7 +931,6 @@ const styles = StyleSheet.create({
   notifItem: { paddingVertical: 12, gap: 4, flexDirection: 'row' },
   notifItemBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
   notifItemUnread: { backgroundColor: Colors.primary + '0d' },
-  notifItemIcon: { width: 26, alignItems: 'center', paddingTop: 1 },
   notifItemMain: { flex: 1, gap: 4 },
   notifItemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   notifItemUnreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.danger },
