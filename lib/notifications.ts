@@ -114,9 +114,27 @@ export async function getRecentNotifications(username: string, limit = 30): Prom
   return notifs.map((n: any) => ({ ...n, isRead: readIds.has(n.id) }));
 }
 
+// Comptage exact via COUNT en base plutôt que fetch+filtre d'une page limitée : reste correct
+// quel que soit le volume de notifications, sans plafond arbitraire ni boucle de pagination.
 export async function getUnreadNotificationCount(username: string): Promise<number> {
-  const items = await getRecentNotifications(username, 100);
-  return items.filter((i) => !i.isRead).length;
+  const { count: total, error: totalError } = await supabase
+    .from('notification_history')
+    .select('id', { count: 'exact', head: true });
+  if (totalError) {
+    console.error('[getUnreadNotificationCount] total count failed:', totalError.message);
+    return 0;
+  }
+
+  const { count: readCount, error: readError } = await supabase
+    .from('notification_reads')
+    .select('id', { count: 'exact', head: true })
+    .eq('player_username', username);
+  if (readError) {
+    console.error('[getUnreadNotificationCount] read count failed:', readError.message);
+    return 0;
+  }
+
+  return Math.max(0, (total ?? 0) - (readCount ?? 0));
 }
 
 export async function markNotificationsAsRead(username: string, notificationIds: string[]): Promise<void> {
