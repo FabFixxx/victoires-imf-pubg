@@ -189,7 +189,7 @@ function buildWeekCompleteNotif(fourVote: string[], threeVote: string[]): { titl
     const dates = fourVote.map(formatDate)
     return { title: '✅ Session IMF confirmée !', body: `Plusieurs dates possibles : ${dates.join(', ')}. La date retenue est le ${dates[0]} !` }
   }
-  return { title: '✅ Tout le monde a répondu !', body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !` }
+  return { title: '📋 Tout le monde a répondu !', body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !` }
 }
 
 async function setChosenDateAuto(supabase: any, weekStart: string, chosenDate: string) {
@@ -250,7 +250,7 @@ Deno.serve(async (_req) => {
     const body = remaining >= GROUP_PLAYERS.length
       ? `Attention, la session du ${formatDate(date)} n'est plus retenue !`
       : `Attention, la session retenue du ${formatDate(date)} n'est plus possible ! (plus que ${remaining} joueur${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}).`
-    await sendPushToAll(supabase, players, '❌ Session annulée !', body, 'session_cancelled')
+    await sendPushToAll(supabase, players, '🚫 Session annulée !', body, 'session_cancelled')
   }
 
   // --- PENDING DATE_4VOTES (debounce "Session confirmée" / "Nouvelle possibilité") ---
@@ -502,7 +502,7 @@ Deno.serve(async (_req) => {
       await sendPushToAll(
         supabase,
         players.filter(p => toNotify.includes(p.username)),
-        '❌ Disponibilités IMF',
+        '⏰ Disponibilités IMF',
         `Tu n'as pas encore renseigné tes dispos pour ${weekWording} !`,
         'dispo_reminder'
       )
