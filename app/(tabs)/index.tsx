@@ -203,17 +203,23 @@ export default function DashboardScreen() {
     if (openingNotifsRef.current) return; // évite un double-tap rapide sur la cloche
     openingNotifsRef.current = true;
     setShowNotifModal(true);
-    setHasUnread(false);
     setLoadingNotifs(true);
-    // Capturer l'ancien repère AVANT de marquer comme lu : sert à distinguer les items
-    // non lus dans la liste elle-même (sinon tout paraîtrait "lu" une fois le repère mis à jour).
+    // Le repère "dernière consultation" (et donc le badge/pastille) n'est mis à jour qu'à la
+    // FERMETURE (voir handleCloseNotifications) — pas ici à l'ouverture. Tant que la page est
+    // affichée, le badge doit rester visible pour montrer ce qui vient d'arriver ; il ne
+    // s'efface qu'une fois qu'on quitte la page.
     const previousView = await getLastNotificationView();
     setLastViewedAt(previousView);
     const items = await getRecentNotifications();
     setNotifications(items);
     setLoadingNotifs(false);
-    await markNotificationsAsRead();
     openingNotifsRef.current = false;
+  }, []);
+
+  const handleCloseNotifications = useCallback(() => {
+    setShowNotifModal(false);
+    setHasUnread(false);
+    markNotificationsAsRead();
   }, []);
 
   const handleRefreshNotifications = useCallback(async () => {
@@ -589,18 +595,18 @@ export default function DashboardScreen() {
       </ScrollView>
 
       {/* ── Modal notifications ── */}
-      <Modal visible={showNotifModal} transparent animationType="slide" onRequestClose={() => setShowNotifModal(false)}>
+      <Modal visible={showNotifModal} transparent animationType="slide" onRequestClose={handleCloseNotifications}>
         <TouchableOpacity
           style={styles.notifModalOverlay}
           activeOpacity={1}
-          onPress={() => setShowNotifModal(false)}
+          onPress={handleCloseNotifications}
         >
           {/* activeOpacity=1 + onPress vide : intercepte le tap pour qu'il ne remonte pas
               jusqu'à l'overlay et ne ferme pas la modale quand on tape le contenu lui-même */}
           <TouchableOpacity activeOpacity={1} style={styles.notifModalContent} onPress={() => {}}>
             <View style={styles.notifModalHeader}>
               <Text style={styles.notifModalTitle}>Notifications</Text>
-              <TouchableOpacity onPress={() => setShowNotifModal(false)}>
+              <TouchableOpacity onPress={handleCloseNotifications}>
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
