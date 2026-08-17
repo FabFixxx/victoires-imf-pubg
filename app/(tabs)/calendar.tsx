@@ -333,13 +333,13 @@ export default function CalendarScreen() {
 
   const bestThisWeek = useMemo(() => {
     return availability
-      .filter((d) => d.date >= currentWeekMonday && d.date <= thisWeekSunday && d.players.length >= 2)
+      .filter((d) => d.date >= currentWeekMonday && d.date <= thisWeekSunday && d.players.length >= 3)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
   }, [availability]);
 
   const bestNextWeek = useMemo(() => {
     return availability
-      .filter((d) => d.date >= nextWeekMonday && d.date <= nextWeekSunday && d.players.length >= 2)
+      .filter((d) => d.date >= nextWeekMonday && d.date <= nextWeekSunday && d.players.length >= 3)
       .sort((a, b) => b.players.length - a.players.length || a.date.localeCompare(b.date));
   }, [availability]);
 
