@@ -568,7 +568,7 @@ export default function SettingsScreen() {
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
-          <Pressable style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -819,7 +819,7 @@ export default function SettingsScreen() {
       {/* ── Modal logs ── */}
       <Modal visible={showLogsModal} transparent animationType="slide" onRequestClose={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
         <Pressable style={styles.modalOverlay} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-          <Pressable style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Logs de synchronisation</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
