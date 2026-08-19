@@ -1052,6 +1052,7 @@ const styles = StyleSheet.create({
   startDateRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   startDateInput: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: Colors.backgroundSecondary,
     borderWidth: 1, borderColor: Colors.cardBorder,
     borderRadius: 8, padding: 10, fontSize: 15, color: Colors.text,
