@@ -779,19 +779,27 @@ export default function SettingsScreen() {
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
-            {GROUP_PLAYERS.map((name) => (
-              <TouchableOpacity
-                key={name}
-                style={[styles.playerPickRow, currentPlayer === name && styles.playerPickRowActive]}
-                onPress={() => selectPlayer(name)}
-              >
-                <View style={[styles.playerPickDot, { backgroundColor: PLAYER_COLORS[name] }]} />
-                <Text style={[styles.playerPickName, currentPlayer === name && styles.playerPickNameActive]}>
-                  {getDisplayName(name)}
-                </Text>
-                {currentPlayer === name && <Ionicons name="checkmark" size={18} color={Colors.primary} />}
-              </TouchableOpacity>
-            ))}
+            {GROUP_PLAYERS.map((name) => {
+              const color = PLAYER_COLORS[name] ?? Colors.primary;
+              const isActive = currentPlayer === name;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[styles.playerPickRow, { borderColor: color, backgroundColor: color + (isActive ? '22' : '11') }]}
+                  onPress={() => selectPlayer(name)}
+                >
+                  <View style={[styles.playerPickAvatar, { borderColor: color, backgroundColor: color + '33' }]}>
+                    <Text style={[styles.playerPickAvatarText, { color }]}>
+                      {getDisplayName(name)[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={[styles.playerPickName, { color, fontWeight: isActive ? '800' : '600' }]}>
+                    {getDisplayName(name)}
+                  </Text>
+                  {isActive && <Ionicons name="checkmark-circle" size={22} color={color} />}
+                </TouchableOpacity>
+              );
+            })}
           </Pressable>
         </Pressable>
       </Modal>
@@ -1104,13 +1112,15 @@ const styles = StyleSheet.create({
   playerPickRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 14, borderRadius: 10, marginBottom: 6,
-    borderWidth: 1, borderColor: Colors.cardBorder,
-    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1.5,
   },
-  playerPickRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + '11' },
-  playerPickDot: { width: 12, height: 12, borderRadius: 6 },
-  playerPickName: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
-  playerPickNameActive: { color: Colors.text, fontWeight: '800' },
+  playerPickAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  playerPickAvatarText: { fontSize: 17, fontWeight: '800' },
+  playerPickName: { flex: 1, fontSize: 15 },
   notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
   notifInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   notifLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
