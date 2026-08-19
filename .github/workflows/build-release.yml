@@ -59,11 +59,12 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             ## 🎮 Nouveautés
-            - Nouvelle notification "Session annulée !" : si une session retenue tombe sous 4 joueurs disponibles, ou si quelqu'un désélectionne manuellement la date retenue, tout le monde est prévenu — le message s'adapte selon le cas (vote retiré ou juste désélectionnée)
-            - Nouvelle page "Notifications" (icône cloche sur l'accueil) : consulte tes dernières notifications reçues, avec une pastille rouge sur la cloche et un badge sur l'icône de l'app tant qu'il y a du non-lu
-            - Taper sur une notification reçue ouvre directement l'app sur cette nouvelle page
+            - Toutes les fenêtres de l'app (victoires, saisons, changement de joueur, logs, diagnostic connexion, etc.) se ferment maintenant en tapant en dehors, comme la fenêtre des notifications
+            - Dans les tableaux "meilleures dates" du calendrier, seules les dates avec au moins 3 votes apparaissent désormais
+            - Renommé "Logs de sync" en "Logs de synchronisation"
 
             ## 🐛 Correctifs
-            - Corrigé un bug qui empêchait parfois la notif "Session annulée" de partir (l'app et le serveur essayaient tous les deux de nettoyer la même donnée, et l'app était plus rapide — le serveur ne détectait alors plus rien à signaler)
-            - Le statut lu/non-lu des notifications est maintenant fiable et suivi par joueur — il survit à une réinstallation de l'app (avant, tout redevenait "non lu" à chaque réinstall)
-            - Diverses corrections de fiabilité sur le système de notifications (ordre de traitement, badge qui se vidait trop tôt, comptage du non-lu)
+            - Impossible de retenir ou désélectionner une date déjà passée dans le calendrier
+            - Corrigé un faux-positif d'erreur lors de la synchronisation (course sur le cache des matchs)
+            - Plusieurs correctifs d'affichage sur le web mobile : bouton "Fermer" invisible sur la modale diagnostic, fenêtres tronquées en largeur/hauteur, bouton "Ajouter une victoire" mal positionné
+            - Police de la liste des notifications alignée sur celle des logs de synchronisation
