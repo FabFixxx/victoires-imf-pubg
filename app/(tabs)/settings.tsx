@@ -888,9 +888,11 @@ export default function SettingsScreen() {
                 {line}
               </Text>
             ))}
-            <TouchableOpacity style={[styles.submitBtn, { marginTop: 20 }]} onPress={() => setShowDiagModal(false)}>
-              <Text style={styles.submitBtnText}>Fermer</Text>
-            </TouchableOpacity>
+            <View style={[styles.modalButtons, { marginTop: 20 }]}>
+              <TouchableOpacity style={styles.submitBtn} onPress={() => setShowDiagModal(false)}>
+                <Text style={styles.submitBtnText}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
