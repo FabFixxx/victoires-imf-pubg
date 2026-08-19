@@ -58,13 +58,6 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## 🎮 Nouveautés
-            - Toutes les fenêtres de l'app (victoires, saisons, changement de joueur, logs, diagnostic connexion, etc.) se ferment maintenant en tapant en dehors, comme la fenêtre des notifications
-            - Dans les tableaux "meilleures dates" du calendrier, seules les dates avec au moins 3 votes apparaissent désormais
-            - Renommé "Logs de sync" en "Logs de synchronisation"
-
             ## 🐛 Correctifs
-            - Impossible de retenir ou désélectionner une date déjà passée dans le calendrier
-            - Corrigé un faux-positif d'erreur lors de la synchronisation (course sur le cache des matchs)
-            - Plusieurs correctifs d'affichage sur le web mobile : bouton "Fermer" invisible sur la modale diagnostic, fenêtres tronquées en largeur/hauteur, bouton "Ajouter une victoire" mal positionné
-            - Police de la liste des notifications alignée sur celle des logs de synchronisation
+            - Victoires manuelles invisibles sur l'APK : la liste se repliait à hauteur zéro sur Android (les données étaient bien là, juste cachées)
+            - Sélecteur de joueur : chaque joueur affiche maintenant son avatar dans sa propre couleur (jaune, orange, bleu, vert)
