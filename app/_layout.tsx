@@ -19,6 +19,7 @@ import * as Notifications from 'expo-notifications';
 import { Colors } from '../constants/colors';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
+import { PLAYER_COLORS } from '../lib/availability';
 import { registerPushToken, refreshAppBadge } from '../lib/notifications';
 import { syncData } from '../lib/pubg-api';
 import { checkForUpdate } from '../lib/update-check';
@@ -170,18 +171,21 @@ export default function RootLayout() {
             <Text style={styles.selectSubtitle}>Qui es-tu ?</Text>
           </View>
           <View style={styles.playerList}>
-            {GROUP_PLAYERS.map((name) => (
-              <TouchableOpacity
-                key={name}
-                style={styles.playerBtn}
-                onPress={() => handleSelectPlayer(name)}
-              >
-                <View style={styles.playerBtnAvatar}>
-                  <Text style={styles.playerBtnAvatarText}>{name[0].toUpperCase()}</Text>
-                </View>
-                <Text style={styles.playerBtnText}>{getDisplayName(name)}</Text>
-              </TouchableOpacity>
-            ))}
+            {GROUP_PLAYERS.map((name) => {
+              const color = PLAYER_COLORS[name] ?? Colors.primary;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[styles.playerBtn, { borderColor: color }]}
+                  onPress={() => handleSelectPlayer(name)}
+                >
+                  <View style={[styles.playerBtnAvatar, { borderColor: color, backgroundColor: color + '33' }]}>
+                    <Text style={[styles.playerBtnAvatarText, { color }]}>{getDisplayName(name)[0].toUpperCase()}</Text>
+                  </View>
+                  <Text style={[styles.playerBtnText, { color }]}>{getDisplayName(name)}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </SafeAreaView>
       </GestureHandlerRootView>
