@@ -568,7 +568,7 @@ export default function SettingsScreen() {
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
-          <Pressable style={[styles.modalContent, { maxHeight: '70%' }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '75%' }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   addWinBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 12,
     borderTopWidth: 1, borderTopColor: Colors.cardBorder,
   },
