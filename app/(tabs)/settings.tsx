@@ -818,7 +818,7 @@ export default function SettingsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '85%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Logs de sync</Text>
+              <Text style={styles.modalTitle}>Logs de synchronisation</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
