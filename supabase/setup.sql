@@ -165,6 +165,28 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 ALTER TABLE notification_preferences DISABLE ROW LEVEL SECURITY;
 
+-- Sync log (historique des synchronisations serveur)
+CREATE TABLE IF NOT EXISTS sync_log (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  finished_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'running', -- 'running', 'success', 'error'
+  matches_new INT DEFAULT 0,
+  matches_saved INT DEFAULT 0,
+  error_msg TEXT,
+  triggered_by TEXT DEFAULT 'cron'       -- 'cron' ou 'manual'
+);
+ALTER TABLE sync_log DISABLE ROW LEVEL SECURITY;
+
+-- Cron pg_cron (toutes les 4 heures) — à exécuter après avoir activé pg_cron dans Supabase
+-- SELECT cron.schedule('pubg-sync', '0 */4 * * *', $$
+--   SELECT net.http_post(
+--     url := 'https://wknxynnoybniifgbjvdt.supabase.co/functions/v1/sync-pubg-data',
+--     headers := '{"Authorization": "Bearer <SERVICE_ROLE_KEY>", "Content-Type": "application/json"}'::jsonb,
+--     body := '{}'::jsonb
+--   );
+-- $$);
+
 -- Disable RLS for this personal app (no auth needed)
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
 ALTER TABLE match_cache DISABLE ROW LEVEL SECURITY;
