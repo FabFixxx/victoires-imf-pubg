@@ -195,6 +195,72 @@ export async function getTopMaps(
     .map(([mapName, wins]) => ({ mapName, wins }));
 }
 
+export interface LastMatch {
+  matchId: string;
+  matchDate: Date;
+  isWin: boolean;
+  finisher: string | null;
+  mapName: string | null;
+  placement: number | null;
+  totalTeams: number | null;
+  players: { username: string; kills: number; assists: number; damage: number }[];
+}
+
+async function buildLastMatchFromRows(
+  rows: any[],
+  opts: { forceWin?: boolean } = {}
+): Promise<LastMatch | null> {
+  if (!rows.length) return null;
+
+  const byMatch = new Map<string, any[]>();
+  for (const row of rows) {
+    if (!byMatch.has(row.match_id)) byMatch.set(row.match_id, []);
+    byMatch.get(row.match_id)!.push(row);
+  }
+
+  for (const [matchId, matchRows] of byMatch) {
+    const usernames = new Set(matchRows.map((r: any) => r.player_username));
+    if (!GROUP_PLAYERS.every((p) => usernames.has(p))) continue;
+
+    const firstRow = matchRows[0];
+    const isWin = opts.forceWin ?? matchRows.some((r: any) => r.is_win);
+    const placement = firstRow?.win_place ?? null;
+
+    const { data: cache } = await supabase
+      .from('match_cache')
+      .select('map_name, finisher')
+      .eq('match_id', matchId)
+      .single();
+
+    return {
+      matchId,
+      matchDate: new Date(firstRow.match_date),
+      isWin,
+      finisher: cache?.finisher ?? null,
+      mapName: cache?.map_name ?? null,
+      placement,
+      totalTeams: null,
+      players: matchRows.map((r: any) => ({
+        username: r.player_username,
+        kills: r.kills,
+        assists: r.assists,
+        damage: Math.round(r.damage),
+      })),
+    };
+  }
+
+  return null;
+}
+
+export async function getLastMatch(): Promise<LastMatch | null> {
+  const { data } = await supabase
+    .from('player_match_stats')
+    .select('match_id, match_date, is_win, kills, assists, damage, player_username, win_place')
+    .order('match_date', { ascending: false })
+    .limit(40);
+  return buildLastMatchFromRows(data ?? []);
+}
+
 export async function getLastWin(): Promise<LastMatch | null> {
   const { data } = await supabase
     .from('player_match_stats')
