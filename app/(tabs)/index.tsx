@@ -953,8 +953,8 @@ const styles = StyleSheet.create({
   notifItemMain: { flex: 1, gap: 4 },
   notifItemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   notifItemUnreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.danger },
-  notifItemTitle: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  notifItemTitle: { fontSize: 12, fontWeight: '700', color: Colors.text },
   notifItemTitleUnread: { fontWeight: '800' },
-  notifItemBody: { fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  notifItemBody: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
   notifItemDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
 });
