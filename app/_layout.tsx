@@ -17,11 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { Colors } from '../constants/colors';
-import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../lib/storage';
+import { getCurrentPlayer, setCurrentPlayer } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
 import { PLAYER_COLORS } from '../lib/availability';
 import { registerPushToken, refreshAppBadge } from '../lib/notifications';
-import { supabase } from '../lib/supabase';
 import { checkForUpdate } from '../lib/update-check';
 import { registerWebPush } from '../lib/web-push-client';
 
@@ -38,7 +37,6 @@ type InitState = 'loading' | 'select' | 'ready';
 export default function RootLayout() {
   const [initState, setInitState] = useState<InitState>('loading');
   const [currentPlayer, setPlayer] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     // `settled` départage qui décide en premier entre le timeout de secours et la résolution
@@ -63,7 +61,6 @@ export default function RootLayout() {
           setInitState('ready');
           registerPushToken(player);
           registerWebPush(player);
-          triggerAutoSync();
           refreshAppBadge(player);
           checkForUpdate().then((info) => {
             if (!info || Platform.OS === 'web') return;
@@ -96,26 +93,12 @@ export default function RootLayout() {
     }
   }, []);
 
-  const triggerAutoSync = async () => {
-    const last = await getLastSync();
-    if (last && Date.now() - last.getTime() < 24 * 60 * 60 * 1000) return;
-    setSyncing(true);
-    try {
-      await supabase.functions.invoke('sync-pubg-data', { method: 'POST', body: {} });
-      await setLastSync(new Date());
-    } catch {
-      // Silent fail — user can manually retry
-    }
-    setSyncing(false);
-  };
-
   const handleSelectPlayer = async (name: string) => {
     await setCurrentPlayer(name);
     setPlayer(name);
     setInitState('ready');
     registerPushToken(name);
     registerWebPush(name);
-    triggerAutoSync();
     refreshAppBadge(name);
   };
 
