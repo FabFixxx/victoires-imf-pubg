@@ -568,7 +568,7 @@ export default function SettingsScreen() {
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -576,49 +576,51 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            {currentWinsSeason?.manualWinsDetail.length === 0 ? (
-              <Text style={styles.emptyWins}>Aucune victoire enregistrée</Text>
-            ) : (
-              <View style={styles.winsList}>
-                {currentWinsSeason?.manualWinsDetail.map((win, idx) => (
-                  <View key={win.id} style={[styles.winRow, idx < (currentWinsSeason.manualWinsDetail.length - 1) && styles.winRowBorder]}>
-                    <View style={styles.winInfo}>
-                      <View style={styles.winMapRow}>
-                        <Text style={styles.winMap}>{win.mapName ?? 'Carte inconnue'}</Text>
-                        {win.winDate && (
-                          <Text style={styles.winDate}>
-                            {new Date(win.winDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {currentWinsSeason?.manualWinsDetail.length === 0 ? (
+                <Text style={styles.emptyWins}>Aucune victoire enregistrée</Text>
+              ) : (
+                <View style={styles.winsList}>
+                  {currentWinsSeason?.manualWinsDetail.map((win, idx) => (
+                    <View key={win.id} style={[styles.winRow, idx < (currentWinsSeason.manualWinsDetail.length - 1) && styles.winRowBorder]}>
+                      <View style={styles.winInfo}>
+                        <View style={styles.winMapRow}>
+                          <Text style={styles.winMap}>{win.mapName ?? 'Carte inconnue'}</Text>
+                          {win.winDate && (
+                            <Text style={styles.winDate}>
+                              {new Date(win.winDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </Text>
+                          )}
+                        </View>
+                        {win.finisher && (
+                          <View style={styles.winFinisher}>
+                            <Ionicons name="skull-outline" size={11} color={Colors.win} />
+                            <Text style={styles.winFinisherText}>Dernier kill : <Text style={styles.winFinisherName}>{getDisplayName(win.finisher)}</Text></Text>
+                          </View>
                         )}
                       </View>
-                      {win.finisher && (
-                        <View style={styles.winFinisher}>
-                          <Ionicons name="skull-outline" size={11} color={Colors.win} />
-                          <Text style={styles.winFinisherText}>Dernier kill : <Text style={styles.winFinisherName}>{getDisplayName(win.finisher)}</Text></Text>
-                        </View>
-                      )}
+                      <TouchableOpacity
+                        style={styles.editWinBtn}
+                        onPress={() => handleOpenEditWin(win)}
+                      >
+                        <Ionicons name="create-outline" size={15} color={Colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteWinBtn}
+                        onPress={() => handleDeleteWin(win)}
+                      >
+                        <Ionicons name="trash-outline" size={15} color={Colors.danger} />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.editWinBtn}
-                      onPress={() => handleOpenEditWin(win)}
-                    >
-                      <Ionicons name="create-outline" size={15} color={Colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteWinBtn}
-                      onPress={() => handleDeleteWin(win)}
-                    >
-                      <Ionicons name="trash-outline" size={15} color={Colors.danger} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
+                  ))}
+                </View>
+              )}
 
-            <TouchableOpacity style={styles.addWinBtn} onPress={handleOpenAddWin}>
-              <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
-              <Text style={styles.addWinBtnText}>Ajouter une victoire</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.addWinBtn} onPress={handleOpenAddWin}>
+                <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
+                <Text style={styles.addWinBtnText}>Ajouter une victoire</Text>
+              </TouchableOpacity>
+            </ScrollView>
 
             <View style={styles.startDateSection}>
               <Text style={styles.startDateLabel}>DATE DE DÉBUT DE SAISON</Text>
