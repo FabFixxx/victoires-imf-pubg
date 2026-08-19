@@ -898,7 +898,7 @@ export default function SettingsScreen() {
                     hour: '2-digit', minute: '2-digit',
                   });
                   const duration = entry.finished_at
-                    ? Math.round((new Date(entry.finished_at).getTime() - new Date(entry.started_at).getTime()) / 1000)
+                    ? Math.max(1, Math.round((new Date(entry.finished_at).getTime() - new Date(entry.started_at).getTime()) / 1000))
                     : null;
                   return (
                     <View key={entry.id} style={styles.logLine}>
@@ -908,21 +908,22 @@ export default function SettingsScreen() {
                         <Text style={[styles.logTime, { color: Colors.textMuted }]}>
                           · {entry.triggered_by === 'cron' ? 'auto' : 'manuel'}
                           {duration !== null ? ` · ${duration}s` : ''}
+                          {isSuccess ? ' · ' : ''}
                         </Text>
+                        {isSuccess && (
+                          <Text style={[styles.logTime, { color: Colors.win }]}>
+                            {entry.matches_saved > 0
+                              ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''}`
+                              : 'Tout est à jour'}
+                          </Text>
+                        )}
+                        {isError && entry.error_msg && (
+                          <Text style={[styles.logTime, { color: Colors.danger }]}>· {entry.error_msg}</Text>
+                        )}
+                        {isRunning && (
+                          <Text style={[styles.logTime, { color: Colors.textMuted }]}>· En cours…</Text>
+                        )}
                       </View>
-                      {isSuccess && (
-                        <Text style={[styles.logMsg, { color: Colors.win }]}>
-                          {entry.matches_saved > 0
-                            ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''} / ${entry.matches_new} analysé${entry.matches_new > 1 ? 's' : ''}`
-                            : 'Tout est à jour'}
-                        </Text>
-                      )}
-                      {isError && entry.error_msg && (
-                        <Text style={[styles.logMsg, { color: Colors.danger }]}>{entry.error_msg}</Text>
-                      )}
-                      {isRunning && (
-                        <Text style={[styles.logMsg, { color: Colors.textMuted }]}>En cours…</Text>
-                      )}
                     </View>
                   );
                 })}
