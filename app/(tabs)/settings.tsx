@@ -568,7 +568,7 @@ export default function SettingsScreen() {
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
-          <Pressable style={[styles.modalContent, { maxHeight: '65%' }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '70%' }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -615,12 +615,12 @@ export default function SettingsScreen() {
                   ))}
                 </View>
               )}
-
-              <TouchableOpacity style={styles.addWinBtn} onPress={handleOpenAddWin}>
-                <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
-                <Text style={styles.addWinBtnText}>Ajouter une victoire</Text>
-              </TouchableOpacity>
             </ScrollView>
+
+            <TouchableOpacity style={styles.addWinBtn} onPress={handleOpenAddWin}>
+              <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
+              <Text style={styles.addWinBtnText}>Ajouter une victoire</Text>
+            </TouchableOpacity>
 
             <View style={styles.startDateSection}>
               <Text style={styles.startDateLabel}>DATE DE DÉBUT DE SAISON</Text>
