@@ -1042,7 +1042,6 @@ const styles = StyleSheet.create({
   },
   addWinBtnText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   startDateSection: {
-    marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.cardBorder,
