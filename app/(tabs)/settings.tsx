@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: Colors.card,
     borderTopLeftRadius: 16, borderTopRightRadius: 16,
-    padding: 20, paddingBottom: 36,
+    padding: 20, paddingBottom: 36, width: '100%',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
   notifModalContent: {
     backgroundColor: Colors.card,
     borderTopLeftRadius: 16, borderTopRightRadius: 16,
-    padding: 20, paddingBottom: 36, maxHeight: '80%',
+    padding: 20, paddingBottom: 36, maxHeight: '80%', width: '100%',
   },
   notifModalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
