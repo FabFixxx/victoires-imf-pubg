@@ -18,7 +18,6 @@ import { Colors } from '../../constants/colors';
 import { SectionHeader } from '../../components/SectionHeader';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
-import { PUBG_API_KEY } from '../../constants/config';
 import { PUBG_MAPS } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
@@ -301,14 +300,11 @@ export default function SettingsScreen() {
       results.push(`Supabase ❌ ${e?.message}`);
     }
     try {
-      const res = await fetch(
-        'https://api.pubg.com/shards/steam/players?filter[playerNames]=FabFix',
-        { headers: { Authorization: `Bearer ${PUBG_API_KEY}`, Accept: 'application/vnd.api+json' } }
-      );
-      if (res.ok) results.push(`PUBG API ✓`);
-      else results.push(`PUBG API ❌ HTTP ${res.status}`);
+      const { data, error } = await supabase.functions.invoke('sync-pubg-data', { method: 'POST', body: {} });
+      if (error) results.push(`Sync serveur ❌ ${error.message}`);
+      else results.push(`Sync serveur ✓`);
     } catch (e: any) {
-      results.push(`PUBG API ❌ ${e?.message}`);
+      results.push(`Sync serveur ❌ ${e?.message}`);
     }
     setDiagResult(results);
     setShowDiagModal(true);
