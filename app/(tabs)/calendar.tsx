@@ -388,8 +388,8 @@ export default function CalendarScreen() {
                 <TouchableOpacity
                   key={day.date}
                   style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenu && styles.bestDateRowChosen]}
-                  onPress={(isPerfect || isRetenu) ? () => handleToggleRetained(day.date) : undefined}
-                  activeOpacity={(isPerfect || isRetenu) ? 0.7 : 1}
+                  onPress={(isPerfect || isRetenu) && day.date >= today ? () => handleToggleRetained(day.date) : undefined}
+                  activeOpacity={(isPerfect || isRetenu) && day.date >= today ? 0.7 : 1}
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
@@ -432,8 +432,8 @@ export default function CalendarScreen() {
                 <TouchableOpacity
                   key={day.date}
                   style={[styles.bestDateRow, isPerfect && styles.bestDateRowPerfect, isRetenu && styles.bestDateRowChosen]}
-                  onPress={(isPerfect || isRetenu) ? () => handleToggleRetained(day.date) : undefined}
-                  activeOpacity={(isPerfect || isRetenu) ? 0.7 : 1}
+                  onPress={(isPerfect || isRetenu) && day.date >= today ? () => handleToggleRetained(day.date) : undefined}
+                  activeOpacity={(isPerfect || isRetenu) && day.date >= today ? 0.7 : 1}
                 >
                   <View style={styles.bestDateInfo}>
                     <View style={styles.bestDateTitleRow}>
