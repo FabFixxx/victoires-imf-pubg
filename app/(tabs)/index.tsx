@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
@@ -600,14 +601,10 @@ export default function DashboardScreen() {
 
       {/* ── Modal notifications ── */}
       <Modal visible={showNotifModal} transparent animationType="slide" onRequestClose={handleCloseNotifications}>
-        <TouchableOpacity
-          style={styles.notifModalOverlay}
-          activeOpacity={1}
-          onPress={handleCloseNotifications}
-        >
-          {/* activeOpacity=1 + onPress vide : intercepte le tap pour qu'il ne remonte pas
-              jusqu'à l'overlay et ne ferme pas la modale quand on tape le contenu lui-même */}
-          <TouchableOpacity activeOpacity={1} style={styles.notifModalContent} onPress={() => {}}>
+        <Pressable style={styles.notifModalOverlay} onPress={handleCloseNotifications}>
+          {/* onPress vide : intercepte le tap pour qu'il ne remonte pas jusqu'à
+              l'overlay et ne ferme pas la modale quand on tape le contenu lui-même */}
+          <Pressable style={styles.notifModalContent} onPress={() => {}}>
             <View style={styles.notifModalHeader}>
               <Text style={styles.notifModalTitle}>Notifications</Text>
               <TouchableOpacity onPress={handleCloseNotifications}>
@@ -654,8 +651,8 @@ export default function DashboardScreen() {
                 ))}
               </ScrollView>
             )}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>

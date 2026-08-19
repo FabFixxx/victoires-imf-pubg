@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Linking,
   ActivityIndicator,
@@ -535,8 +536,8 @@ export default function SettingsScreen() {
 
       {/* ── Modal changelog ── */}
       <Modal visible={showChangelogModal} transparent animationType="slide" onRequestClose={() => setShowChangelogModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowChangelogModal(false)}>
-          <TouchableOpacity activeOpacity={1} style={[styles.modalContent, { maxHeight: '80%' }]} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowChangelogModal(false)}>
+          <Pressable style={[styles.modalContent, { maxHeight: '80%' }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des versions</Text>
               <TouchableOpacity onPress={() => setShowChangelogModal(false)}>
@@ -560,14 +561,14 @@ export default function SettingsScreen() {
                 ))}
               </ScrollView>
             )}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowWinsModal(false)}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -647,14 +648,14 @@ export default function SettingsScreen() {
                 La fin de la saison précédente sera ajustée automatiquement.
               </Text>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal ajout victoire individuelle ── */}
       <Modal visible={showAddWinModal} transparent animationType="slide" onRequestClose={() => setShowAddWinModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowAddWinModal(false)}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowAddWinModal(false)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{editingWin ? 'Modifier la victoire' : 'Nouvelle victoire'}</Text>
               <TouchableOpacity onPress={() => setShowAddWinModal(false)}>
@@ -718,14 +719,14 @@ export default function SettingsScreen() {
                 <Text style={styles.submitBtnText}>Enregistrer</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal ajout saison ── */}
       <Modal visible={showSeasonModal} transparent animationType="slide" onRequestClose={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); setSeasonFormError(''); }}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); setSeasonFormError(''); }}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); setSeasonFormError(''); }}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
             <Text style={styles.modalTitle}>Nouvelle saison IMF</Text>
 
             <Text style={styles.inputLabel}>Année</Text>
@@ -762,14 +763,14 @@ export default function SettingsScreen() {
                 <Text style={styles.submitBtnText}>Enregistrer</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal changer de joueur ── */}
       <Modal visible={showPlayerModal} transparent animationType="fade" onRequestClose={() => setShowPlayerModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPlayerModal(false)}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowPlayerModal(false)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Qui es-tu ?</Text>
               <TouchableOpacity onPress={() => setShowPlayerModal(false)}>
@@ -789,14 +790,14 @@ export default function SettingsScreen() {
                 {currentPlayer === name && <Ionicons name="checkmark" size={18} color={Colors.primary} />}
               </TouchableOpacity>
             ))}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal supprimer victoire ── */}
       <Modal visible={!!winToDelete} transparent animationType="fade" onRequestClose={() => setWinToDelete(null)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setWinToDelete(null)}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => setWinToDelete(null)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
             <Text style={styles.modalTitle}>Supprimer cette victoire ?</Text>
             <Text style={[styles.infoValue, { marginVertical: 12 }]}>
               {winToDelete?.mapName ?? 'Carte inconnue'}{winToDelete?.finisher ? ` — ${getDisplayName(winToDelete.finisher)}` : ''}
@@ -809,14 +810,14 @@ export default function SettingsScreen() {
                 <Text style={styles.submitBtnText}>Supprimer</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal logs ── */}
       <Modal visible={showLogsModal} transparent animationType="slide" onRequestClose={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-          <TouchableOpacity activeOpacity={1} style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
+          <Pressable style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Logs de synchronisation</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
@@ -869,14 +870,14 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               </View>
             )}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Modal diagnostic ── */}
       <Modal visible={showDiagModal} transparent animationType="fade" onRequestClose={() => setShowDiagModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDiagModal(false)}>
-          <TouchableOpacity activeOpacity={1} style={styles.modalContent} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowDiagModal(false)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Diagnostic connexion</Text>
               <TouchableOpacity onPress={() => setShowDiagModal(false)}>
@@ -893,8 +894,8 @@ export default function SettingsScreen() {
                 <Text style={styles.submitBtnText}>Fermer</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>
