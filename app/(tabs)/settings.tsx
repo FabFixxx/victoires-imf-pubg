@@ -487,7 +487,7 @@ export default function SettingsScreen() {
             onPress={handleOpenLogs}
           >
             <Ionicons name="terminal-outline" size={14} color={Colors.textMuted} />
-            <Text style={styles.diagBtnText}>Logs de synchronisation</Text>
+            <Text style={styles.diagBtnText}>Historique des synchronisations</Text>
           </TouchableOpacity>
         </View>
 
