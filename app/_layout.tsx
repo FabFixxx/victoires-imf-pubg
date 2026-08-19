@@ -176,13 +176,13 @@ export default function RootLayout() {
               return (
                 <TouchableOpacity
                   key={name}
-                  style={[styles.playerBtn, { borderColor: color }]}
+                  style={styles.playerBtn}
                   onPress={() => handleSelectPlayer(name)}
                 >
                   <View style={[styles.playerBtnAvatar, { borderColor: color, backgroundColor: color + '33' }]}>
                     <Text style={[styles.playerBtnAvatarText, { color }]}>{getDisplayName(name)[0].toUpperCase()}</Text>
                   </View>
-                  <Text style={[styles.playerBtnText, { color }]}>{getDisplayName(name)}</Text>
+                  <Text style={styles.playerBtnText}>{getDisplayName(name)}</Text>
                 </TouchableOpacity>
               );
             })}

@@ -785,7 +785,7 @@ export default function SettingsScreen() {
               return (
                 <TouchableOpacity
                   key={name}
-                  style={[styles.playerPickRow, { borderColor: color, backgroundColor: color + (isActive ? '22' : '11') }]}
+                  style={[styles.playerPickRow, isActive && styles.playerPickRowActive]}
                   onPress={() => selectPlayer(name)}
                 >
                   <View style={[styles.playerPickAvatar, { borderColor: color, backgroundColor: color + '33' }]}>
@@ -793,10 +793,10 @@ export default function SettingsScreen() {
                       {getDisplayName(name)[0].toUpperCase()}
                     </Text>
                   </View>
-                  <Text style={[styles.playerPickName, { color, fontWeight: isActive ? '800' : '600' }]}>
+                  <Text style={[styles.playerPickName, isActive && styles.playerPickNameActive]}>
                     {getDisplayName(name)}
                   </Text>
-                  {isActive && <Ionicons name="checkmark-circle" size={22} color={color} />}
+                  {isActive && <Ionicons name="checkmark" size={18} color={Colors.primary} />}
                 </TouchableOpacity>
               );
             })}
@@ -1112,15 +1112,18 @@ const styles = StyleSheet.create({
   playerPickRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 14, borderRadius: 10, marginBottom: 6,
-    borderWidth: 1.5,
+    borderWidth: 1, borderColor: Colors.cardBorder,
+    backgroundColor: Colors.backgroundSecondary,
   },
+  playerPickRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + '11' },
   playerPickAvatar: {
     width: 40, height: 40, borderRadius: 20,
     borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
   playerPickAvatarText: { fontSize: 17, fontWeight: '800' },
-  playerPickName: { flex: 1, fontSize: 15 },
+  playerPickName: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  playerPickNameActive: { color: Colors.text, fontWeight: '800' },
   notifRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
   notifInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   notifLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
