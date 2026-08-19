@@ -599,9 +599,9 @@ export default function CalendarScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
-      <Modal visible={showNoAvailConfirm} transparent animationType="fade">
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
+      <Modal visible={showNoAvailConfirm} transparent animationType="fade" onRequestClose={() => setShowNoAvailConfirm(false)}>
+        <TouchableOpacity style={styles.confirmOverlay} activeOpacity={1} onPress={() => setShowNoAvailConfirm(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.confirmBox} onPress={() => {}}>
             <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
             <Text style={styles.confirmText}>
               {`Tu confirmes ne pas être disponible du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
@@ -615,12 +615,12 @@ export default function CalendarScreen() {
                 <Text style={styles.confirmOkText}>Confirmer</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
-      <Modal visible={showNoAvailThisWeekConfirm} transparent animationType="fade">
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmBox}>
+      <Modal visible={showNoAvailThisWeekConfirm} transparent animationType="fade" onRequestClose={() => setShowNoAvailThisWeekConfirm(false)}>
+        <TouchableOpacity style={styles.confirmOverlay} activeOpacity={1} onPress={() => setShowNoAvailThisWeekConfirm(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.confirmBox} onPress={() => {}}>
             <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
             <Text style={styles.confirmText}>
               {`Tu confirmes ne pas être disponible du ${new Date(currentWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(thisWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
@@ -634,8 +634,8 @@ export default function CalendarScreen() {
                 <Text style={styles.confirmOkText}>Confirmer</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>
