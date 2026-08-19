@@ -218,7 +218,14 @@ async function fetchAndCacheMatch(
   }
 }
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
   const triggeredBy = req.method === 'POST' ? 'manual' : 'cron'
 
@@ -231,7 +238,7 @@ Deno.serve(async (req) => {
     .limit(1)
 
   if (running && running.length > 0) {
-    return new Response(JSON.stringify({ skipped: 'sync already running', since: running[0].started_at }), { status: 200 })
+    return new Response(JSON.stringify({ skipped: 'sync already running', since: running[0].started_at }), { status: 200, headers: CORS })
   }
 
   // Créer l'entrée de log (status=running)
@@ -323,7 +330,7 @@ Deno.serve(async (req) => {
       }).eq('id', logId)
     }
 
-    return new Response(JSON.stringify({ status: 'success', matchesNew, matchesSaved, logs }), { status: 200 })
+    return new Response(JSON.stringify({ status: 'success', matchesNew, matchesSaved, logs }), { status: 200, headers: CORS })
   } catch (e: any) {
     errorMsg = e?.message ?? String(e)
     log(`Erreur : ${errorMsg}`)
@@ -338,6 +345,6 @@ Deno.serve(async (req) => {
       }).eq('id', logId)
     }
 
-    return new Response(JSON.stringify({ status: 'error', error: errorMsg, logs }), { status: 500 })
+    return new Response(JSON.stringify({ status: 'error', error: errorMsg, logs }), { status: 500, headers: CORS })
   }
 })
