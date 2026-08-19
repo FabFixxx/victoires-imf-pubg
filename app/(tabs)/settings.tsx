@@ -1184,7 +1184,7 @@ const styles = StyleSheet.create({
   diagResultLine: { fontSize: 14, lineHeight: 22, marginBottom: 4 },
   logsScroll: { maxHeight: 400, marginBottom: 4 },
   logLine: { flexDirection: 'row', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
-  logTime: { fontSize: 11, color: Colors.textMuted, minWidth: 72, fontFamily: 'monospace' },
+  logTime: { fontSize: 11, color: Colors.textMuted },
   logMsg: { flex: 1, fontSize: 12, color: Colors.textSecondary, flexWrap: 'wrap' },
   formError: { fontSize: 12, color: Colors.danger, marginTop: 6, fontStyle: 'italic' },
   formSuccess: { fontSize: 12, color: Colors.win, marginTop: 6, fontWeight: '600' },
