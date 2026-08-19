@@ -192,7 +192,7 @@ async function fetchAndCacheMatch(
     }
 
     await supabase.from('match_cache').upsert(
-      { match_id: matchId, match_date: matchData.matchDate, game_mode: gameMode, map_name: PUBG_MAP_NAMES[mapName] ?? mapName || null, finisher, data: matchData },
+      { match_id: matchId, match_date: matchData.matchDate, game_mode: gameMode, map_name: (PUBG_MAP_NAMES[mapName] ?? mapName) || null, finisher, data: matchData },
       { onConflict: 'match_id', ignoreDuplicates: true }
     )
 
