@@ -21,7 +21,7 @@ import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '..
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
 import { PLAYER_COLORS } from '../lib/availability';
 import { registerPushToken, refreshAppBadge } from '../lib/notifications';
-import { syncData } from '../lib/pubg-api';
+import { supabase } from '../lib/supabase';
 import { checkForUpdate } from '../lib/update-check';
 import { registerWebPush } from '../lib/web-push-client';
 
@@ -101,7 +101,7 @@ export default function RootLayout() {
     if (last && Date.now() - last.getTime() < 24 * 60 * 60 * 1000) return;
     setSyncing(true);
     try {
-      await syncData();
+      await supabase.functions.invoke('sync-pubg-data', { method: 'POST', body: {} });
       await setLastSync(new Date());
     } catch {
       // Silent fail — user can manually retry

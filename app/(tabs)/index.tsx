@@ -18,7 +18,6 @@ import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
 import {
-  syncData,
   getMonthlyStats,
   getLastMatch,
   getImfSeasonHighlights,
@@ -325,9 +324,12 @@ export default function DashboardScreen() {
     if (syncingRef.current) return;
     syncingRef.current = true;
     setSyncing(true);
-    setSyncMsg('Démarrage...');
+    setSyncMsg('Synchronisation en cours...');
     try {
-      await syncData((msg) => setSyncMsg(msg));
+      const { data, error } = await supabase.functions.invoke('sync-pubg-data', { method: 'POST', body: {} });
+      if (error) throw error;
+      const n = data?.matchesSaved ?? 0;
+      setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
       const now_ = new Date();
       await setLastSync(now_);
       setLastSyncState(now_);
@@ -337,7 +339,7 @@ export default function DashboardScreen() {
     await loadData();
     syncingRef.current = false;
     setSyncing(false);
-    setSyncMsg('');
+    setTimeout(() => setSyncMsg(''), 3000);
   };
 
   const formatSyncTime = (date: Date | null) => {
