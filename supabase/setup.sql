@@ -178,14 +178,19 @@ CREATE TABLE IF NOT EXISTS sync_log (
 );
 ALTER TABLE sync_log DISABLE ROW LEVEL SECURITY;
 
--- Cron pg_cron (toutes les 4 heures) — à exécuter après avoir activé pg_cron dans Supabase
--- SELECT cron.schedule('pubg-sync', '0 */4 * * *', $$
+-- Cron pg_cron (1x/jour à 3h du matin) — à exécuter dans le SQL Editor Supabase
+-- SELECT cron.schedule(
+--   'pubg-sync',
+--   '0 2 * * *',
+--   $$
 --   SELECT net.http_post(
 --     url := 'https://wknxynnoybniifgbjvdt.supabase.co/functions/v1/sync-pubg-data',
 --     headers := '{"Authorization": "Bearer <SERVICE_ROLE_KEY>", "Content-Type": "application/json"}'::jsonb,
 --     body := '{}'::jsonb
 --   );
--- $$);
+--   $$
+-- );
+-- Note : '0 2 * * *' UTC = 3h CET (hiver) / 4h CEST (été)
 
 -- Disable RLS for this personal app (no auth needed)
 ALTER TABLE players DISABLE ROW LEVEL SECURITY;
