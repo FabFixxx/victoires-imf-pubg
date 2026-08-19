@@ -83,9 +83,6 @@ export default function SettingsScreen() {
   const [editStartDate, setEditStartDate] = useState('');
   const [savingDate, setSavingDate] = useState(false);
 
-  // Modal diagnostic
-  const [diagResult, setDiagResult] = useState<string[]>([]);
-  const [showDiagModal, setShowDiagModal] = useState(false);
 
   // Modal logs
   const [showLogsModal, setShowLogsModal] = useState(false);
@@ -290,25 +287,6 @@ export default function SettingsScreen() {
     setConfirmClearLogs(false);
   };
 
-  const handleDiagnostic = async () => {
-    const results: string[] = [];
-    try {
-      const { data, error } = await supabase.from('players').select('username').limit(1);
-      if (error) results.push(`Supabase ❌ ${error.message}`);
-      else results.push(`Supabase ✓`);
-    } catch (e: any) {
-      results.push(`Supabase ❌ ${e?.message}`);
-    }
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-pubg-data', { method: 'POST', body: {} });
-      if (error) results.push(`Sync serveur ❌ ${error.message}`);
-      else results.push(`Sync serveur ✓`);
-    } catch (e: any) {
-      results.push(`Sync serveur ❌ ${e?.message}`);
-    }
-    setDiagResult(results);
-    setShowDiagModal(true);
-  };
 
   const handleOpenChangelog = async () => {
     setShowChangelogModal(true);
@@ -474,14 +452,7 @@ export default function SettingsScreen() {
               {syncMsg}
             </Text>
           ) : null}
-          <TouchableOpacity style={styles.diagBtn} onPress={handleDiagnostic}>
-            <Ionicons name="bug-outline" size={14} color={Colors.textMuted} />
-            <Text style={styles.diagBtnText}>Tester la connexion</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.diagBtn, { borderTopWidth: 1, borderTopColor: Colors.cardBorder }]}
-            onPress={handleOpenLogs}
-          >
+          <TouchableOpacity style={styles.diagBtn} onPress={handleOpenLogs}>
             <Ionicons name="terminal-outline" size={14} color={Colors.textMuted} />
             <Text style={styles.diagBtnText}>Historique des synchronisations</Text>
           </TouchableOpacity>
@@ -948,29 +919,6 @@ export default function SettingsScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Modal diagnostic ── */}
-      <Modal visible={showDiagModal} transparent animationType="fade" onRequestClose={() => setShowDiagModal(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowDiagModal(false)}>
-          <Pressable style={styles.modalContent} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Diagnostic de connexion</Text>
-              <TouchableOpacity onPress={() => setShowDiagModal(false)}>
-                <Ionicons name="close" size={22} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            {diagResult.map((line, i) => (
-              <Text key={i} style={[styles.diagResultLine, { color: line.includes('❌') ? Colors.danger : Colors.win }]}>
-                {line}
-              </Text>
-            ))}
-            <View style={[styles.modalButtons, { marginTop: 20 }]}>
-              <TouchableOpacity style={styles.submitBtn} onPress={() => setShowDiagModal(false)}>
-                <Text style={styles.submitBtnText}>Fermer</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
     </SwipeableScreen>
   );
@@ -1166,7 +1114,6 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
-  diagResultLine: { fontSize: 14, lineHeight: 22, marginBottom: 4 },
   logsScroll: { maxHeight: 400, marginBottom: 4 },
   logLine: { flexDirection: 'row', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
   logTime: { fontSize: 11, color: Colors.textMuted },
