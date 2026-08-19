@@ -19,7 +19,7 @@ import { SectionHeader } from '../../components/SectionHeader';
 import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 import { PUBG_API_KEY } from '../../constants/config';
-import { syncData, getSyncLogs, clearSyncLogs, PUBG_MAPS } from '../../lib/pubg-api';
+import { PUBG_MAPS } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
   getImfSeasons, upsertImfSeason,
@@ -31,6 +31,17 @@ import { PLAYER_COLORS, getNotificationPrefs, saveNotificationPrefs, Notificatio
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 
 const TRACKER_BASE = 'https://tracker.gg/pubg/profile/steam';
+
+type SyncLogEntry = {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  matches_new: number;
+  matches_saved: number;
+  error_msg: string | null;
+  triggered_by: string;
+};
 
 // Converts YYYY-MM-DD (ISO/DB) to DD/MM/YYYY (display)
 const toDisplayDate = (iso: string) => {
@@ -78,7 +89,8 @@ export default function SettingsScreen() {
 
   // Modal logs
   const [showLogsModal, setShowLogsModal] = useState(false);
-  const [logs, setLogs] = useState<{ time: string; msg: string }[]>([]);
+  const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
+  const [loadingSyncLogs, setLoadingSyncLogs] = useState(false);
   const [confirmClearLogs, setConfirmClearLogs] = useState(false);
 
   // Modal changer de joueur
@@ -234,17 +246,44 @@ export default function SettingsScreen() {
 
   const handleManualSync = async () => {
     setSyncing(true);
-    setSyncMsg('Démarrage...');
+    setSyncMsg('Synchronisation en cours...');
     try {
-      await syncData((msg) => setSyncMsg(msg));
-      const now = new Date();
-      await setLastSync(now);
-      setLastSyncState(now);
+      const { data, error } = await supabase.functions.invoke('sync-pubg-data', {
+        method: 'POST',
+        body: {},
+      });
+      if (error) throw error;
+      if (data?.status === 'success') {
+        const n = data.matchesSaved ?? 0;
+        setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
+        const now = new Date();
+        await setLastSync(now);
+        setLastSyncState(now);
+      } else {
+        setSyncMsg(`Erreur : ${data?.error ?? 'inconnue'}`);
+      }
     } catch (e: any) {
-      const msg = e?.message ?? String(e) ?? 'Erreur inconnue';
-      setSyncMsg(`Erreur: ${msg}`);
+      setSyncMsg(`Erreur : ${e?.message ?? 'inconnue'}`);
     }
     setSyncing(false);
+  };
+
+  const handleOpenLogs = async () => {
+    setShowLogsModal(true);
+    setLoadingSyncLogs(true);
+    const { data } = await supabase
+      .from('sync_log')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(20);
+    setSyncLogs(data ?? []);
+    setLoadingSyncLogs(false);
+  };
+
+  const handleClearLogs = async () => {
+    await supabase.from('sync_log').delete().neq('id', 0);
+    setSyncLogs([]);
+    setConfirmClearLogs(false);
   };
 
   const handleDiagnostic = async () => {
@@ -437,7 +476,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.diagBtn, { borderTopWidth: 1, borderTopColor: Colors.cardBorder }]}
-            onPress={() => { setLogs(getSyncLogs()); setShowLogsModal(true); }}
+            onPress={handleOpenLogs}
           >
             <Ionicons name="terminal-outline" size={14} color={Colors.textMuted} />
             <Text style={styles.diagBtnText}>Logs de synchronisation</Text>
@@ -829,31 +868,62 @@ export default function SettingsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
           <Pressable style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Logs de synchronisation</Text>
+              <Text style={styles.modalTitle}>Historique des synchronisations</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
-            {logs.length === 0 ? (
-              <Text style={styles.emptyWins}>Aucun log — lance une synchronisation d'abord</Text>
+            {loadingSyncLogs ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginVertical: 24 }} />
+            ) : syncLogs.length === 0 ? (
+              <Text style={styles.emptyWins}>Aucune synchronisation dans l'historique</Text>
             ) : (
-              <ScrollView showsVerticalScrollIndicator style={styles.logsScroll}>
-                {[...logs].reverse().map((line, i) => (
-                  <View key={i} style={styles.logLine}>
-                    <Text style={styles.logTime}>{line.time}</Text>
-                    <Text style={[
-                      styles.logMsg,
-                      (line.msg.includes('Erreur') || line.msg.includes('erreur') || line.msg.includes('ignoré')) && { color: Colors.danger },
-                      (line.msg.includes('terminée') || line.msg.includes('ajouté') || line.msg.includes('✓') || line.msg.includes('à jour')) && { color: Colors.win },
-                    ]}>{line.msg}</Text>
-                  </View>
-                ))}
+              <ScrollView showsVerticalScrollIndicator style={{ maxHeight: 400 }}>
+                {syncLogs.map((entry) => {
+                  const isSuccess = entry.status === 'success';
+                  const isError = entry.status === 'error';
+                  const isRunning = entry.status === 'running';
+                  const statusColor = isSuccess ? Colors.win : isError ? Colors.danger : Colors.textMuted;
+                  const statusIcon = isSuccess ? 'checkmark-circle' : isError ? 'close-circle' : 'sync';
+                  const date = new Date(entry.started_at).toLocaleString('fr-FR', {
+                    day: '2-digit', month: '2-digit', year: '2-digit',
+                    hour: '2-digit', minute: '2-digit',
+                  });
+                  const duration = entry.finished_at
+                    ? Math.round((new Date(entry.finished_at).getTime() - new Date(entry.started_at).getTime()) / 1000)
+                    : null;
+                  return (
+                    <View key={entry.id} style={styles.logLine}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Ionicons name={statusIcon as any} size={14} color={statusColor} />
+                        <Text style={[styles.logTime, { color: statusColor, fontWeight: '600' }]}>{date}</Text>
+                        <Text style={[styles.logTime, { color: Colors.textMuted }]}>
+                          · {entry.triggered_by === 'cron' ? 'auto' : 'manuel'}
+                          {duration !== null ? ` · ${duration}s` : ''}
+                        </Text>
+                      </View>
+                      {isSuccess && (
+                        <Text style={[styles.logMsg, { color: Colors.textSecondary }]}>
+                          {entry.matches_saved > 0
+                            ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''} / ${entry.matches_new} analysé${entry.matches_new > 1 ? 's' : ''}`
+                            : 'Tout est à jour'}
+                        </Text>
+                      )}
+                      {isError && entry.error_msg && (
+                        <Text style={[styles.logMsg, { color: Colors.danger }]}>{entry.error_msg}</Text>
+                      )}
+                      {isRunning && (
+                        <Text style={[styles.logMsg, { color: Colors.textMuted }]}>En cours…</Text>
+                      )}
+                    </View>
+                  );
+                })}
               </ScrollView>
             )}
             {confirmClearLogs ? (
               <View style={[styles.modalButtons, { marginTop: 16, flexDirection: 'column', gap: 8 }]}>
                 <Text style={{ color: Colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
-                  Supprimer tous les logs de synchronisation ?
+                  Vider tout l'historique de synchronisation ?
                 </Text>
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={() => setConfirmClearLogs(false)}>
@@ -861,7 +931,7 @@ export default function SettingsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.submitBtn, { backgroundColor: Colors.danger }]}
-                    onPress={() => { clearSyncLogs(); setLogs([]); setConfirmClearLogs(false); }}
+                    onPress={handleClearLogs}
                   >
                     <Text style={styles.submitBtnText}>Confirmer</Text>
                   </TouchableOpacity>
