@@ -782,9 +782,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.text,
   },
-  statsBarValueAccent: {
-    color: Colors.primary,
-  },
   statsBarDivider: {
     width: 1,
     backgroundColor: Colors.cardBorder,
@@ -865,7 +862,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   matchDate: { fontSize: 12, color: Colors.textSecondary },
-  matchMap: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   badgeWin: {
     backgroundColor: Colors.win + '22',

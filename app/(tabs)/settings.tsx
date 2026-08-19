@@ -1114,10 +1114,7 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   submitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
   submitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
-  logsScroll: { maxHeight: 400, marginBottom: 4 },
   logLine: { flexDirection: 'row', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
-  logTime: { fontSize: 11, color: Colors.textMuted },
-  logMsg: { flex: 1, fontSize: 12, color: Colors.textSecondary, flexWrap: 'wrap' },
   formError: { fontSize: 12, color: Colors.danger, marginTop: 6, fontStyle: 'italic' },
   formSuccess: { fontSize: 12, color: Colors.win, marginTop: 6, fontWeight: '600' },
   playerPickRow: {
