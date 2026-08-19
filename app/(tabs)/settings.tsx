@@ -911,7 +911,7 @@ export default function SettingsScreen() {
                         </Text>
                       </View>
                       {isSuccess && (
-                        <Text style={[styles.logMsg, { color: Colors.textSecondary }]}>
+                        <Text style={[styles.logMsg, { color: Colors.win }]}>
                           {entry.matches_saved > 0
                             ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''} / ${entry.matches_new} analysé${entry.matches_new > 1 ? 's' : ''}`
                             : 'Tout est à jour'}
