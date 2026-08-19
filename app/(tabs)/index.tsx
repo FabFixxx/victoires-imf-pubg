@@ -333,8 +333,9 @@ export default function DashboardScreen() {
       const now_ = new Date();
       await setLastSync(now_);
       setLastSyncState(now_);
-    } catch {
-      setSyncMsg('Erreur de synchronisation');
+    } catch (e: any) {
+      const msg = e?.message ?? e?.error_description ?? (typeof e === 'string' ? e : JSON.stringify(e));
+      setSyncMsg(`Erreur : ${msg ?? 'inconnue'}`);
     }
     await loadData();
     syncingRef.current = false;

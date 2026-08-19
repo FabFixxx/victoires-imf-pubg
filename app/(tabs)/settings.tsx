@@ -263,7 +263,8 @@ export default function SettingsScreen() {
         setSyncMsg(`Erreur : ${data?.error ?? 'inconnue'}`);
       }
     } catch (e: any) {
-      setSyncMsg(`Erreur : ${e?.message ?? 'inconnue'}`);
+      const msg = e?.message ?? e?.error_description ?? (typeof e === 'string' ? e : JSON.stringify(e));
+      setSyncMsg(`Erreur : ${msg ?? 'inconnue'}`);
     }
     setSyncing(false);
   };
