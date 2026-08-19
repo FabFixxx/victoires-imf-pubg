@@ -957,7 +957,7 @@ export default function SettingsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowDiagModal(false)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Diagnostic connexion</Text>
+              <Text style={styles.modalTitle}>Diagnostic de connexion</Text>
               <TouchableOpacity onPress={() => setShowDiagModal(false)}>
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
