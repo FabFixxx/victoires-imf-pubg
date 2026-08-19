@@ -70,7 +70,7 @@ async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
   }
 }
 
-async function resolvePlayerIds(supabase: any): Promise<Record<string, string>> {
+async function resolvePlayerIds(supabase: any): Promise<{ ids: Record<string, string>; calledApi: boolean }> {
   const { data: cached } = await supabase
     .from('players')
     .select('username, pubg_account_id')
@@ -78,7 +78,7 @@ async function resolvePlayerIds(supabase: any): Promise<Record<string, string>> 
     .not('pubg_account_id', 'is', null)
 
   if (cached && cached.length === GROUP_PLAYERS.length) {
-    return Object.fromEntries(cached.map((p: any) => [p.username, p.pubg_account_id]))
+    return { ids: Object.fromEntries(cached.map((p: any) => [p.username, p.pubg_account_id])), calledApi: false }
   }
 
   const names = GROUP_PLAYERS.join(',')
@@ -90,7 +90,7 @@ async function resolvePlayerIds(supabase: any): Promise<Record<string, string>> 
     Object.entries(ids).map(([username, pubg_account_id]) => ({ username, pubg_account_id })),
     { onConflict: 'username' }
   )
-  return ids
+  return { ids, calledApi: true }
 }
 
 async function fetchAndCacheMatch(
@@ -259,9 +259,9 @@ Deno.serve(async (req) => {
 
   try {
     log('Récupération des IDs joueurs...')
-    const accountIds = await resolvePlayerIds(supabase)
+    const { ids: accountIds, calledApi: playerApiCalled } = await resolvePlayerIds(supabase)
     log(`${Object.keys(accountIds).length} joueurs trouvés`)
-    await sleep(RATE_LIMIT_DELAY)
+    if (playerApiCalled) await sleep(RATE_LIMIT_DELAY)
 
     const playerIdToName: Record<string, string> = Object.fromEntries(
       Object.entries(accountIds).map(([name, id]) => [id, name])
@@ -271,7 +271,6 @@ Deno.serve(async (req) => {
     const referenceId = accountIds['Jibby37']
     const data = await fetchPUBG(`/players/${referenceId}`)
     const allMatchIds: string[] = data.data.relationships.matches.data.map((m: any) => m.id)
-    await sleep(RATE_LIMIT_DELAY)
 
     const { data: cachedRows } = await supabase
       .from('match_cache')
@@ -297,6 +296,7 @@ Deno.serve(async (req) => {
     if (newIds.length === 0) {
       log('Tout est à jour !')
     } else {
+      await sleep(RATE_LIMIT_DELAY)
       log(`${newIds.length} nouveau${newIds.length > 1 ? 'x' : ''} match${newIds.length > 1 ? 's' : ''} à synchroniser...`)
       let consecutiveErrors = 0
 
