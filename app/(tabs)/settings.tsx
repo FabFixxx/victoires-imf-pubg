@@ -576,7 +576,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {currentWinsSeason?.manualWinsDetail.length === 0 ? (
                 <Text style={styles.emptyWins}>Aucune victoire enregistrée</Text>
               ) : (
