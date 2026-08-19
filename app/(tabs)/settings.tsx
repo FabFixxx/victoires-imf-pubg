@@ -62,6 +62,7 @@ export default function SettingsScreen() {
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
+  const [syncOk, setSyncOk] = useState<boolean | null>(null);
   const [imfSeasons, setImfSeasons] = useState<ImfSeason[]>([]);
 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>({ reminderHour: 17, gameDayHour: 18 });
@@ -256,15 +257,18 @@ export default function SettingsScreen() {
       if (data?.status === 'success') {
         const n = data.matchesSaved ?? 0;
         setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
+        setSyncOk(true);
         const now = new Date();
         await setLastSync(now);
         setLastSyncState(now);
       } else {
         setSyncMsg(`Erreur : ${data?.error ?? 'inconnue'}`);
+        setSyncOk(false);
       }
     } catch (e: any) {
       const msg = e?.message ?? e?.error_description ?? (typeof e === 'string' ? e : JSON.stringify(e));
       setSyncMsg(`Erreur : ${msg ?? 'inconnue'}`);
+      setSyncOk(false);
     }
     setSyncing(false);
   };
@@ -469,8 +473,11 @@ export default function SettingsScreen() {
               )}
             </TouchableOpacity>
           </View>
-          {syncing && syncMsg ? <Text style={styles.syncMsg}>{syncMsg}</Text> : null}
-          {!syncing && syncMsg ? <Text style={[styles.syncMsg, { color: Colors.danger }]}>{syncMsg}</Text> : null}
+          {syncMsg ? (
+            <Text style={[styles.syncMsg, !syncing && syncOk === false && { color: Colors.danger }, !syncing && syncOk === true && { color: Colors.win }]}>
+              {syncMsg}
+            </Text>
+          ) : null}
           <TouchableOpacity style={styles.diagBtn} onPress={handleDiagnostic}>
             <Ionicons name="bug-outline" size={14} color={Colors.textMuted} />
             <Text style={styles.diagBtnText}>Tester la connexion</Text>
