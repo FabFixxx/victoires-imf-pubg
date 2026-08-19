@@ -900,29 +900,18 @@ export default function SettingsScreen() {
                   const duration = entry.finished_at
                     ? Math.max(1, Math.round((new Date(entry.finished_at).getTime() - new Date(entry.started_at).getTime()) / 1000))
                     : null;
+                  const statusText = isSuccess
+                    ? (entry.matches_saved > 0 ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''}` : 'Tout est à jour')
+                    : isError ? (entry.error_msg ?? 'Erreur inconnue')
+                    : 'En cours…';
                   return (
-                    <View key={entry.id} style={styles.logLine}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                        <Ionicons name={statusIcon as any} size={14} color={statusColor} />
-                        <Text style={[styles.logTime, { color: statusColor, fontWeight: '600' }]}>{date}</Text>
-                        <Text style={[styles.logTime, { color: Colors.textMuted }]}>
-                          · {entry.triggered_by === 'cron' ? 'auto' : 'manuel'}
-                          {duration !== null ? ` · ${duration}s` : ''}
-                          {isSuccess ? ' · ' : ''}
+                    <View key={entry.id} style={[styles.logLine, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                      <Ionicons name={statusIcon as any} size={14} color={statusColor} />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.text }}>{statusText}</Text>
+                        <Text style={{ fontSize: 11, color: Colors.textMuted }}>
+                          {date} · {entry.triggered_by === 'cron' ? 'auto' : 'manuel'}{duration !== null ? ` · ${duration}s` : ''}
                         </Text>
-                        {isSuccess && (
-                          <Text style={[styles.logTime, { color: Colors.text }]}>
-                            {entry.matches_saved > 0
-                              ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''}`
-                              : 'Tout est à jour'}
-                          </Text>
-                        )}
-                        {isError && entry.error_msg && (
-                          <Text style={[styles.logTime, { color: Colors.danger }]}>· {entry.error_msg}</Text>
-                        )}
-                        {isRunning && (
-                          <Text style={[styles.logTime, { color: Colors.textMuted }]}>· En cours…</Text>
-                        )}
                       </View>
                     </View>
                   );
