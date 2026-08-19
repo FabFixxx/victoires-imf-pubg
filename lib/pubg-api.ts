@@ -281,14 +281,20 @@ async function fetchAndCacheMatch(matchId: string, accountIds: Record<string, st
       }
     }
 
-    const { error: insertErr } = await supabase.from('match_cache').insert({
+    // upsert plutôt qu'insert : un même match est souvent partagé par plusieurs joueurs du
+    // groupe, donc cette fonction peut être appelée presque simultanément pour le même
+    // matchId (une fois par joueur) — les deux appels peuvent voir le match "pas encore en
+    // cache" avant que l'un des deux ait fini d'insérer, et le second se ferait rejeter par
+    // la contrainte unique. ignoreDuplicates évite ce faux-positif sans changer le résultat
+    // (la donnée est de toute façon identique, peu importe lequel des deux appels "gagne").
+    const { error: insertErr } = await supabase.from('match_cache').upsert({
       match_id: matchId,
       match_date: matchData.matchDate,
       game_mode: gameMode,
       map_name: mapName || null,
       finisher,
       data: matchData,
-    });
+    }, { onConflict: 'match_id', ignoreDuplicates: true });
     if (insertErr) onProgress?.(`  ↳ cache insert: ${insertErr.message}`);
 
     // N'enregistrer les stats que si les 4 joueurs ont joué ensemble
