@@ -700,6 +700,7 @@ const styles = StyleSheet.create({
   monthNavLabel: {
     fontSize: 11, fontWeight: '800', letterSpacing: 2.5,
     color: Colors.primary, textTransform: 'uppercase',
+    width: 160, textAlign: 'center',
   },
   safe: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1, paddingHorizontal: 16 },
