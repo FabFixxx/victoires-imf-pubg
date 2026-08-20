@@ -58,6 +58,5 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## 🐛 Correctifs
-            - Scroll bloqué dans 4 fenêtres : victoires manuelles, historique des versions, notifications, logs de synchro
-            - Les syncs automatiques (cron 3h) apparaissent maintenant correctement comme "Auto" dans les logs (et non "Manuel")
+            ## 🆕 Nouveauté
+            - Navigation par mois sur la page d'accueil : flèches ‹ › autour du titre du mois pour consulter les statistiques des mois précédents
