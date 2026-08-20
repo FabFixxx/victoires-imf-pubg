@@ -877,7 +877,7 @@ export default function SettingsScreen() {
                       <View style={{ flex: 1, gap: 2 }}>
                         <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.text }}>{statusText}</Text>
                         <Text style={{ fontSize: 11, color: Colors.textMuted }}>
-                          {date} · {entry.triggered_by === 'cron' ? 'auto' : 'manuel'}{duration !== null ? ` · ${duration}s` : ''}
+                          {date} · {entry.triggered_by === 'cron' ? 'Auto' : 'Manuel'}{duration !== null ? ` · ${duration}s` : ''}
                         </Text>
                       </View>
                     </View>
