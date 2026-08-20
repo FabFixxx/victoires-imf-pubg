@@ -619,8 +619,9 @@ export default function DashboardScreen() {
             ) : notifications.length === 0 ? (
               <Text style={styles.notifEmpty}>Aucune notification pour le moment</Text>
             ) : (
+              <View style={{ flex: 1, minHeight: 0 }}>
               <ScrollView
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator
                 refreshControl={
                   <RefreshControl refreshing={refreshingNotifs} onRefresh={handleRefreshNotifications} tintColor={Colors.primary} />
                 }
@@ -653,6 +654,7 @@ export default function DashboardScreen() {
                   </View>
                 ))}
               </ScrollView>
+              </View>
             )}
           </Pressable>
         </Pressable>
@@ -931,7 +933,7 @@ const styles = StyleSheet.create({
   notifModalContent: {
     backgroundColor: Colors.card,
     borderTopLeftRadius: 16, borderTopRightRadius: 16,
-    padding: 20, paddingBottom: 36, maxHeight: '80%', width: '100%',
+    padding: 20, paddingBottom: 36, maxHeight: '80%', width: '100%', flex: 1,
   },
   notifModalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
