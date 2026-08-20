@@ -845,7 +845,7 @@ export default function SettingsScreen() {
       {/* ── Modal logs ── */}
       <Modal visible={showLogsModal} transparent animationType="slide" onRequestClose={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
         <Pressable style={styles.modalOverlay} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-          <Pressable style={[styles.modalContent, { maxHeight: '85%' }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des synchronisations</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
@@ -857,7 +857,8 @@ export default function SettingsScreen() {
             ) : syncLogs.length === 0 ? (
               <Text style={styles.emptyWins}>Aucune synchronisation dans l'historique</Text>
             ) : (
-              <ScrollView showsVerticalScrollIndicator style={{ maxHeight: 400 }}>
+              <View style={{ flex: 1, minHeight: 0 }}>
+              <ScrollView showsVerticalScrollIndicator>
                 {syncLogs.map((entry) => {
                   const isSuccess = entry.status === 'success';
                   const isError = entry.status === 'error';
@@ -888,6 +889,7 @@ export default function SettingsScreen() {
                   );
                 })}
               </ScrollView>
+              </View>
             )}
             {confirmClearLogs ? (
               <View style={[styles.modalButtons, { marginTop: 16, flexDirection: 'column', gap: 8 }]}>
