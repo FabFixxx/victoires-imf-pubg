@@ -162,6 +162,9 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
 
 export default function DashboardScreen() {
   const now = new Date();
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [monthly, setMonthly] = useState<MonthlyStats | null>(null);
   const [imfSeason, setImfSeason] = useState<ImfSeason | null>(null);
   const [imfStats, setImfStats] = useState<MonthlyStats | null>(null);
@@ -251,7 +254,7 @@ export default function DashboardScreen() {
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
     const [m, lm, lw, ls, imf, fs, maps] = await Promise.all([
-      getMonthlyStats(now.getFullYear(), now.getMonth() + 1),
+      getMonthlyStats(viewYear, viewMonth + 1),
       getLastMatch(),
       getLastWin(),
       getLastSync(),
@@ -319,6 +322,21 @@ export default function DashboardScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const isCurrentMonth = viewMonth === now.getMonth() && viewYear === now.getFullYear();
+
+  const navigateMonth = async (dir: -1 | 1) => {
+    let m = viewMonth + dir, y = viewYear;
+    if (m < 0) { m = 11; y--; }
+    if (m > 11) { m = 0; y++; }
+    setViewMonth(m);
+    setViewYear(y);
+    setMonthly(null);
+    setLoadingMonthly(true);
+    const stats = await getMonthlyStats(y, m + 1);
+    setMonthly(stats);
+    setLoadingMonthly(false);
+  };
 
   const handleSync = async () => {
     if (syncingRef.current) return;
@@ -483,11 +501,23 @@ export default function DashboardScreen() {
           </>
         )}
 
-        {/* ── Mois en cours ── */}
-        <SectionHeader title={`${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`} />
+        {/* ── Navigation mensuelle ── */}
+        <View style={styles.monthNav}>
+          <View style={styles.monthNavLine} />
+          <TouchableOpacity onPress={() => navigateMonth(-1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={14} color={Colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.monthNavLabel}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
+          <TouchableOpacity onPress={() => navigateMonth(1)} disabled={isCurrentMonth} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-forward" size={14} color={isCurrentMonth ? 'transparent' : Colors.primary} />
+          </TouchableOpacity>
+          <View style={styles.monthNavLine} />
+        </View>
 
         <View style={styles.row}>
-          <StatCard label="Victoires du groupe" value={monthly?.totalWins ?? '—'} accent large />
+          {loadingMonthly
+            ? <ActivityIndicator color={Colors.primary} style={{ marginVertical: 12 }} />
+            : <StatCard label="Victoires du groupe" value={monthly?.totalWins ?? '—'} accent large />}
         </View>
 
         <View style={styles.statsBar}>
@@ -665,6 +695,12 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  monthNavLine: { flex: 1, height: 1, backgroundColor: Colors.cardBorder },
+  monthNavLabel: {
+    fontSize: 11, fontWeight: '800', letterSpacing: 2.5,
+    color: Colors.primary, textTransform: 'uppercase',
+  },
   safe: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1, paddingHorizontal: 16 },
   header: {
