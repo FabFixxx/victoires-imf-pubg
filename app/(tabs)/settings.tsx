@@ -551,7 +551,7 @@ export default function SettingsScreen() {
       {/* ── Modal changelog ── */}
       <Modal visible={showChangelogModal} transparent animationType="slide" onRequestClose={() => setShowChangelogModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowChangelogModal(false)}>
-          <Pressable style={[styles.modalContent, { maxHeight: '80%' }]} onPress={() => {}}>
+          <Pressable style={[styles.modalContent, { maxHeight: '80%', flex: 1 }]} onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des versions</Text>
               <TouchableOpacity onPress={() => setShowChangelogModal(false)}>
@@ -563,17 +563,19 @@ export default function SettingsScreen() {
             ) : releases.length === 0 ? (
               <Text style={styles.emptyWins}>Aucune version disponible</Text>
             ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {releases.map((r, i) => (
-                  <View key={r.version} style={[styles.changelogItem, i < releases.length - 1 && styles.changelogBorder]}>
-                    <View style={styles.changelogHeader}>
-                      <Text style={styles.changelogVersion}>{r.version}</Text>
-                      {r.date ? <Text style={styles.changelogDate}>{r.date}</Text> : null}
+              <View style={{ flex: 1, minHeight: 0 }}>
+                <ScrollView showsVerticalScrollIndicator>
+                  {releases.map((r, i) => (
+                    <View key={r.version} style={[styles.changelogItem, i < releases.length - 1 && styles.changelogBorder]}>
+                      <View style={styles.changelogHeader}>
+                        <Text style={styles.changelogVersion}>{r.version}</Text>
+                        {r.date ? <Text style={styles.changelogDate}>{r.date}</Text> : null}
+                      </View>
+                      {r.notes ? <Text style={styles.changelogNotes}>{r.notes}</Text> : null}
                     </View>
-                    {r.notes ? <Text style={styles.changelogNotes}>{r.notes}</Text> : null}
-                  </View>
-                ))}
-              </ScrollView>
+                  ))}
+                </ScrollView>
+              </View>
             )}
           </Pressable>
         </Pressable>
