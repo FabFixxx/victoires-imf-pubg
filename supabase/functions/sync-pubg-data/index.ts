@@ -228,7 +228,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-  const triggeredBy = req.method === 'POST' ? 'manual' : 'cron'
+  const body = await req.json().catch(() => ({}))
+  const triggeredBy = body?.triggered_by === 'cron' ? 'cron' : 'manual'
 
   // Lock : skip si une sync tourne déjà (démarrée il y a moins de LOCK_TIMEOUT_MINUTES)
   const { data: running } = await supabase
