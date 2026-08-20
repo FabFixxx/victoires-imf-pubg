@@ -590,7 +590,8 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            <View style={{ flex: 1, minHeight: 0 }}>
+            <ScrollView showsVerticalScrollIndicator>
               {currentWinsSeason?.manualWinsDetail.length === 0 ? (
                 <Text style={styles.emptyWins}>Aucune victoire enregistrée</Text>
               ) : (
@@ -630,6 +631,7 @@ export default function SettingsScreen() {
                 </View>
               )}
             </ScrollView>
+            </View>
 
             <TouchableOpacity style={styles.addWinBtn} onPress={handleOpenAddWin}>
               <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
