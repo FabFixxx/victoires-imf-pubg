@@ -58,6 +58,12 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## 🐛 Correctifs
-            - Victoires manuelles invisibles sur l'APK : la liste se repliait à hauteur zéro sur Android (les données étaient bien là, juste cachées)
-            - Sélecteur de joueur : chaque joueur affiche maintenant son avatar dans sa propre couleur (jaune, orange, bleu, vert)
+            ## 🔄 Synchronisation serveur
+            - La sync PUBG tourne désormais côté serveur chaque nuit à 3h — la clé API n'est plus dans l'app
+            - Historique des synchronisations accessible depuis Réglages (date, durée, statut Auto/Manuel)
+            - Sync manuelle toujours disponible via les boutons de l'app
+            - Temps de sync réduit de ~13s à ~2s quand tout est déjà à jour
+
+            ## 🧹 Nettoyage
+            - Suppression de "Tester la connexion" et de la sync automatique au démarrage
+            - Suppression du code PUBG API côté client (devenu inutile)
