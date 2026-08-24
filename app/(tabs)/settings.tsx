@@ -558,7 +558,7 @@ export default function SettingsScreen() {
       {/* ── Modal changelog ── */}
       <Modal visible={showChangelogModal} transparent animationType="slide" onRequestClose={() => setShowChangelogModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowChangelogModal(false)}>
-          <Pressable style={[styles.modalContent, { maxHeight: '80%', flex: 1 }]} onPress={() => {}}>
+          <View style={[styles.modalContent, { maxHeight: '80%', flex: 1 }]} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des versions</Text>
               <TouchableOpacity onPress={() => setShowChangelogModal(false)}>
@@ -584,14 +584,14 @@ export default function SettingsScreen() {
                 </ScrollView>
               </View>
             )}
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
-          <Pressable style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onPress={() => {}}>
+          <View style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -675,7 +675,7 @@ export default function SettingsScreen() {
                 La fin de la saison précédente sera ajustée automatiquement.
               </Text>
             </View>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
@@ -852,7 +852,7 @@ export default function SettingsScreen() {
       {/* ── Modal logs ── */}
       <Modal visible={showLogsModal} transparent animationType="slide" onRequestClose={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
         <Pressable style={styles.modalOverlay} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-          <Pressable style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onPress={() => {}}>
+          <View style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des synchronisations</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
@@ -929,7 +929,7 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               </View>
             )}
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
