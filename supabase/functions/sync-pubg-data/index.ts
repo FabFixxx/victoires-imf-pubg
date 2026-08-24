@@ -167,7 +167,14 @@ async function fetchAndCacheMatch(
       return true
     }
 
-    if (!gameMode.includes('fpp')) return null
+    if (!gameMode.includes('fpp')) {
+      // Marque le match comme traité (map_name non-null) pour ne pas le refetch à chaque run
+      await supabase.from('match_cache').upsert(
+        { match_id: matchId, match_date: raw.data.attributes.createdAt, game_mode: gameMode, map_name: (PUBG_MAP_NAMES[mapName] ?? mapName) || 'N/A' },
+        { onConflict: 'match_id', ignoreDuplicates: true }
+      )
+      return null
+    }
 
     const participants = (raw.included as any[]).filter((i: any) => i.type === 'participant')
     const players = participants.map((p: any) => ({
@@ -231,25 +238,36 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}))
   const triggeredBy = body?.triggered_by === 'cron' ? 'cron' : 'manual'
 
-  // Lock : skip si une sync tourne déjà (démarrée il y a moins de LOCK_TIMEOUT_MINUTES)
+  // Créer l'entrée de log (status=running) AVANT de vérifier le verrou : réserve notre
+  // place immédiatement pour fermer la fenêtre de course entre deux invocations quasi
+  // simultanées (check-then-insert laisserait les deux passer le check avant que l'une
+  // n'insère sa ligne).
+  const { data: logEntry } = await supabase
+    .from('sync_log')
+    .insert({ status: 'running', triggered_by: triggeredBy })
+    .select('id, started_at')
+    .single()
+  const logId = logEntry?.id
+
+  // Lock : skip si une AUTRE sync tourne déjà et a démarré avant nous (il y a moins de
+  // LOCK_TIMEOUT_MINUTES) — celle qui a démarré la première continue, l'autre s'annule.
   const { data: running } = await supabase
     .from('sync_log')
     .select('id, started_at')
     .eq('status', 'running')
+    .neq('id', logId)
     .gte('started_at', new Date(Date.now() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString())
+    .lt('started_at', logEntry?.started_at ?? new Date().toISOString())
     .limit(1)
 
   if (running && running.length > 0) {
+    await supabase.from('sync_log').update({
+      status: 'error',
+      finished_at: new Date().toISOString(),
+      error_msg: 'skipped: another sync already running',
+    }).eq('id', logId)
     return new Response(JSON.stringify({ skipped: 'sync already running', since: running[0].started_at }), { status: 200, headers: CORS })
   }
-
-  // Créer l'entrée de log (status=running)
-  const { data: logEntry } = await supabase
-    .from('sync_log')
-    .insert({ status: 'running', triggered_by: triggeredBy })
-    .select('id')
-    .single()
-  const logId = logEntry?.id
 
   const logs: string[] = []
   const log = (msg: string) => { logs.push(msg); console.log(msg) }

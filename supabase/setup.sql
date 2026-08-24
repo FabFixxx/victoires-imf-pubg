@@ -120,10 +120,9 @@ ALTER TABLE imf_season_wins DISABLE ROW LEVEL SECURITY;
 -- Web push subscriptions (iOS PWA)
 CREATE TABLE IF NOT EXISTS web_push_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  player_username TEXT NOT NULL,
+  username TEXT NOT NULL,
   endpoint TEXT NOT NULL UNIQUE,
-  p256dh TEXT NOT NULL,
-  auth TEXT NOT NULL,
+  subscription JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE web_push_subscriptions DISABLE ROW LEVEL SECURITY;
@@ -201,16 +200,17 @@ ALTER TABLE session_responses DISABLE ROW LEVEL SECURITY;
 ALTER TABLE player_season_stats DISABLE ROW LEVEL SECURITY;
 
 -- notification_history : une ligne par joueur par notification (permet suppression individuelle)
--- Migration depuis l'ancien schéma partagé :
---   DROP TABLE IF EXISTS notification_reads;
---   DROP TABLE IF EXISTS notification_history;
---   CREATE TABLE notification_history (
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
---     player_username TEXT NOT NULL,
---     title TEXT NOT NULL,
---     body TEXT,
---     type TEXT,
---     sent_at TIMESTAMPTZ DEFAULT NOW(),
---     is_read BOOLEAN DEFAULT FALSE
---   );
---   ALTER TABLE notification_history DISABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS notification_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_username TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  type TEXT,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  is_read BOOLEAN DEFAULT FALSE
+);
+-- RLS activé (pas de bypass global comme les autres tables) + policy permissive :
+-- l'app filtre déjà côté client par player_username, la policy autorise juste l'accès anon.
+ALTER TABLE notification_history ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow anon access" ON notification_history
+  FOR ALL USING (true) WITH CHECK (true);

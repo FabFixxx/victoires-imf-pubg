@@ -85,7 +85,7 @@ export async function getImfSeasonHighlights(
   endDate: string,
   manualWinsCount?: number
 ): Promise<SeasonHighlights> {
-  const start = new Date(startDate).toISOString();
+  const start = new Date(startDate + 'T00:00:00').toISOString();
   const end = new Date(endDate + 'T23:59:59').toISOString();
   const stats = await getStatsBetween(start, end);
   if (manualWinsCount !== undefined) {
@@ -107,7 +107,7 @@ export async function getFinisherStats(
     .select('finisher, match_date')
     .not('finisher', 'is', null);
 
-  if (startDate) query = query.gte('match_date', new Date(startDate).toISOString());
+  if (startDate) query = query.gte('match_date', new Date(startDate + 'T00:00:00').toISOString());
   if (endDate) query = query.lte('match_date', new Date(endDate + 'T23:59:59').toISOString());
 
   const { data } = await query;
@@ -155,7 +155,7 @@ export async function getTopMaps(
   manualWins?: { mapName: string | null }[],
   limit = 5
 ): Promise<{ mapName: string; wins: number }[]> {
-  const start = new Date(startDate).toISOString();
+  const start = new Date(startDate + 'T00:00:00').toISOString();
   const end = new Date(endDate + 'T23:59:59').toISOString();
 
   const counts: Record<string, number> = {};

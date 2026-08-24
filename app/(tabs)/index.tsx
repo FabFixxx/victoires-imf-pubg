@@ -164,6 +164,12 @@ export default function DashboardScreen() {
   const now = new Date();
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
+  const viewMonthRef = useRef(viewMonth);
+  const viewYearRef = useRef(viewYear);
+  useEffect(() => {
+    viewMonthRef.current = viewMonth;
+    viewYearRef.current = viewYear;
+  }, [viewMonth, viewYear]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [monthly, setMonthly] = useState<MonthlyStats | null>(null);
   const [imfSeason, setImfSeason] = useState<ImfSeason | null>(null);
@@ -213,14 +219,17 @@ export default function DashboardScreen() {
     openingNotifsRef.current = true;
     setShowNotifModal(true);
     setLoadingNotifs(true);
-    // Le statut lu/non-lu (table notification_reads, par joueur) n'est écrit qu'à la
-    // FERMETURE (voir handleCloseNotifications) — pas ici à l'ouverture. Tant que la page
-    // est affichée, le badge doit rester visible pour montrer ce qui vient d'arriver ; il
-    // ne s'efface qu'une fois qu'on quitte la page.
-    const items = await getRecentNotifications(currentPlayer);
-    setNotifications(items);
-    setLoadingNotifs(false);
-    openingNotifsRef.current = false;
+    try {
+      // Le statut lu/non-lu (colonne is_read sur notification_history, par joueur) n'est
+      // écrit qu'à la FERMETURE (voir handleCloseNotifications) — pas ici à l'ouverture.
+      // Tant que la page est affichée, le badge doit rester visible pour montrer ce qui
+      // vient d'arriver ; il ne s'efface qu'une fois qu'on quitte la page.
+      const items = await getRecentNotifications(currentPlayer);
+      setNotifications(items);
+    } finally {
+      setLoadingNotifs(false);
+      openingNotifsRef.current = false;
+    }
   }, [currentPlayer]);
 
   const handleCloseNotifications = useCallback(() => {
@@ -262,7 +271,7 @@ export default function DashboardScreen() {
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
     const [m, lm, lw, ls, imf, fs, maps] = await Promise.all([
-      getMonthlyStats(viewYear, viewMonth + 1),
+      getMonthlyStats(viewYearRef.current, viewMonthRef.current + 1),
       getLastMatch(),
       getLastWin(),
       getLastSync(),
@@ -363,10 +372,13 @@ export default function DashboardScreen() {
       const msg = e?.message ?? e?.error_description ?? (typeof e === 'string' ? e : JSON.stringify(e));
       setSyncMsg(`Erreur : ${msg ?? 'inconnue'}`);
     }
-    await loadData();
-    syncingRef.current = false;
-    setSyncing(false);
-    setTimeout(() => setSyncMsg(''), 3000);
+    try {
+      await loadData();
+    } finally {
+      syncingRef.current = false;
+      setSyncing(false);
+      setTimeout(() => setSyncMsg(''), 3000);
+    }
   };
 
   const formatSyncTime = (date: Date | null) => {
@@ -378,7 +390,7 @@ export default function DashboardScreen() {
     return `Il y a ${Math.floor(diff / 1440)}j`;
   };
 
-  const isEmpty = !monthly?.totalWins && !imfStats?.totalWins;
+  const isEmpty = !lastMatch && recentTeamMatches.length === 0;
 
   return (
     <SwipeableScreen>

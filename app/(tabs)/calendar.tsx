@@ -603,7 +603,7 @@ export default function CalendarScreen() {
       <Modal visible={showNoAvailConfirm} transparent animationType="fade" onRequestClose={() => setShowNoAvailConfirm(false)}>
         <Pressable style={styles.confirmOverlay} onPress={() => setShowNoAvailConfirm(false)}>
           <Pressable style={styles.confirmBox} onPress={() => {}}>
-            <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
+            <Text style={styles.confirmTitle}>Aucune dispo la semaine prochaine</Text>
             <Text style={styles.confirmText}>
               {`Tu confirmes ne pas être disponible du ${new Date(nextWeekMonday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au ${new Date(nextWeekSunday + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ?`}
             </Text>
