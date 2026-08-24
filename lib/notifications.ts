@@ -87,65 +87,51 @@ export interface NotificationHistoryItem {
   isRead: boolean;
 }
 
-// Lecture par joueur (table notification_reads), pas un simple repère temporel local :
-// survit à une réinstallation de l'app et se synchronise si un joueur utilise plusieurs
-// appareils (PWA + APK par exemple), contrairement à un timestamp stocké en AsyncStorage.
 export async function getRecentNotifications(username: string, limit = 30): Promise<NotificationHistoryItem[]> {
   const { data: notifs, error } = await supabase
     .from('notification_history')
-    .select('id, title, body, type, sent_at')
+    .select('id, title, body, type, sent_at, is_read')
+    .eq('player_username', username)
     .order('sent_at', { ascending: false })
     .limit(limit);
   if (error) {
     console.error('[getRecentNotifications] failed:', error.message);
     return [];
   }
-  if (!notifs || notifs.length === 0) return [];
-
-  const ids = notifs.map((n: any) => n.id);
-  const { data: reads, error: readsError } = await supabase
-    .from('notification_reads')
-    .select('notification_id')
-    .eq('player_username', username)
-    .in('notification_id', ids);
-  if (readsError) console.error('[getRecentNotifications] reads lookup failed:', readsError.message);
-  const readIds = new Set((reads ?? []).map((r: any) => r.notification_id));
-
-  return notifs.map((n: any) => ({ ...n, isRead: readIds.has(n.id) }));
+  return (notifs ?? []).map((n: any) => ({ ...n, isRead: n.is_read }));
 }
 
-// Comptage exact via COUNT en base plutôt que fetch+filtre d'une page limitée : reste correct
-// quel que soit le volume de notifications, sans plafond arbitraire ni boucle de pagination.
 export async function getUnreadNotificationCount(username: string): Promise<number> {
-  const { count: total, error: totalError } = await supabase
+  const { count, error } = await supabase
     .from('notification_history')
-    .select('id', { count: 'exact', head: true });
-  if (totalError) {
-    console.error('[getUnreadNotificationCount] total count failed:', totalError.message);
-    return 0;
-  }
-
-  const { count: readCount, error: readError } = await supabase
-    .from('notification_reads')
     .select('id', { count: 'exact', head: true })
-    .eq('player_username', username);
-  if (readError) {
-    console.error('[getUnreadNotificationCount] read count failed:', readError.message);
+    .eq('player_username', username)
+    .eq('is_read', false);
+  if (error) {
+    console.error('[getUnreadNotificationCount] failed:', error.message);
     return 0;
   }
-
-  return Math.max(0, (total ?? 0) - (readCount ?? 0));
+  return count ?? 0;
 }
 
 export async function markNotificationsAsRead(username: string, notificationIds: string[]): Promise<void> {
   if (notificationIds.length > 0) {
-    const rows = notificationIds.map((id) => ({ player_username: username, notification_id: id }));
     const { error } = await supabase
-      .from('notification_reads')
-      .upsert(rows, { onConflict: 'player_username,notification_id', ignoreDuplicates: true });
+      .from('notification_history')
+      .update({ is_read: true })
+      .eq('player_username', username)
+      .in('id', notificationIds);
     if (error) console.error('[markNotificationsAsRead] failed:', error.message);
   }
   await updateAppBadge(0);
+}
+
+export async function dismissAllNotifications(username: string): Promise<void> {
+  const { error } = await supabase
+    .from('notification_history')
+    .delete()
+    .eq('player_username', username);
+  if (error) console.error('[dismissAllNotifications] failed:', error.message);
 }
 
 export async function updateAppBadge(count: number): Promise<void> {

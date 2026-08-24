@@ -199,3 +199,18 @@ ALTER TABLE player_match_stats DISABLE ROW LEVEL SECURITY;
 ALTER TABLE session_proposals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE session_responses DISABLE ROW LEVEL SECURITY;
 ALTER TABLE player_season_stats DISABLE ROW LEVEL SECURITY;
+
+-- notification_history : une ligne par joueur par notification (permet suppression individuelle)
+-- Migration depuis l'ancien schéma partagé :
+--   DROP TABLE IF EXISTS notification_reads;
+--   DROP TABLE IF EXISTS notification_history;
+--   CREATE TABLE notification_history (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     player_username TEXT NOT NULL,
+--     title TEXT NOT NULL,
+--     body TEXT,
+--     type TEXT,
+--     sent_at TIMESTAMPTZ DEFAULT NOW(),
+--     is_read BOOLEAN DEFAULT FALSE
+--   );
+--   ALTER TABLE notification_history DISABLE ROW LEVEL SECURITY;

@@ -78,8 +78,10 @@ async function sendPushToAll(supabase: any, players: any[], title: string, body:
   const data = { type, screen: 'notifications' }
   const payload = { title, body }
 
-  // Historique consulté depuis l'app (page notifications + badge de non-lu)
-  await supabase.from('notification_history').insert({ title, body, type })
+  // Historique consulté depuis l'app (page notifications + badge de non-lu) — une ligne par joueur
+  await supabase.from('notification_history').insert(
+    players.map((p: any) => ({ player_username: p.username, title, body, type }))
+  )
 
   // Expo push (APK Android)
   const expoTokens = players.map(p => p.expo_push_token).filter(Boolean)

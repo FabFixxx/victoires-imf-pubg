@@ -34,7 +34,7 @@ import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
 import { supabase } from '../../lib/supabase';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
-import { getRecentNotifications, markNotificationsAsRead, getUnreadNotificationCount, NotificationHistoryItem } from '../../lib/notifications';
+import { getRecentNotifications, markNotificationsAsRead, getUnreadNotificationCount, dismissAllNotifications, NotificationHistoryItem } from '../../lib/notifications';
 
 interface TeamMatch {
   match_id: string;
@@ -231,10 +231,10 @@ export default function DashboardScreen() {
   }, [currentPlayer, notifications]);
 
   const handleClearNotifications = useCallback(async () => {
-    await supabase.from('notification_history').delete().neq('id', 0);
+    if (currentPlayer) await dismissAllNotifications(currentPlayer);
     setNotifications([]);
     setConfirmClearNotifs(false);
-  }, []);
+  }, [currentPlayer]);
 
   const handleRefreshNotifications = useCallback(async () => {
     if (!currentPlayer) return;
