@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       finished_at: new Date().toISOString(),
       error_msg: 'another sync already running',
     }).eq('id', logId)
-    return new Response(JSON.stringify({ skipped: 'sync already running', since: running[0].started_at }), { status: 200, headers: CORS })
+    return new Response(JSON.stringify({ status: 'skipped', skipped: 'sync already running', since: running[0].started_at }), { status: 200, headers: CORS })
   }
 
   const logs: string[] = []

@@ -234,17 +234,23 @@ export default function DashboardScreen() {
   }, [currentPlayer, notifications]);
 
   const handleClearNotifications = useCallback(async () => {
-    if (currentPlayer) await dismissAllNotifications(currentPlayer);
-    setNotifications([]);
-    setConfirmClearNotifs(false);
+    try {
+      if (currentPlayer) await dismissAllNotifications(currentPlayer);
+      setNotifications([]);
+    } finally {
+      setConfirmClearNotifs(false);
+    }
   }, [currentPlayer]);
 
   const handleRefreshNotifications = useCallback(async () => {
     if (!currentPlayer) return;
     setRefreshingNotifs(true);
-    const items = await getRecentNotifications(currentPlayer);
-    setNotifications(items);
-    setRefreshingNotifs(false);
+    try {
+      const items = await getRecentNotifications(currentPlayer);
+      setNotifications(items);
+    } finally {
+      setRefreshingNotifs(false);
+    }
   }, [currentPlayer]);
 
   // Ouverture directe sur cette page au tap d'une notif (voir app/_layout.tsx). Le guard par
@@ -358,11 +364,15 @@ export default function DashboardScreen() {
     try {
       const { data, error } = await supabase.functions.invoke('sync-pubg-data', { method: 'POST', body: {} });
       if (error) throw error;
-      const n = data?.matchesSaved ?? 0;
-      setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
-      const now_ = new Date();
-      await setLastSync(now_);
-      setLastSyncState(now_);
+      if (data?.status === 'skipped') {
+        setSyncMsg('Une autre synchro est déjà en cours, réessaie dans un instant');
+      } else {
+        const n = data?.matchesSaved ?? 0;
+        setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
+        const now_ = new Date();
+        await setLastSync(now_);
+        setLastSyncState(now_);
+      }
     } catch (e: any) {
       const msg = e?.message ?? e?.error_description ?? (typeof e === 'string' ? e : JSON.stringify(e));
       setSyncMsg(`Erreur : ${msg ?? 'inconnue'}`);

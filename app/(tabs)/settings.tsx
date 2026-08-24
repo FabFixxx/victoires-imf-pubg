@@ -261,6 +261,9 @@ export default function SettingsScreen() {
         const now = new Date();
         await setLastSync(now);
         setLastSyncState(now);
+      } else if (data?.status === 'skipped') {
+        setSyncMsg('Une autre synchro est déjà en cours, réessaie dans un instant');
+        setSyncOk(true);
       } else {
         setSyncMsg(`Erreur : ${data?.error ?? 'inconnue'}`);
         setSyncOk(false);

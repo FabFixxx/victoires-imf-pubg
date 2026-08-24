@@ -85,8 +85,10 @@ export async function getImfSeasonHighlights(
   endDate: string,
   manualWinsCount?: number
 ): Promise<SeasonHighlights> {
-  const start = new Date(startDate + 'T00:00:00').toISOString();
-  const end = new Date(endDate + 'T23:59:59').toISOString();
+  // Ancrage UTC explicite (comme victoires.tsx/stats.tsx) : sinon la frontière de saison
+  // dépend du fuseau de l'appareil qui déclenche la requête (client mobile vs serveur).
+  const start = new Date(startDate + 'T00:00:00Z').toISOString();
+  const end = new Date(endDate + 'T23:59:59Z').toISOString();
   const stats = await getStatsBetween(start, end);
   if (manualWinsCount !== undefined) {
     return { ...stats, totalWins: stats.totalWins + manualWinsCount };
@@ -107,8 +109,8 @@ export async function getFinisherStats(
     .select('finisher, match_date')
     .not('finisher', 'is', null);
 
-  if (startDate) query = query.gte('match_date', new Date(startDate + 'T00:00:00').toISOString());
-  if (endDate) query = query.lte('match_date', new Date(endDate + 'T23:59:59').toISOString());
+  if (startDate) query = query.gte('match_date', new Date(startDate + 'T00:00:00Z').toISOString());
+  if (endDate) query = query.lte('match_date', new Date(endDate + 'T23:59:59Z').toISOString());
 
   const { data } = await query;
 
@@ -155,8 +157,8 @@ export async function getTopMaps(
   manualWins?: { mapName: string | null }[],
   limit = 5
 ): Promise<{ mapName: string; wins: number }[]> {
-  const start = new Date(startDate + 'T00:00:00').toISOString();
-  const end = new Date(endDate + 'T23:59:59').toISOString();
+  const start = new Date(startDate + 'T00:00:00Z').toISOString();
+  const end = new Date(endDate + 'T23:59:59Z').toISOString();
 
   const counts: Record<string, number> = {};
 

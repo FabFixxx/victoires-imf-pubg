@@ -23,8 +23,10 @@ export async function getImfSeasons(): Promise<ImfSeason[]> {
 
   if (!data || data.length === 0) return [];
 
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Jour calendaire en heure de Paris (le groupe joue depuis la France), pas le fuseau de
+  // l'appareil qui exécute le code : un joueur en déplacement à l'étranger ne doit pas voir
+  // une saison différente à cause de son fuseau local (cf. toParisDateStr dans victoires.tsx).
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date());
 
   const { data: winsData } = await supabase
     .from('imf_season_wins')
@@ -35,9 +37,11 @@ export async function getImfSeasons(): Promise<ImfSeason[]> {
     const nextSeason = data[idx - 1];
     let endDate: string;
     if (nextSeason) {
-      const d = new Date(nextSeason.start_date + 'T00:00:00');
-      d.setDate(d.getDate() - 1);
-      endDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      // Arithmétique purement calendaire en UTC (getUTCDate/setUTCDate) : évite toute
+      // dépendance au fuseau de l'appareil pour un simple "jour précédent".
+      const d = new Date(nextSeason.start_date + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - 1);
+      endDate = d.toISOString().split('T')[0];
     } else {
       endDate = today;
     }
