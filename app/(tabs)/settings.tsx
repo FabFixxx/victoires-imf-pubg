@@ -11,7 +11,7 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Colors } from '../../constants/colors';
@@ -57,6 +57,7 @@ const toIsoDate = (display: string) => {
 };
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const [currentPlayer, setPlayer] = useState<string | null>(null);
   const [lastSync, setLastSyncState] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -559,9 +560,12 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* ── Modal changelog ── */}
+      {/* Fond et contenu sont FRÈRES (pas parent/enfant) : évite le conflit de gestes Android
+          entre un ancêtre cliquable et le ScrollView (scroll erratique). */}
       <Modal visible={showChangelogModal} transparent animationType="slide" onRequestClose={() => setShowChangelogModal(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowChangelogModal(false)}>
-          <View style={[styles.modalContent, { maxHeight: '80%', flex: 1 }]} onStartShouldSetResponder={() => true}>
+        <View style={styles.modalRoot}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowChangelogModal(false)} />
+          <View style={[styles.modalContent, { maxHeight: '80%', flex: 1, paddingBottom: 36 + insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des versions</Text>
               <TouchableOpacity onPress={() => setShowChangelogModal(false)}>
@@ -588,13 +592,14 @@ export default function SettingsScreen() {
               </View>
             )}
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowWinsModal(false)}>
-          <View style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onStartShouldSetResponder={() => true}>
+        <View style={styles.modalRoot}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowWinsModal(false)} />
+          <View style={[styles.modalContent, { maxHeight: '85%', flex: 1, paddingBottom: 36 + insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Victoires — Saison {winsSeasonYear}</Text>
               <TouchableOpacity onPress={() => setShowWinsModal(false)}>
@@ -679,7 +684,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       {/* ── Modal ajout victoire individuelle ── */}
@@ -854,8 +859,9 @@ export default function SettingsScreen() {
 
       {/* ── Modal logs ── */}
       <Modal visible={showLogsModal} transparent animationType="slide" onRequestClose={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-        <Pressable style={styles.modalOverlay} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
-          <View style={[styles.modalContent, { maxHeight: '85%', flex: 1 }]} onStartShouldSetResponder={() => true}>
+        <View style={styles.modalRoot}>
+          <Pressable style={styles.modalBackdrop} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }} />
+          <View style={[styles.modalContent, { maxHeight: '85%', flex: 1, paddingBottom: 36 + insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Historique des synchronisations</Text>
               <TouchableOpacity onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
@@ -933,7 +939,7 @@ export default function SettingsScreen() {
               </View>
             )}
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
     </SafeAreaView>
@@ -1033,6 +1039,11 @@ const styles = StyleSheet.create({
   },
   addSeasonBtnText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  // modalRoot/modalBackdrop : variante "frères" (pas parent/enfant) du fond + contenu, pour
+  // les modals avec ScrollView — évite tout conflit de gestes Android entre un ancêtre
+  // cliquable et le ScrollView (scroll erratique). Les modals sans scroll gardent modalOverlay.
+  modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
   modalContent: {
     backgroundColor: Colors.card,
     borderTopLeftRadius: 16, borderTopRightRadius: 16,

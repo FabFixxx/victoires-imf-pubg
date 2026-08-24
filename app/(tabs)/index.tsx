@@ -11,7 +11,7 @@ import {
   Modal,
   AppState,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '../../constants/colors';
@@ -161,6 +161,7 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
 }
 
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
   const now = new Date();
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -661,11 +662,13 @@ export default function DashboardScreen() {
 
       {/* ── Modal notifications ── */}
       <Modal visible={showNotifModal} transparent animationType="slide" onRequestClose={handleCloseNotifications}>
-        <Pressable style={styles.notifModalOverlay} onPress={handleCloseNotifications}>
-          {/* View (pas Pressable) + onStartShouldSetResponder : intercepte le tap pour qu'il
-              ne remonte pas jusqu'à l'overlay, sans passer par le système de gestes de
-              Pressable qui entre en conflit avec le ScrollView sur Android (scroll erratique) */}
-          <View style={styles.notifModalContent} onStartShouldSetResponder={() => true}>
+        {/* Fond et contenu sont FRÈRES (pas parent/enfant) : un tap sur le contenu ne peut
+            pas atteindre le fond puisqu'il n'est pas un de ses ancêtres. Plus besoin d'astuce
+            pour "avaler" le tap, donc plus de conflit de gestes avec le ScrollView sur Android
+            (scroll erratique avec l'ancienne approche Pressable imbriqué / onStartShouldSetResponder). */}
+        <View style={styles.notifModalRoot}>
+          <Pressable style={styles.notifModalBackdrop} onPress={handleCloseNotifications} />
+          <View style={[styles.notifModalContent, { paddingBottom: 36 + insets.bottom }]}>
             <View style={styles.notifModalHeader}>
               <Text style={styles.notifModalTitle}>Notifications</Text>
               <TouchableOpacity onPress={handleCloseNotifications}>
@@ -745,7 +748,7 @@ export default function DashboardScreen() {
               </View>
             )}
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>
@@ -1024,7 +1027,8 @@ const styles = StyleSheet.create({
   playerName: { fontSize: 13, fontWeight: '700', color: Colors.text },
   playerKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
   playerDmg: { fontSize: 11, color: Colors.textMuted },
-  notifModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  notifModalRoot: { flex: 1, justifyContent: 'flex-end' },
+  notifModalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
   notifModalContent: {
     backgroundColor: Colors.card,
     borderTopLeftRadius: 16, borderTopRightRadius: 16,
