@@ -12,6 +12,7 @@ import {
   AppState,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Colors } from '../../constants/colors';
@@ -662,10 +663,13 @@ export default function DashboardScreen() {
 
       {/* ── Modal notifications ── */}
       <Modal visible={showNotifModal} transparent animationType="slide" onRequestClose={handleCloseNotifications}>
-        {/* Fond et contenu sont FRÈRES (pas parent/enfant) : un tap sur le contenu ne peut
-            pas atteindre le fond puisqu'il n'est pas un de ses ancêtres. Plus besoin d'astuce
-            pour "avaler" le tap, donc plus de conflit de gestes avec le ScrollView sur Android
-            (scroll erratique avec l'ancienne approche Pressable imbriqué / onStartShouldSetResponder). */}
+        {/* GestureHandlerRootView : une Modal crée sa propre fenêtre native sur Android, non
+            couverte par le GestureHandlerRootView racine de l'app (react-native-gesture-handler
+            patche la gestion tactile au niveau de la fenêtre native — sans ce wrapper imbriqué,
+            le scroll à l'intérieur de la Modal peut devenir incohérent sur Android). */}
+        {/* Fond et contenu sont aussi FRÈRES (pas parent/enfant) : un tap sur le contenu ne peut
+            pas atteindre le fond puisqu'il n'est pas un de ses ancêtres. */}
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.notifModalRoot}>
           <Pressable style={styles.notifModalBackdrop} onPress={handleCloseNotifications} />
           <View style={[styles.notifModalContent, { paddingBottom: 36 + insets.bottom }]}>
@@ -749,6 +753,7 @@ export default function DashboardScreen() {
             )}
           </View>
         </View>
+        </GestureHandlerRootView>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>

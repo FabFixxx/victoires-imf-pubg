@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Colors } from '../../constants/colors';
@@ -560,9 +561,13 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* ── Modal changelog ── */}
-      {/* Fond et contenu sont FRÈRES (pas parent/enfant) : évite le conflit de gestes Android
-          entre un ancêtre cliquable et le ScrollView (scroll erratique). */}
+      {/* GestureHandlerRootView sur chaque Modal : une Modal crée sa propre fenêtre native
+          Android, non couverte par le GestureHandlerRootView racine de l'app — sans ce
+          wrapper imbriqué, le scroll à l'intérieur peut devenir incohérent sur Android.
+          Fond et contenu sont aussi FRÈRES (pas parent/enfant) : évite le conflit de gestes
+          entre un ancêtre cliquable et le ScrollView. */}
       <Modal visible={showChangelogModal} transparent animationType="slide" onRequestClose={() => setShowChangelogModal(false)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.modalRoot}>
           <Pressable style={styles.modalBackdrop} onPress={() => setShowChangelogModal(false)} />
           <View style={[styles.modalContent, { maxHeight: '80%', flex: 1, paddingBottom: 36 + insets.bottom }]}>
@@ -593,10 +598,12 @@ export default function SettingsScreen() {
             )}
           </View>
         </View>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ── Modal victoires manuelles (liste + ajout) ── */}
       <Modal visible={showWinsModal} transparent animationType="slide" onRequestClose={() => setShowWinsModal(false)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.modalRoot}>
           <Pressable style={styles.modalBackdrop} onPress={() => setShowWinsModal(false)} />
           <View style={[styles.modalContent, { maxHeight: '85%', flex: 1, paddingBottom: 36 + insets.bottom }]}>
@@ -685,10 +692,12 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ── Modal ajout victoire individuelle ── */}
       <Modal visible={showAddWinModal} transparent animationType="slide" onRequestClose={() => setShowAddWinModal(false)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowAddWinModal(false)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
@@ -756,10 +765,12 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </Pressable>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ── Modal ajout saison ── */}
       <Modal visible={showSeasonModal} transparent animationType="slide" onRequestClose={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); setSeasonFormError(''); }}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={styles.modalOverlay} onPress={() => { setShowSeasonModal(false); setEditYear(''); setEditDate(''); setSeasonFormError(''); }}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <Text style={styles.modalTitle}>Nouvelle saison IMF</Text>
@@ -800,10 +811,12 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </Pressable>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ── Modal changer de joueur ── */}
       <Modal visible={showPlayerModal} transparent animationType="fade" onRequestClose={() => setShowPlayerModal(false)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowPlayerModal(false)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <View style={styles.modalHeader}>
@@ -835,10 +848,12 @@ export default function SettingsScreen() {
             })}
           </Pressable>
         </Pressable>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ── Modal supprimer victoire ── */}
       <Modal visible={!!winToDelete} transparent animationType="fade" onRequestClose={() => setWinToDelete(null)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={styles.modalOverlay} onPress={() => setWinToDelete(null)}>
           <Pressable style={styles.modalContent} onPress={() => {}}>
             <Text style={styles.modalTitle}>Supprimer cette victoire ?</Text>
@@ -855,10 +870,12 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </Pressable>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ── Modal logs ── */}
       <Modal visible={showLogsModal} transparent animationType="slide" onRequestClose={() => { setShowLogsModal(false); setConfirmClearLogs(false); }}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.modalRoot}>
           <Pressable style={styles.modalBackdrop} onPress={() => { setShowLogsModal(false); setConfirmClearLogs(false); }} />
           <View style={[styles.modalContent, { maxHeight: '85%', flex: 1, paddingBottom: 36 + insets.bottom }]}>
@@ -940,6 +957,7 @@ export default function SettingsScreen() {
             )}
           </View>
         </View>
+        </GestureHandlerRootView>
       </Modal>
 
     </SafeAreaView>

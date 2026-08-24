@@ -10,6 +10,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -602,7 +603,10 @@ export default function CalendarScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+      {/* GestureHandlerRootView : une Modal crée sa propre fenêtre native Android, non
+          couverte par le GestureHandlerRootView racine de l'app. */}
       <Modal visible={showNoAvailConfirm} transparent animationType="fade" onRequestClose={() => setShowNoAvailConfirm(false)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={styles.confirmOverlay} onPress={() => setShowNoAvailConfirm(false)}>
           <Pressable style={styles.confirmBox} onPress={() => {}}>
             <Text style={styles.confirmTitle}>Aucune dispo la semaine prochaine</Text>
@@ -620,8 +624,10 @@ export default function CalendarScreen() {
             </View>
           </Pressable>
         </Pressable>
+        </GestureHandlerRootView>
       </Modal>
       <Modal visible={showNoAvailThisWeekConfirm} transparent animationType="fade" onRequestClose={() => setShowNoAvailThisWeekConfirm(false)}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <Pressable style={styles.confirmOverlay} onPress={() => setShowNoAvailThisWeekConfirm(false)}>
           <Pressable style={styles.confirmBox} onPress={() => {}}>
             <Text style={styles.confirmTitle}>Aucune dispo cette semaine</Text>
@@ -639,6 +645,7 @@ export default function CalendarScreen() {
             </View>
           </Pressable>
         </Pressable>
+        </GestureHandlerRootView>
       </Modal>
     </SafeAreaView>
     </SwipeableScreen>
