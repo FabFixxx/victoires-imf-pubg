@@ -182,6 +182,7 @@ export default function DashboardScreen() {
   const [notifications, setNotifications] = useState<NotificationHistoryItem[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [refreshingNotifs, setRefreshingNotifs] = useState(false);
+  const [confirmClearNotifs, setConfirmClearNotifs] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
   const params = useLocalSearchParams<{ openNotifications?: string }>();
@@ -224,9 +225,16 @@ export default function DashboardScreen() {
 
   const handleCloseNotifications = useCallback(() => {
     setShowNotifModal(false);
+    setConfirmClearNotifs(false);
     setHasUnread(false);
     if (currentPlayer) markNotificationsAsRead(currentPlayer, notifications.map((n) => n.id));
   }, [currentPlayer, notifications]);
+
+  const handleClearNotifications = useCallback(async () => {
+    await supabase.from('notification_history').delete().neq('id', 0);
+    setNotifications([]);
+    setConfirmClearNotifs(false);
+  }, []);
 
   const handleRefreshNotifications = useCallback(async () => {
     if (!currentPlayer) return;
@@ -686,6 +694,36 @@ export default function DashboardScreen() {
               </ScrollView>
               </View>
             )}
+            {confirmClearNotifs ? (
+              <View style={[styles.notifModalButtons, { flexDirection: 'column', gap: 8 }]}>
+                <Text style={{ color: Colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
+                  Vider tout l'historique des notifications ?
+                </Text>
+                <View style={styles.notifModalButtons}>
+                  <TouchableOpacity style={styles.notifCancelBtn} onPress={() => setConfirmClearNotifs(false)}>
+                    <Text style={styles.notifCancelBtnText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.notifSubmitBtn, { backgroundColor: Colors.danger }]}
+                    onPress={handleClearNotifications}
+                  >
+                    <Text style={styles.notifSubmitBtnText}>Confirmer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.notifModalButtons}>
+                <TouchableOpacity
+                  style={[styles.notifCancelBtn, { backgroundColor: Colors.danger + '22', borderColor: Colors.danger }]}
+                  onPress={() => setConfirmClearNotifs(true)}
+                >
+                  <Text style={[styles.notifCancelBtnText, { color: Colors.danger }]}>Supprimer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.notifSubmitBtn} onPress={handleCloseNotifications}>
+                  <Text style={styles.notifSubmitBtnText}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -992,4 +1030,12 @@ const styles = StyleSheet.create({
   notifItemTitleUnread: { fontWeight: '800' },
   notifItemBody: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
   notifItemDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  notifModalButtons: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  notifCancelBtn: {
+    flex: 1, padding: 14, borderRadius: 10, borderWidth: 1,
+    borderColor: Colors.cardBorder, alignItems: 'center',
+  },
+  notifCancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  notifSubmitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
+  notifSubmitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
 });
