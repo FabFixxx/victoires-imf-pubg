@@ -58,9 +58,6 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## 🆕 Nouveauté
-            - Boutons "Supprimer" et "Fermer" dans la fenêtre des notifications, pour vider son historique personnel
-
             ## 🐛 Corrections
-            - Le scroll ne fonctionnait pas de façon fiable dans certaines fenêtres (notifications, historique des versions, victoires manuelles, logs de synchronisation)
-            - Diverses corrections de fiabilité : synchronisation PUBG, dates de saison, notifications de disponibilité
+            - Le scroll dans les fenêtres notifications / historique des versions / victoires manuelles / logs de synchronisation ne fonctionnait toujours pas de façon fiable en 1.4.3 (nouveau correctif, plus en profondeur)
+            - Les boutons "Supprimer" et "Fermer" pouvaient chevaucher la barre de navigation Android en bas de l'écran
