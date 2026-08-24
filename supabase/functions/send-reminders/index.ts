@@ -203,7 +203,7 @@ async function setChosenDateAuto(supabase: any, weekStart: string, chosenDate: s
 const MAP_NAMES: Record<string, string> = {
   Baltic_Main: 'Erangel', Erangel_Main: 'Erangel',
   Desert_Main: 'Miramar',
-  Savage_Main: 'Sanhok',
+  Savage_Main: 'Sanhok', Heaven_Main: 'Sanhok',
   DihorOtok_Main: 'Vikendi',
   Summerland_Main: 'Karakin',
   Tiger_Main: 'Taego',
@@ -326,6 +326,13 @@ Deno.serve(async (_req) => {
     const ws = entry.key
     const we = getWeekEnd(ws)
 
+    // Semaine déjà passée (pending resté bloqué trop longtemps, ex: panne du cron) →
+    // ne pas notifier un récap obsolète, comme pour les 2 autres pendings ci-dessus.
+    if (we < todayStr) {
+      await supabase.from('notification_log').delete().eq('type', 'week_complete_pending').eq('key', ws)
+      continue
+    }
+
     // Claim atomique : insert week_complete (UNIQUE constraint = mutex)
     const { error: claimError } = await supabase
       .from('notification_log')
@@ -347,6 +354,15 @@ Deno.serve(async (_req) => {
     // Fetch données fraîches et envoyer la notif
     const { data: freshRows } = await supabase
       .from('player_availability').select('player_username, date').gte('date', ws).lte('date', we)
+    const { data: freshNoAvailRows } = await supabase
+      .from('week_no_availability').select('player_username').eq('week_start', ws)
+
+    // Re-vérifier la prémisse ("tout le monde a répondu") avec des données fraîches :
+    // un joueur peut avoir retiré toutes ses dispos depuis la planification du pending.
+    const freshResponded = new Set((freshRows ?? []).map((r: any) => r.player_username))
+    const freshNoAvail = new Set((freshNoAvailRows ?? []).map((r: any) => r.player_username))
+    const stillAllResponded = GROUP_PLAYERS.every((p) => freshResponded.has(p) || freshNoAvail.has(p))
+    if (!stillAllResponded) continue
 
     const weekAvail = groupByDate(freshRows ?? [])
     const fourVote = weekAvail.filter((d) => d.players.length >= GROUP_PLAYERS.length).map((d) => d.date).sort()

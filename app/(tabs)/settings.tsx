@@ -162,11 +162,14 @@ export default function SettingsScreen() {
     }
     setStartDateError('');
     setSavingDate(true);
-    await upsertImfSeason(winsSeasonYear, toIsoDate(editStartDate));
-    await loadImfSeasons();
-    setSavingDate(false);
-    setStartDateSaved(true);
-    setTimeout(() => setStartDateSaved(false), 2000);
+    try {
+      await upsertImfSeason(winsSeasonYear, toIsoDate(editStartDate));
+      await loadImfSeasons();
+      setStartDateSaved(true);
+      setTimeout(() => setStartDateSaved(false), 2000);
+    } finally {
+      setSavingDate(false);
+    }
   };
 
   const handleDeleteWin = (win: ManualWin) => {
@@ -601,7 +604,7 @@ export default function SettingsScreen() {
 
             <View style={{ flex: 1, minHeight: 0 }}>
             <ScrollView showsVerticalScrollIndicator>
-              {currentWinsSeason?.manualWinsDetail.length === 0 ? (
+              {!currentWinsSeason?.manualWinsDetail.length ? (
                 <Text style={styles.emptyWins}>Aucune victoire enregistrée</Text>
               ) : (
                 <View style={styles.winsList}>

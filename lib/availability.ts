@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { GROUP_PLAYERS } from '../constants/players';
 
 export const PLAYER_COLORS: Record<string, string> = {
   FabFix: '#359bcf',
@@ -148,43 +147,4 @@ export async function saveNotificationPrefs(username: string, prefs: Notificatio
     { onConflict: 'player_username' }
   );
   if (error) console.error('[saveNotificationPrefs] failed:', error.message);
-}
-
-// Vérifie si les 4 joueurs ont au moins 1 dispo sur une même semaine (lun-dim)
-// Cherche dans les 4 prochaines semaines, retourne la première semaine complète trouvée
-export async function checkWeekAllResponded(): Promise<{
-  found: boolean;
-  weekStart: string;
-  bestDates: DayAvailability[];
-}> {
-  const today = new Date();
-  // Lundi de la semaine courante
-  const dayOfWeek = today.getDay(); // 0=dim
-  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + daysToMonday);
-
-  for (let w = 0; w < 4; w++) {
-    const weekStart = new Date(monday);
-    weekStart.setDate(monday.getDate() + w * 7);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-
-    const startStr = weekStart.toISOString().split('T')[0];
-    const endStr = weekEnd.toISOString().split('T')[0];
-
-    const avail = await getAvailability(startStr, endStr);
-    const respondedPlayers = new Set(avail.flatMap((d) => d.players));
-    const allResponded = (GROUP_PLAYERS as readonly string[]).every((p) => respondedPlayers.has(p));
-
-    if (allResponded) {
-      const fourVotes = avail.filter((d) => d.players.length === 4).sort((a, b) => a.date.localeCompare(b.date));
-      const threeVotes = avail.filter((d) => d.players.length === 3).sort((a, b) => a.date.localeCompare(b.date));
-      const bestDates = fourVotes.length > 0 ? fourVotes : threeVotes;
-      if (bestDates.length === 0) continue;
-      return { found: true, weekStart: startStr, bestDates };
-    }
-  }
-
-  return { found: false, weekStart: '', bestDates: [] };
 }

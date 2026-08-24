@@ -75,8 +75,10 @@ async function getStatsBetween(startDate: string, endDate: string): Promise<Seas
 export type MonthlyStats = SeasonHighlights;
 
 export async function getMonthlyStats(year: number, month: number): Promise<SeasonHighlights> {
-  const startDate = new Date(year, month - 1, 1).toISOString();
-  const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+  // Date.UTC (pas le constructeur local) : ancrage UTC cohérent avec le reste du fichier,
+  // sinon la frontière du mois dépend du fuseau de l'appareil qui déclenche la requête.
+  const startDate = new Date(Date.UTC(year, month - 1, 1)).toISOString();
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59)).toISOString();
   return getStatsBetween(startDate, endDate);
 }
 
@@ -266,7 +268,7 @@ export async function getLastMatch(): Promise<LastMatch | null> {
 export async function getLastWin(): Promise<LastMatch | null> {
   const { data } = await supabase
     .from('player_match_stats')
-    .select('match_id, match_date, kills, assists, damage, player_username')
+    .select('match_id, match_date, kills, assists, damage, player_username, win_place')
     .eq('is_win', true)
     .order('match_date', { ascending: false })
     .limit(20);

@@ -162,43 +162,45 @@ export default function CalendarScreen() {
 
     setToggling(day.dateString);
 
-    setAvailability((prev) => {
-      const existing = prev.find((d) => d.date === day.dateString);
-      if (existing) {
-        const hasMe = existing.players.includes(currentPlayer);
-        if (hasMe) {
-          const newPlayers = existing.players.filter((p) => p !== currentPlayer);
-          if (newPlayers.length === 0) return prev.filter((d) => d.date !== day.dateString);
-          return prev.map((d) => d.date === day.dateString ? { ...d, players: newPlayers } : d);
+    try {
+      setAvailability((prev) => {
+        const existing = prev.find((d) => d.date === day.dateString);
+        if (existing) {
+          const hasMe = existing.players.includes(currentPlayer);
+          if (hasMe) {
+            const newPlayers = existing.players.filter((p) => p !== currentPlayer);
+            if (newPlayers.length === 0) return prev.filter((d) => d.date !== day.dateString);
+            return prev.map((d) => d.date === day.dateString ? { ...d, players: newPlayers } : d);
+          } else {
+            return prev.map((d) => d.date === day.dateString ? { ...d, players: [...d.players, currentPlayer] } : d);
+          }
         } else {
-          return prev.map((d) => d.date === day.dateString ? { ...d, players: [...d.players, currentPlayer] } : d);
+          return [...prev, { date: day.dateString, players: [currentPlayer] }];
         }
-      } else {
-        return [...prev, { date: day.dateString, players: [currentPlayer] }];
-      }
-    });
+      });
 
-    await toggleAvailability(currentPlayer, day.dateString);
+      await toggleAvailability(currentPlayer, day.dateString);
 
-    // Si le joueur ajoute une dispo sur la semaine prochaine, retirer "Aucune dispo"
-    if (day.dateString >= nextWeekMonday && day.dateString <= nextWeekSunday) {
-      const isAdding = !availability.find((d) => d.date === day.dateString)?.players.includes(currentPlayer);
-      if (isAdding && noAvailPlayers.includes(currentPlayer)) {
-        setNoAvailPlayers((prev) => prev.filter((p) => p !== currentPlayer));
-        await removeNoAvailability(currentPlayer, nextWeekMonday);
+      // Si le joueur ajoute une dispo sur la semaine prochaine, retirer "Aucune dispo"
+      if (day.dateString >= nextWeekMonday && day.dateString <= nextWeekSunday) {
+        const isAdding = !availability.find((d) => d.date === day.dateString)?.players.includes(currentPlayer);
+        if (isAdding && noAvailPlayers.includes(currentPlayer)) {
+          setNoAvailPlayers((prev) => prev.filter((p) => p !== currentPlayer));
+          await removeNoAvailability(currentPlayer, nextWeekMonday);
+        }
       }
+
+      // Si le joueur ajoute une dispo sur cette semaine, retirer "Aucune dispo"
+      if (day.dateString >= currentWeekMonday && day.dateString <= thisWeekSunday) {
+        const isAdding = !availability.find((d) => d.date === day.dateString)?.players.includes(currentPlayer);
+        if (isAdding && noAvailThisWeekPlayers.includes(currentPlayer)) {
+          setNoAvailThisWeekPlayers((prev) => prev.filter((p) => p !== currentPlayer));
+          await removeNoAvailability(currentPlayer, currentWeekMonday);
+        }
+      }
+    } finally {
+      setToggling(null);
     }
-
-    // Si le joueur ajoute une dispo sur cette semaine, retirer "Aucune dispo"
-    if (day.dateString >= currentWeekMonday && day.dateString <= thisWeekSunday) {
-      const isAdding = !availability.find((d) => d.date === day.dateString)?.players.includes(currentPlayer);
-      if (isAdding && noAvailThisWeekPlayers.includes(currentPlayer)) {
-        setNoAvailThisWeekPlayers((prev) => prev.filter((p) => p !== currentPlayer));
-        await removeNoAvailability(currentPlayer, currentWeekMonday);
-      }
-    }
-
-    setToggling(null);
   };
 
   const handleNoAvail = async () => {

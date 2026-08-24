@@ -268,6 +268,7 @@ export default function DashboardScreen() {
 
   const loadData = useCallback(async (month: number, year: number) => {
     setLoading(true);
+    try {
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
     const [m, lm, lw, ls, imf, fs, maps] = await Promise.all([
@@ -332,8 +333,9 @@ export default function DashboardScreen() {
       .slice(0, 10)
       .map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null }));
     setRecentTeamMatches(sorted);
-
-    setLoading(false);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

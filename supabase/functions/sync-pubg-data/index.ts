@@ -274,13 +274,23 @@ Deno.serve(async (req) => {
   // LOCK_TIMEOUT_MINUTES). On compare par id (BIGINT séquentiel, jamais d'égalité possible)
   // plutôt que par started_at : deux inserts quasi simultanés peuvent partager le même
   // timestamp, ce qui ferait échouer un tie-break basé sur la date pour les deux à la fois.
-  const { data: running } = await supabase
+  const { data: running, error: lockCheckError } = await supabase
     .from('sync_log')
     .select('id, started_at')
     .eq('status', 'running')
     .lt('id', logId)
     .gte('started_at', new Date(Date.now() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString())
     .limit(1)
+
+  if (lockCheckError) {
+    // Impossible de vérifier le verrou : on abandonne plutôt que de tourner sans protection.
+    await supabase.from('sync_log').update({
+      status: 'error',
+      finished_at: new Date().toISOString(),
+      error_msg: 'lock check failed: ' + lockCheckError.message,
+    }).eq('id', logId)
+    return new Response(JSON.stringify({ error: 'could not verify sync lock' }), { status: 500, headers: CORS })
+  }
 
   if (running && running.length > 0) {
     await supabase.from('sync_log').update({
@@ -363,29 +373,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (logId) {
-      await supabase.from('sync_log').update({
-        status: 'success',
-        finished_at: new Date().toISOString(),
-        matches_new: matchesNew,
-        matches_saved: matchesSaved,
-      }).eq('id', logId)
-    }
+    await supabase.from('sync_log').update({
+      status: 'success',
+      finished_at: new Date().toISOString(),
+      matches_new: matchesNew,
+      matches_saved: matchesSaved,
+    }).eq('id', logId)
 
     return new Response(JSON.stringify({ status: 'success', matchesNew, matchesSaved, logs }), { status: 200, headers: CORS })
   } catch (e: any) {
     errorMsg = e?.message ?? String(e)
     log(`Erreur : ${errorMsg}`)
 
-    if (logId) {
-      await supabase.from('sync_log').update({
-        status: 'error',
-        finished_at: new Date().toISOString(),
-        matches_new: matchesNew,
-        matches_saved: matchesSaved,
-        error_msg: errorMsg,
-      }).eq('id', logId)
-    }
+    await supabase.from('sync_log').update({
+      status: 'error',
+      finished_at: new Date().toISOString(),
+      matches_new: matchesNew,
+      matches_saved: matchesSaved,
+      error_msg: errorMsg,
+    }).eq('id', logId)
 
     return new Response(JSON.stringify({ status: 'error', error: errorMsg, logs }), { status: 500, headers: CORS })
   }

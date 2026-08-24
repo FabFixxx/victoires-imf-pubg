@@ -104,44 +104,48 @@ export default function StatsScreen() {
     if (!season) return;
     const requestId = ++requestIdRef.current;
     setLoading(true);
-    // Ancrage UTC explicite : sinon `end` (sans 'Z') est interprété dans le fuseau local de
-    // l'appareil, ce qui décale la frontière de saison selon qui exécute la requête.
-    const start = new Date(season.startDate + 'T00:00:00Z').toISOString();
-    const end = new Date(season.endDate + 'T23:59:59Z').toISOString();
+    try {
+      // Ancrage UTC explicite : sinon `end` (sans 'Z') est interprété dans le fuseau local de
+      // l'appareil, ce qui décale la frontière de saison selon qui exécute la requête.
+      const start = new Date(season.startDate + 'T00:00:00Z').toISOString();
+      const end = new Date(season.endDate + 'T23:59:59Z').toISOString();
 
-    const [s, { data: recentMatches }] = await Promise.all([
-      getPlayerStatsBetween(username, start, end),
-      supabase
-        .from('player_match_stats')
-        .select('*')
-        .eq('player_username', username)
-        .gte('match_date', start)
-        .lte('match_date', end)
-        .order('match_date', { ascending: false })
-        .limit(10),
-    ]);
+      const [s, { data: recentMatches }] = await Promise.all([
+        getPlayerStatsBetween(username, start, end),
+        supabase
+          .from('player_match_stats')
+          .select('*')
+          .eq('player_username', username)
+          .gte('match_date', start)
+          .lte('match_date', end)
+          .order('match_date', { ascending: false })
+          .limit(10),
+      ]);
 
-    if (requestIdRef.current !== requestId) return; // une requête plus récente a pris le relais
+      if (requestIdRef.current !== requestId) return; // une requête plus récente a pris le relais
 
-    setStats((prev) => ({ ...prev, [`${username}_${season.year}`]: s }));
+      setStats((prev) => ({ ...prev, [`${username}_${season.year}`]: s }));
 
-    const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
-    const matchIds = sorted.map((m) => m.match_id);
-    const { data: cacheRows } = await supabase
-      .from('match_cache')
-      .select('match_id, map_name, finisher')
-      .in('match_id', matchIds.length ? matchIds : ['__none__']);
+      const sorted = (recentMatches ?? []).sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
+      const matchIds = sorted.map((m) => m.match_id);
+      const { data: cacheRows } = await supabase
+        .from('match_cache')
+        .select('match_id, map_name, finisher')
+        .in('match_id', matchIds.length ? matchIds : ['__none__']);
 
-    if (requestIdRef.current !== requestId) return;
+      if (requestIdRef.current !== requestId) return;
 
-    const mapNameById: Record<string, string> = {};
-    const finisherById: Record<string, string> = {};
-    for (const row of cacheRows ?? []) {
-      if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
-      if (row.finisher) finisherById[row.match_id] = row.finisher;
+      const mapNameById: Record<string, string> = {};
+      const finisherById: Record<string, string> = {};
+      for (const row of cacheRows ?? []) {
+        if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
+        if (row.finisher) finisherById[row.match_id] = row.finisher;
+      }
+      setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null })));
+    } finally {
+      // Ne réinitialiser loading que si aucune requête plus récente n'a pris le relais.
+      if (requestIdRef.current === requestId) setLoading(false);
     }
-    setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null })));
-    setLoading(false);
   }, []);
 
   const handleRefresh = async () => {

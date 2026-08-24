@@ -248,15 +248,18 @@ export default function VictoiresScreen() {
 
   const loadVictories = useCallback(async (season: ImfSeason) => {
     setLoading(true);
-    const [wins, fs, maps] = await Promise.all([
-      getVictoriesForSeason(season.year, season.startDate, season.endDate),
-      getFinisherStats(season.startDate, season.endDate, season.manualWinsDetail),
-      getTopMaps(season.startDate, season.endDate, season.manualWinsDetail),
-    ]);
-    setVictories(wins);
-    setFinisherStats(fs);
-    setTopMaps(maps);
-    setLoading(false);
+    try {
+      const [wins, fs, maps] = await Promise.all([
+        getVictoriesForSeason(season.year, season.startDate, season.endDate),
+        getFinisherStats(season.startDate, season.endDate, season.manualWinsDetail),
+        getTopMaps(season.startDate, season.endDate, season.manualWinsDetail),
+      ]);
+      setVictories(wins);
+      setFinisherStats(fs);
+      setTopMaps(maps);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
