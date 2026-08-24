@@ -168,9 +168,24 @@ async function fetchAndCacheMatch(
     }
 
     if (!gameMode.includes('fpp')) {
-      // Marque le match comme traité (map_name non-null) pour ne pas le refetch à chaque run
+      // Marque le match comme traité (avec un `data` complet : la colonne est NOT NULL)
+      // pour ne pas le refetch à chaque run.
+      const nonFppParticipants = (raw.included as any[]).filter((i: any) => i.type === 'participant')
+      const nonFppMatchData = {
+        matchId,
+        matchDate: raw.data.attributes.createdAt,
+        gameMode,
+        players: nonFppParticipants.map((p: any) => ({
+          accountId: p.attributes.stats.playerId,
+          name: playerIdToName[p.attributes.stats.playerId] ?? p.attributes.stats.name,
+          kills: p.attributes.stats.kills,
+          assists: p.attributes.stats.assists,
+          damageDealt: p.attributes.stats.damageDealt,
+          winPlace: p.attributes.stats.winPlace,
+        })),
+      }
       await supabase.from('match_cache').upsert(
-        { match_id: matchId, match_date: raw.data.attributes.createdAt, game_mode: gameMode, map_name: (PUBG_MAP_NAMES[mapName] ?? mapName) || 'N/A' },
+        { match_id: matchId, match_date: nonFppMatchData.matchDate, game_mode: gameMode, map_name: (PUBG_MAP_NAMES[mapName] ?? mapName) || null, data: nonFppMatchData },
         { onConflict: 'match_id', ignoreDuplicates: true }
       )
       return null
@@ -245,26 +260,33 @@ Deno.serve(async (req) => {
   const { data: logEntry } = await supabase
     .from('sync_log')
     .insert({ status: 'running', triggered_by: triggeredBy })
-    .select('id, started_at')
+    .select('id')
     .single()
   const logId = logEntry?.id
 
+  if (!logId) {
+    // Impossible de poser notre verrou (erreur DB transitoire) : on abandonne plutôt que
+    // de tourner sans aucune protection contre une synchro concurrente.
+    return new Response(JSON.stringify({ error: 'could not acquire sync lock' }), { status: 500, headers: CORS })
+  }
+
   // Lock : skip si une AUTRE sync tourne déjà et a démarré avant nous (il y a moins de
-  // LOCK_TIMEOUT_MINUTES) — celle qui a démarré la première continue, l'autre s'annule.
+  // LOCK_TIMEOUT_MINUTES). On compare par id (BIGINT séquentiel, jamais d'égalité possible)
+  // plutôt que par started_at : deux inserts quasi simultanés peuvent partager le même
+  // timestamp, ce qui ferait échouer un tie-break basé sur la date pour les deux à la fois.
   const { data: running } = await supabase
     .from('sync_log')
     .select('id, started_at')
     .eq('status', 'running')
-    .neq('id', logId)
+    .lt('id', logId)
     .gte('started_at', new Date(Date.now() - LOCK_TIMEOUT_MINUTES * 60 * 1000).toISOString())
-    .lt('started_at', logEntry?.started_at ?? new Date().toISOString())
     .limit(1)
 
   if (running && running.length > 0) {
     await supabase.from('sync_log').update({
-      status: 'error',
+      status: 'skipped',
       finished_at: new Date().toISOString(),
-      error_msg: 'skipped: another sync already running',
+      error_msg: 'another sync already running',
     }).eq('id', logId)
     return new Response(JSON.stringify({ skipped: 'sync already running', since: running[0].started_at }), { status: 200, headers: CORS })
   }

@@ -212,5 +212,6 @@ CREATE TABLE IF NOT EXISTS notification_history (
 -- RLS activé (pas de bypass global comme les autres tables) + policy permissive :
 -- l'app filtre déjà côté client par player_username, la policy autorise juste l'accès anon.
 ALTER TABLE notification_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "allow anon access" ON notification_history;
 CREATE POLICY "allow anon access" ON notification_history
   FOR ALL USING (true) WITH CHECK (true);

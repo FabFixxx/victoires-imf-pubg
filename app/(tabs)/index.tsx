@@ -164,12 +164,6 @@ export default function DashboardScreen() {
   const now = new Date();
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
-  const viewMonthRef = useRef(viewMonth);
-  const viewYearRef = useRef(viewYear);
-  useEffect(() => {
-    viewMonthRef.current = viewMonth;
-    viewYearRef.current = viewYear;
-  }, [viewMonth, viewYear]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [monthly, setMonthly] = useState<MonthlyStats | null>(null);
   const [imfSeason, setImfSeason] = useState<ImfSeason | null>(null);
@@ -266,12 +260,12 @@ export default function DashboardScreen() {
     }
   }, [params.openNotifications, handleOpenNotifications]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (month: number, year: number) => {
     setLoading(true);
     const currentImfSeason = await getCurrentImfSeason();
     setImfSeason(currentImfSeason);
     const [m, lm, lw, ls, imf, fs, maps] = await Promise.all([
-      getMonthlyStats(viewYearRef.current, viewMonthRef.current + 1),
+      getMonthlyStats(year, month + 1),
       getLastMatch(),
       getLastWin(),
       getLastSync(),
@@ -337,7 +331,8 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(viewMonth, viewYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadData]);
 
   const isCurrentMonth = viewMonth === now.getMonth() && viewYear === now.getFullYear();
@@ -373,7 +368,7 @@ export default function DashboardScreen() {
       setSyncMsg(`Erreur : ${msg ?? 'inconnue'}`);
     }
     try {
-      await loadData();
+      await loadData(viewMonth, viewYear);
     } finally {
       syncingRef.current = false;
       setSyncing(false);
@@ -400,7 +395,7 @@ export default function DashboardScreen() {
         refreshControl={
           <RefreshControl
             refreshing={loading && !syncing}
-            onRefresh={loadData}
+            onRefresh={() => loadData(viewMonth, viewYear)}
             tintColor={Colors.primary}
           />
         }

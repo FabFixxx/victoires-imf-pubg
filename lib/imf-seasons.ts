@@ -35,9 +35,9 @@ export async function getImfSeasons(): Promise<ImfSeason[]> {
     const nextSeason = data[idx - 1];
     let endDate: string;
     if (nextSeason) {
-      const d = new Date(nextSeason.start_date);
+      const d = new Date(nextSeason.start_date + 'T00:00:00');
       d.setDate(d.getDate() - 1);
-      endDate = d.toISOString().split('T')[0];
+      endDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     } else {
       endDate = today;
     }

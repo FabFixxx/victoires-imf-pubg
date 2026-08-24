@@ -866,9 +866,9 @@ export default function SettingsScreen() {
                 {syncLogs.map((entry) => {
                   const isSuccess = entry.status === 'success';
                   const isError = entry.status === 'error';
-                  const isRunning = entry.status === 'running';
+                  const isSkipped = entry.status === 'skipped';
                   const statusColor = isSuccess ? Colors.win : isError ? Colors.danger : Colors.textMuted;
-                  const statusIcon = isSuccess ? 'checkmark-circle' : isError ? 'close-circle' : 'sync';
+                  const statusIcon = isSuccess ? 'checkmark-circle' : isError ? 'close-circle' : isSkipped ? 'pause-circle' : 'sync';
                   const date = new Date(entry.started_at).toLocaleString('fr-FR', {
                     day: '2-digit', month: '2-digit', year: '2-digit',
                     hour: '2-digit', minute: '2-digit',
@@ -879,6 +879,7 @@ export default function SettingsScreen() {
                   const statusText = isSuccess
                     ? (entry.matches_saved > 0 ? `${entry.matches_saved} match${entry.matches_saved > 1 ? 's' : ''} ajouté${entry.matches_saved > 1 ? 's' : ''}` : 'Tout est à jour')
                     : isError ? (entry.error_msg ?? 'Erreur inconnue')
+                    : isSkipped ? 'Ignorée (autre synchro en cours)'
                     : 'En cours…';
                   return (
                     <View key={entry.id} style={[styles.logLine, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
