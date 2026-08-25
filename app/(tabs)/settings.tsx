@@ -17,9 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Colors } from '../../constants/colors';
 import { SectionHeader } from '../../components/SectionHeader';
-import { getCurrentPlayer, setCurrentPlayer, getLastSync, setLastSync } from '../../lib/storage';
+import { getCurrentPlayer, setCurrentPlayer } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
-import { PUBG_MAPS } from '../../lib/pubg-api';
+import { PUBG_MAPS, getLastServerSync } from '../../lib/pubg-api';
 import { registerPushToken } from '../../lib/notifications';
 import {
   getImfSeasons, upsertImfSeason,
@@ -119,7 +119,7 @@ export default function SettingsScreen() {
         setNotifPrefs(prefs);
       }
     });
-    getLastSync().then(setLastSyncState);
+    getLastServerSync().then(setLastSyncState);
     loadImfSeasons();
   }, []);
 
@@ -263,9 +263,7 @@ export default function SettingsScreen() {
         const n = data.matchesSaved ?? 0;
         setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
         setSyncOk(true);
-        const now = new Date();
-        await setLastSync(now);
-        setLastSyncState(now);
+        setLastSyncState(await getLastServerSync());
       } else if (data?.status === 'skipped') {
         setSyncMsg('Une autre synchro est déjà en cours, réessaie dans un instant');
         setSyncOk(true);

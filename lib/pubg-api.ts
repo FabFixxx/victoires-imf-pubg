@@ -5,6 +5,20 @@ export const PUBG_MAPS = [
   'Erangel', 'Miramar', 'Sanhok', 'Vikendi', 'Karakin', 'Taego', 'Deston', 'Rondo', 'Paramo',
 ];
 
+// Date de la dernière synchro réussie côté serveur (cron ou manuelle, peu importe l'appareil
+// qui l'a déclenchée) — contrairement à un flag local par navigateur/appareil, qui resterait
+// à "jamais synchronisé" tant que CET appareil n'a jamais lui-même appuyé sur sync.
+export async function getLastServerSync(): Promise<Date | null> {
+  const { data } = await supabase
+    .from('sync_log')
+    .select('finished_at')
+    .eq('status', 'success')
+    .order('finished_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.finished_at ? new Date(data.finished_at) : null;
+}
+
 export const PUBG_MAP_NAMES: Record<string, string> = {
   Baltic_Main: 'Erangel',
   Erangel_Main: 'Erangel',

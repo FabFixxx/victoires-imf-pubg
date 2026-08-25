@@ -25,11 +25,12 @@ import {
   getFinisherStats,
   getTopMaps,
   getLastWin,
+  getLastServerSync,
   PUBG_MAP_NAMES,
   MonthlyStats,
   LastMatch,
 } from '../../lib/pubg-api';
-import { getLastSync, setLastSync, getCurrentPlayer } from '../../lib/storage';
+import { getCurrentPlayer } from '../../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
 import { getCurrentImfSeason, ImfSeason } from '../../lib/imf-seasons';
@@ -277,7 +278,7 @@ export default function DashboardScreen() {
       getMonthlyStats(year, month + 1),
       getLastMatch(),
       getLastWin(),
-      getLastSync(),
+      getLastServerSync(),
       currentImfSeason
         ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate)
         : Promise.resolve(null),
@@ -373,9 +374,6 @@ export default function DashboardScreen() {
       } else {
         const n = data?.matchesSaved ?? 0;
         setSyncMsg(n > 0 ? `${n} match${n > 1 ? 's' : ''} ajouté${n > 1 ? 's' : ''}` : 'Tout est à jour !');
-        const now_ = new Date();
-        await setLastSync(now_);
-        setLastSyncState(now_);
       }
     } catch (e: any) {
       const msg = e?.message ?? e?.error_description ?? (typeof e === 'string' ? e : JSON.stringify(e));
