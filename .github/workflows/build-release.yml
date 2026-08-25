@@ -58,6 +58,11 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
+            ## 🆕 Nouveautés
+            - Page Victoires : total de victoires de la saison affiché en haut, nouveau bloc Matchs/Frags moy./Dmg moy./% Vict., et la liste des cartes gagnées n'est plus limitée à 5
+            - Accueil : "TOP CARTES GAGNÉES" devient "TOP 5 CARTES GAGNÉES"
+
             ## 🐛 Corrections
-            - Scroll enfin corrigé dans les fenêtres notifications / historique des versions / victoires manuelles / logs de synchronisation (le fix de la 1.4.3 était insuffisant — cause racine identifiée cette fois : conflit de gestion tactile Android propre aux fenêtres modales)
-            - Les boutons "Supprimer" et "Fermer" ne chevauchent plus la barre de navigation Android en bas de l'écran
+            - "Win Rate" renommé en "% Vict." partout ; les victoires manuelles ne faussent plus le calcul du % de victoires (elles ne comptaient déjà pas dans les frags/dmg moyens)
+            - Tri des cartes gagnées corrigé : nombre de victoires en priorité, ordre alphabétique en cas d'égalité
+            - "Jamais synchronisé" ne s'affiche plus à tort sur un appareil qui n'a jamais lui-même déclenché de sync manuelle (on lit maintenant la vraie dernière synchro côté serveur)
