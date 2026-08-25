@@ -224,7 +224,9 @@ export async function getTopMaps(
 
   const entries = Object.entries(counts);
   if (sortBy === 'recent') {
-    entries.sort((a, b) => (lastWinDate[b[0]] ?? '').localeCompare(lastWinDate[a[0]] ?? ''));
+    // Nombre de victoires en critère principal, date de la victoire la plus récente
+    // pour départager les cartes à égalité.
+    entries.sort((a, b) => b[1] - a[1] || (lastWinDate[b[0]] ?? '').localeCompare(lastWinDate[a[0]] ?? ''));
   } else {
     entries.sort((a, b) => b[1] - a[1]);
   }
