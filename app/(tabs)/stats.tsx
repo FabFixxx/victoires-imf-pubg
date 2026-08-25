@@ -282,7 +282,7 @@ export default function StatsScreen() {
 
             <SectionHeader title="Vue d'ensemble" />
             <View style={styles.row}>
-              <StatCard label="Win Rate" value={`${current.winRate}%`} />
+              <StatCard label="% Vict." value={`${current.winRate}%`} />
               <StatCard label="K/D Ratio" value={current.kd} />
             </View>
 

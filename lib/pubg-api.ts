@@ -82,20 +82,20 @@ export async function getMonthlyStats(year: number, month: number): Promise<Seas
   return getStatsBetween(startDate, endDate);
 }
 
+// Retourne des stats purement basées sur les matchs synchronisés (jamais les victoires
+// manuelles) : totalWins/totalMatches/totalKills/totalDamage doivent rester cohérents entre
+// eux pour que les moyennes (frags/dmg) et le % de victoires calculés à partir d'eux soient
+// justes. L'appelant qui veut afficher un total incluant les victoires manuelles doit
+// additionner season.manualWinsDetail.length séparément, uniquement pour l'affichage.
 export async function getImfSeasonHighlights(
   startDate: string,
-  endDate: string,
-  manualWinsCount?: number
+  endDate: string
 ): Promise<SeasonHighlights> {
   // Ancrage UTC explicite (comme victoires.tsx/stats.tsx) : sinon la frontière de saison
   // dépend du fuseau de l'appareil qui déclenche la requête (client mobile vs serveur).
   const start = new Date(startDate + 'T00:00:00Z').toISOString();
   const end = new Date(endDate + 'T23:59:59Z').toISOString();
-  const stats = await getStatsBetween(start, end);
-  if (manualWinsCount !== undefined) {
-    return { ...stats, totalWins: stats.totalWins + manualWinsCount };
-  }
-  return stats;
+  return getStatsBetween(start, end);
 }
 
 // Agrège les stats depuis player_season_stats (données historiques complètes)
@@ -156,45 +156,66 @@ export async function getFinisherStats(
 export async function getTopMaps(
   startDate: string,
   endDate: string,
-  manualWins?: { mapName: string | null }[],
-  limit = 5
+  manualWins?: { mapName: string | null; winDate?: string | null }[],
+  limit = 5,
+  sortBy: 'wins' | 'recent' = 'wins'
 ): Promise<{ mapName: string; wins: number }[]> {
   const start = new Date(startDate + 'T00:00:00Z').toISOString();
   const end = new Date(endDate + 'T23:59:59Z').toISOString();
 
   const counts: Record<string, number> = {};
+  const lastWinDate: Record<string, string> = {};
 
   const { data: winRows } = await supabase
     .from('player_match_stats')
-    .select('match_id')
+    .select('match_id, match_date')
     .eq('is_win', true)
     .gte('match_date', start)
     .lte('match_date', end);
 
   if (winRows && winRows.length > 0) {
-    const winMatchIds = [...new Set(winRows.map((r) => r.match_id))];
+    const matchDateById = new Map<string, string>();
+    for (const r of winRows) {
+      if (!matchDateById.has(r.match_id)) matchDateById.set(r.match_id, r.match_date);
+    }
+    const winMatchIds = [...matchDateById.keys()];
     const { data: mapRows } = await supabase
       .from('match_cache')
-      .select('map_name')
+      .select('match_id, map_name')
       .in('match_id', winMatchIds)
       .not('map_name', 'is', null);
 
     for (const row of mapRows ?? []) {
       const display = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
       counts[display] = (counts[display] ?? 0) + 1;
+      const matchDate = matchDateById.get(row.match_id);
+      if (matchDate && (!lastWinDate[display] || matchDate > lastWinDate[display])) {
+        lastWinDate[display] = matchDate;
+      }
     }
   }
 
   if (manualWins) {
     for (const w of manualWins) {
-      if (w.mapName) counts[w.mapName] = (counts[w.mapName] ?? 0) + 1;
+      if (w.mapName) {
+        counts[w.mapName] = (counts[w.mapName] ?? 0) + 1;
+        if (w.winDate && (!lastWinDate[w.mapName] || w.winDate > lastWinDate[w.mapName])) {
+          lastWinDate[w.mapName] = w.winDate;
+        }
+      }
     }
   }
 
   if (Object.keys(counts).length === 0) return [];
 
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
+  const entries = Object.entries(counts);
+  if (sortBy === 'recent') {
+    entries.sort((a, b) => (lastWinDate[b[0]] ?? '').localeCompare(lastWinDate[a[0]] ?? ''));
+  } else {
+    entries.sort((a, b) => b[1] - a[1]);
+  }
+
+  return entries
     .slice(0, limit)
     .map(([mapName, wins]) => ({ mapName, wins }));
 }

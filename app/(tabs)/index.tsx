@@ -279,13 +279,13 @@ export default function DashboardScreen() {
       getLastWin(),
       getLastSync(),
       currentImfSeason
-        ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail.length || undefined)
+        ? getImfSeasonHighlights(currentImfSeason.startDate, currentImfSeason.endDate)
         : Promise.resolve(null),
       currentImfSeason
         ? getFinisherStats(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail)
         : Promise.resolve([]),
       currentImfSeason
-        ? getTopMaps(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail)
+        ? getTopMaps(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail, 5, 'recent')
         : Promise.resolve([]),
     ]);
     setMonthly(m);
@@ -467,7 +467,7 @@ export default function DashboardScreen() {
               <View style={styles.row}>
                 <StatCard
                   label="Victoires IMF"
-                  value={imfStats?.totalWins ?? '—'}
+                  value={imfStats ? imfStats.totalWins + imfSeason.manualWinsDetail.length : '—'}
                   accent
                   large
                 />
@@ -498,7 +498,7 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.statsBarDivider} />
               <View style={styles.statsBarItem}>
-                <Text style={styles.statsBarLabel}>Win rate</Text>
+                <Text style={styles.statsBarLabel}>% Vict.</Text>
                 <Text style={styles.statsBarValue}>{imfStats ? winRate(imfStats.totalWins, imfStats.totalMatches) : '—'}</Text>
               </View>
             </View>
@@ -509,7 +509,7 @@ export default function DashboardScreen() {
         {imfSeason && (
           <>
             {/* Top 5 cartes */}
-            <Text style={styles.listTitle}>TOP CARTES GAGNÉES</Text>
+            <Text style={styles.listTitle}>TOP 5 CARTES GAGNÉES</Text>
             <View style={styles.listCard}>
               {topMaps.length === 0 ? (
                 <View style={styles.listRow}>
@@ -566,7 +566,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.statsBarDivider} />
           <View style={styles.statsBarItem}>
-            <Text style={styles.statsBarLabel}>Win rate</Text>
+            <Text style={styles.statsBarLabel}>% Vict.</Text>
             <Text style={styles.statsBarValue}>{monthly ? winRate(monthly.totalWins, monthly.totalMatches) : '—'}</Text>
           </View>
         </View>

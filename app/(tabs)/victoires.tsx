@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps, getImfSeasonHighlights, SeasonHighlights } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { getImfSeasons, ImfSeason } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
@@ -31,6 +31,16 @@ function formatDateTime(iso: string): string {
 
 function formatSeasonDates(start: string, end: string, isCurrent: boolean): string {
   return `${formatDate(start)} → ${isCurrent ? "aujourd'hui" : formatDate(end)}`;
+}
+
+function avg(total: number, matches: number): string {
+  if (matches === 0) return '—';
+  return (total / matches).toFixed(1);
+}
+
+function winRate(wins: number, matches: number): string {
+  if (matches === 0) return '—';
+  return Math.round(wins / matches * 100) + '%';
 }
 
 // Date calendaire en heure de Paris (le groupe joue depuis la France), pas en UTC brut :
@@ -241,6 +251,7 @@ export default function VictoiresScreen() {
   const [victories, setVictories] = useState<Victory[]>([]);
   const [finisherStats, setFinisherStats] = useState<{ username: string; count: number }[]>([]);
   const [topMaps, setTopMaps] = useState<{ mapName: string; wins: number }[]>([]);
+  const [imfStats, setImfStats] = useState<SeasonHighlights | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -249,14 +260,16 @@ export default function VictoiresScreen() {
   const loadVictories = useCallback(async (season: ImfSeason) => {
     setLoading(true);
     try {
-      const [wins, fs, maps] = await Promise.all([
+      const [wins, fs, maps, highlights] = await Promise.all([
         getVictoriesForSeason(season.year, season.startDate, season.endDate),
         getFinisherStats(season.startDate, season.endDate, season.manualWinsDetail),
-        getTopMaps(season.startDate, season.endDate, season.manualWinsDetail),
+        getTopMaps(season.startDate, season.endDate, season.manualWinsDetail, Infinity),
+        getImfSeasonHighlights(season.startDate, season.endDate),
       ]);
       setVictories(wins);
       setFinisherStats(fs);
       setTopMaps(maps);
+      setImfStats(highlights);
     } finally {
       setLoading(false);
     }
@@ -332,6 +345,37 @@ export default function VictoiresScreen() {
       >
         {currentSeason && (
           <>
+            {/* ── Total victoires de la saison ── */}
+            <View style={styles.totalWinsRow}>
+              <Ionicons name="trophy" size={14} color={Colors.primary} />
+              <Text style={styles.totalWinsText}>
+                {imfStats ? imfStats.totalWins + currentSeason.manualWinsDetail.length : '—'} victoire{(imfStats ? imfStats.totalWins + currentSeason.manualWinsDetail.length : 0) > 1 ? 's' : ''} cette saison
+              </Text>
+            </View>
+
+            {/* ── Matchs / Frags moy. / Dmg moy. / % Vict. (hors victoires manuelles) ── */}
+            <View style={styles.statsBar}>
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Matchs</Text>
+                <Text style={styles.statsBarValue}>{imfStats?.totalMatches ?? '—'}</Text>
+              </View>
+              <View style={styles.statsBarDivider} />
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Frags moy.</Text>
+                <Text style={styles.statsBarValue}>{imfStats ? avg(imfStats.totalKills, imfStats.totalMatches) : '—'}</Text>
+              </View>
+              <View style={styles.statsBarDivider} />
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>Dmg moy.</Text>
+                <Text style={styles.statsBarValue}>{imfStats ? avg(imfStats.totalDamage, imfStats.totalMatches) : '—'}</Text>
+              </View>
+              <View style={styles.statsBarDivider} />
+              <View style={styles.statsBarItem}>
+                <Text style={styles.statsBarLabel}>% Vict.</Text>
+                <Text style={styles.statsBarValue}>{imfStats ? winRate(imfStats.totalWins, imfStats.totalMatches) : '—'}</Text>
+              </View>
+            </View>
+
             {/* ── Top cartes gagnées ── */}
             <Text style={styles.listTitle}>TOP CARTES GAGNÉES</Text>
             <View style={styles.listCard}>
@@ -449,6 +493,41 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 12, gap: 10, paddingBottom: 32 },
 
   countRow: { alignItems: 'flex-end', paddingHorizontal: 4, paddingBottom: 4 },
+
+  totalWinsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, paddingBottom: 4 },
+  totalWinsText: { fontSize: 14, fontWeight: '800', color: Colors.primary },
+
+  statsBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    marginBottom: 4,
+  },
+  statsBarItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  statsBarLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  statsBarValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.text,
+  },
+  statsBarDivider: {
+    width: 1,
+    backgroundColor: Colors.cardBorder,
+    marginVertical: 8,
+  },
 
   listTitle: {
     fontSize: 10,
