@@ -263,7 +263,7 @@ export default function VictoiresScreen() {
       const [wins, fs, maps, highlights] = await Promise.all([
         getVictoriesForSeason(season.year, season.startDate, season.endDate),
         getFinisherStats(season.startDate, season.endDate, season.manualWinsDetail),
-        getTopMaps(season.startDate, season.endDate, season.manualWinsDetail, Infinity, 'recent'),
+        getTopMaps(season.startDate, season.endDate, season.manualWinsDetail, Infinity),
         getImfSeasonHighlights(season.startDate, season.endDate),
       ]);
       setVictories(wins);

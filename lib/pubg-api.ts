@@ -170,68 +170,47 @@ export async function getFinisherStats(
 export async function getTopMaps(
   startDate: string,
   endDate: string,
-  manualWins?: { mapName: string | null; winDate?: string | null }[],
-  limit = 5,
-  sortBy: 'wins' | 'recent' = 'wins'
+  manualWins?: { mapName: string | null }[],
+  limit = 5
 ): Promise<{ mapName: string; wins: number }[]> {
   const start = new Date(startDate + 'T00:00:00Z').toISOString();
   const end = new Date(endDate + 'T23:59:59Z').toISOString();
 
   const counts: Record<string, number> = {};
-  const lastWinDate: Record<string, string> = {};
 
   const { data: winRows } = await supabase
     .from('player_match_stats')
-    .select('match_id, match_date')
+    .select('match_id')
     .eq('is_win', true)
     .gte('match_date', start)
     .lte('match_date', end);
 
   if (winRows && winRows.length > 0) {
-    const matchDateById = new Map<string, string>();
-    for (const r of winRows) {
-      if (!matchDateById.has(r.match_id)) matchDateById.set(r.match_id, r.match_date);
-    }
-    const winMatchIds = [...matchDateById.keys()];
+    const winMatchIds = [...new Set(winRows.map((r) => r.match_id))];
     const { data: mapRows } = await supabase
       .from('match_cache')
-      .select('match_id, map_name')
+      .select('map_name')
       .in('match_id', winMatchIds)
       .not('map_name', 'is', null);
 
     for (const row of mapRows ?? []) {
       const display = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
       counts[display] = (counts[display] ?? 0) + 1;
-      const matchDate = matchDateById.get(row.match_id);
-      if (matchDate && (!lastWinDate[display] || matchDate > lastWinDate[display])) {
-        lastWinDate[display] = matchDate;
-      }
     }
   }
 
   if (manualWins) {
     for (const w of manualWins) {
-      if (w.mapName) {
-        counts[w.mapName] = (counts[w.mapName] ?? 0) + 1;
-        if (w.winDate && (!lastWinDate[w.mapName] || w.winDate > lastWinDate[w.mapName])) {
-          lastWinDate[w.mapName] = w.winDate;
-        }
-      }
+      if (w.mapName) counts[w.mapName] = (counts[w.mapName] ?? 0) + 1;
     }
   }
 
   if (Object.keys(counts).length === 0) return [];
 
-  const entries = Object.entries(counts);
-  if (sortBy === 'recent') {
-    // Nombre de victoires en critère principal, date de la victoire la plus récente
-    // pour départager les cartes à égalité.
-    entries.sort((a, b) => b[1] - a[1] || (lastWinDate[b[0]] ?? '').localeCompare(lastWinDate[a[0]] ?? ''));
-  } else {
-    entries.sort((a, b) => b[1] - a[1]);
-  }
-
-  return entries
+  // Nombre de victoires en critère principal, ordre alphabétique pour départager
+  // les cartes à égalité.
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, limit)
     .map(([mapName, wins]) => ({ mapName, wins }));
 }

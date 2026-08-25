@@ -286,7 +286,7 @@ export default function DashboardScreen() {
         ? getFinisherStats(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail)
         : Promise.resolve([]),
       currentImfSeason
-        ? getTopMaps(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail, 5, 'recent')
+        ? getTopMaps(currentImfSeason.startDate, currentImfSeason.endDate, currentImfSeason.manualWinsDetail, 5)
         : Promise.resolve([]),
     ]);
     setMonthly(m);
