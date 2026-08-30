@@ -215,7 +215,7 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
           <View style={styles.divider} />
           <View style={styles.playersTable}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.tableCell, styles.tableCellPlayer, styles.tableHeaderText]}>Joueur</Text>
+              <Text style={[styles.tableCell, styles.tableCellPlayer, styles.tableHeaderText]}>Joueurs</Text>
               <Text style={[styles.tableCell, styles.tableCellStat, styles.tableHeaderText]}>Kills</Text>
               <Text style={[styles.tableCell, styles.tableCellStat, styles.tableHeaderText]}>Assists</Text>
               <Text style={[styles.tableCell, styles.tableCellDmg, styles.tableHeaderText]}>Dommages</Text>
