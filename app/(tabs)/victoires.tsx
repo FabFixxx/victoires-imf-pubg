@@ -259,6 +259,14 @@ export default function VictoiresScreen() {
 
   const loadVictories = useCallback(async (season: ImfSeason) => {
     setLoading(true);
+    // Purge immédiate des données de l'ancienne saison : le bandeau total et le bloc
+    // stats ne sont pas gardés par `loading`, donc sans ça ils affichent brièvement un
+    // mélange incohérent (imfStats de l'ancienne saison + manualWinsDetail de la nouvelle)
+    // pendant la durée du fetch.
+    setImfStats(null);
+    setVictories([]);
+    setFinisherStats([]);
+    setTopMaps([]);
     try {
       const [wins, fs, maps, highlights] = await Promise.all([
         getVictoriesForSeason(season.year, season.startDate, season.endDate),
