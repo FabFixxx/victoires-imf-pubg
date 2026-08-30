@@ -216,9 +216,9 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
           <View style={styles.playersTable}>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableCell, styles.tableCellPlayer, styles.tableHeaderText]}>Joueurs</Text>
-              <Text style={[styles.tableCell, styles.tableCellStat, styles.tableHeaderText]}>Kills</Text>
-              <Text style={[styles.tableCell, styles.tableCellStat, styles.tableHeaderText]}>Assists</Text>
-              <Text style={[styles.tableCell, styles.tableCellDmg, styles.tableHeaderText]}>Dommages</Text>
+              <Text style={[styles.tableCell, styles.tableCellStat, styles.tableHeaderText, styles.tableHeaderTextCentered]}>Kills</Text>
+              <Text style={[styles.tableCell, styles.tableCellStat, styles.tableHeaderText, styles.tableHeaderTextCentered]}>Assists</Text>
+              <Text style={[styles.tableCell, styles.tableCellDmg, styles.tableHeaderText, styles.tableHeaderTextCentered]}>Dommages</Text>
             </View>
             {win.players.map((p) => (
               <View key={p.username} style={styles.tableRow}>
@@ -677,12 +677,13 @@ const styles = StyleSheet.create({
   },
   tableCell: { fontSize: 12 },
   tableCellPlayer: { flex: 2 },
-  tableCellStat: { flex: 1, textAlign: 'center' },
-  tableCellDmg: { flex: 1, textAlign: 'center' },
+  tableCellStat: { flex: 1, textAlign: 'right' },
+  tableCellDmg: { flex: 1, textAlign: 'right' },
   playerCell: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   playerDot: { width: 7, height: 7, borderRadius: 3.5 },
   tableCellPlayerValue: { color: Colors.text, fontWeight: '600', fontSize: 12 },
   tableCellValue: { color: Colors.textSecondary, fontVariant: ['tabular-nums'] },
   tableCellTotal: { color: Colors.primary, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  tableHeaderText: { fontSize: 10, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  tableHeaderText: { fontSize: 10, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  tableHeaderTextCentered: { textAlign: 'center' },
 });
