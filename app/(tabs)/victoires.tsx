@@ -678,11 +678,11 @@ const styles = StyleSheet.create({
   tableCell: { fontSize: 12 },
   tableCellPlayer: { flex: 2 },
   tableCellStat: { flex: 1, textAlign: 'center' },
-  tableCellDmg: { flex: 1.5, textAlign: 'right' },
+  tableCellDmg: { flex: 1, textAlign: 'center' },
   playerCell: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   playerDot: { width: 7, height: 7, borderRadius: 3.5 },
   tableCellPlayerValue: { color: Colors.text, fontWeight: '600', fontSize: 12 },
   tableCellValue: { color: Colors.textSecondary, fontVariant: ['tabular-nums'] },
   tableCellTotal: { color: Colors.primary, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  tableHeaderText: { fontSize: 10, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  tableHeaderText: { fontSize: 10, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
 });
