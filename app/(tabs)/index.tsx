@@ -28,7 +28,6 @@ import {
   getLastServerSync,
   PUBG_MAP_NAMES,
   weaponDisplayName,
-  weaponIcon,
   MonthlyStats,
   LastMatch,
 } from '../../lib/pubg-api';
@@ -130,7 +129,7 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
                 <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                 <Text style={styles.finisherText}>
                   Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
-                  {weaponDisplayName(match.weapon) ? ` ${weaponIcon(match.weapon)} ${weaponDisplayName(match.weapon)}` : ''}
+                  {weaponDisplayName(match.weapon) ? ` (${weaponDisplayName(match.weapon)})` : ''}
                 </Text>
               </View>
             )}
@@ -647,7 +646,7 @@ export default function DashboardScreen() {
                           <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                           <Text style={styles.finisherText}>
                             Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
-                            {weaponDisplayName(match.weapon ?? null) ? ` ${weaponIcon(match.weapon ?? null)} ${weaponDisplayName(match.weapon ?? null)}` : ''}
+                            {weaponDisplayName(match.weapon ?? null) ? ` (${weaponDisplayName(match.weapon ?? null)})` : ''}
                           </Text>
                         </>
                       )}

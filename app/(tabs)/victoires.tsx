@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps, getImfSeasonHighlights, SeasonHighlights, weaponDisplayName, weaponIcon } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps, getImfSeasonHighlights, SeasonHighlights, weaponDisplayName } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { getImfSeasons, ImfSeason } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
@@ -205,7 +205,7 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
           <Ionicons name="skull-outline" size={12} color={win.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
           <Text style={styles.finisherText}>
             Dernier kill : <Text style={[styles.finisherName, win.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{win.finisher}</Text>
-            {weaponDisplayName(win.weapon) ? ` ${weaponIcon(win.weapon)} ${weaponDisplayName(win.weapon)}` : ''}
+            {weaponDisplayName(win.weapon) ? ` (${weaponDisplayName(win.weapon)})` : ''}
           </Text>
         </View>
       )}

@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
-import { PUBG_MAP_NAMES, weaponDisplayName, weaponIcon } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES, weaponDisplayName } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
@@ -331,7 +331,7 @@ export default function StatsScreen() {
                               <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                               <Text style={styles.matchFinisherText}>
                                 Dernier kill : <Text style={[styles.matchFinisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
-                                {weaponDisplayName(match.weapon ?? null) ? ` ${weaponIcon(match.weapon ?? null)} ${weaponDisplayName(match.weapon ?? null)}` : ''}
+                                {weaponDisplayName(match.weapon ?? null) ? ` (${weaponDisplayName(match.weapon ?? null)})` : ''}
                               </Text>
                             </>
                           )}

@@ -126,30 +126,6 @@ export const PUBG_WEAPON_NAMES: Record<string, string> = {
   WeapTurret_KillTruck_Main_C: 'Camion',
 };
 
-const SNIPER_DMR = new Set([
-  'Kar98k', 'M24', 'AWM', 'Mosin-Nagant', 'Win94', 'VSS', 'Dragunov', 'Mini 14',
-  'SKS', 'SLR', 'Mk12', 'Mk14 EBR', 'QBU88', 'Lynx AMR', 'Arbalète',
-]);
-const SHOTGUNS = new Set(['S686', 'S1897', 'S12K', 'DBS', 'Sawed-off', 'O12']);
-const MELEE = new Set(['Pied de biche', 'Machette', 'Poêle', 'Faucille']);
-const THROWABLES = new Set(['Grenade', 'Molotov', 'C4', 'Sticky Bomb', 'Panzerfaust', 'Mortier', 'Grenade Zone bleue']);
-
-// Icône (emoji) par catégorie d'arme plutôt qu'une vraie icône du jeu : pas d'assets
-// PUBG officiels disponibles (propriété du studio), l'emoji donne un repère visuel
-// par catégorie sans utiliser d'assets protégés.
-export function weaponIcon(weaponCode: string | null): string {
-  if (!weaponCode) return '';
-  const name = PUBG_WEAPON_NAMES[weaponCode] ?? weaponCode;
-  if (name === 'Zone bleue' || name === 'Grenade Zone bleue') return '⚡';
-  if (name === 'Zone rouge') return '🔴';
-  if (name === 'Noyade' || name === 'Lave' || name === 'Tempête de sable') return '⚠️';
-  if (SNIPER_DMR.has(name)) return '🎯';
-  if (SHOTGUNS.has(name)) return '💥';
-  if (MELEE.has(name)) return '🔪';
-  if (THROWABLES.has(name)) return '💣';
-  return '🔫';
-}
-
 export function weaponDisplayName(weaponCode: string | null): string | null {
   if (!weaponCode) return null;
   return PUBG_WEAPON_NAMES[weaponCode] ?? null;
