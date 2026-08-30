@@ -114,6 +114,16 @@ export const PUBG_WEAPON_NAMES: Record<string, string> = {
   Lava: 'Lave',
   SandStormBuff_BP_C: 'Tempête de sable',
   'Buff_DecreaseBreathInApnea_C': 'Noyade',
+  BP_FireEffectController_C: 'Molotov',
+  BP_FireEffectController_JerryCan_C: 'Molotov',
+  BP_IncendiaryDebuff_C: 'Molotov',
+  BP_JerryCanFireDebuff_C: 'Molotov',
+  BP_JerryCan_FuelPuddle_C: 'Molotov',
+  BP_MolotovFireDebuff_C: 'Molotov',
+  ProjIncendiary_C: 'Molotov',
+  ProjMolotov_DamageField_Direct_C: 'Molotov',
+  BP_KillTruck_C: 'Camion',
+  WeapTurret_KillTruck_Main_C: 'Camion',
 };
 
 const SNIPER_DMR = new Set([
