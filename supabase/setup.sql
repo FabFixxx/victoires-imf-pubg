@@ -106,6 +106,10 @@ ALTER TABLE match_cache ADD COLUMN IF NOT EXISTS finisher TEXT;
 -- Nom de la carte pour le top 5 maps
 ALTER TABLE match_cache ADD COLUMN IF NOT EXISTS map_name TEXT;
 
+-- Arme utilisée pour le dernier kill (code interne PUBG, ex: WeapAK47_C) — voir
+-- PUBG_WEAPON_NAMES dans lib/pubg-api.ts pour la table de correspondance vers un nom lisible
+ALTER TABLE match_cache ADD COLUMN IF NOT EXISTS weapon TEXT;
+
 -- Victoires manuelles détaillées par saison IMF (carte + finisher par victoire)
 CREATE TABLE IF NOT EXISTS imf_season_wins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

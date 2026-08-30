@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps, getImfSeasonHighlights, SeasonHighlights } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps, getImfSeasonHighlights, SeasonHighlights, weaponDisplayName, weaponIcon } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { getImfSeasons, ImfSeason } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
@@ -62,6 +62,7 @@ interface Victory {
   matchDate: string | null;
   mapName: string | null;
   finisher: string | null;
+  weapon: string | null;
   totalTeams: number | null;
   players: WinPlayer[];
   isManual: boolean;
@@ -86,16 +87,17 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
 
   const { data: cacheRows } = await supabase
     .from('match_cache')
-    .select('match_id, map_name, finisher, data')
+    .select('match_id, map_name, finisher, weapon, data')
     .in('match_id', matchIds.length ? matchIds : ['__none__']);
 
-  const cacheByMatchId: Record<string, { mapName: string | null; finisher: string | null; totalTeams: number | null }> = {};
+  const cacheByMatchId: Record<string, { mapName: string | null; finisher: string | null; weapon: string | null; totalTeams: number | null }> = {};
   for (const row of cacheRows ?? []) {
     const allPlayers: { winPlace?: number }[] = row.data?.players ?? [];
     const totalTeams = allPlayers.length > 0 ? Math.max(...allPlayers.map((p) => p.winPlace ?? 1)) : null;
     cacheByMatchId[row.match_id] = {
       mapName: row.map_name ? (PUBG_MAP_NAMES[row.map_name] ?? row.map_name) : null,
       finisher: row.finisher ?? null,
+      weapon: row.weapon ?? null,
       totalTeams,
     };
   }
@@ -115,7 +117,7 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
     .map((matchId) => {
       const match = byMatch[matchId];
       if (!match) return null;
-      const cache = cacheByMatchId[matchId] ?? { mapName: null, finisher: null, totalTeams: null };
+      const cache = cacheByMatchId[matchId] ?? { mapName: null, finisher: null, weapon: null, totalTeams: null };
       const players = [...match.players].sort(
         (a, b) => GROUP_PLAYERS.indexOf(a.username as any) - GROUP_PLAYERS.indexOf(b.username as any)
       );
@@ -124,6 +126,7 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
         matchDate: match.matchDate,
         mapName: cache.mapName,
         finisher: cache.finisher,
+        weapon: cache.weapon,
         totalTeams: cache.totalTeams,
         players,
         isManual: false,
@@ -150,6 +153,7 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
       matchDate: w.win_date ?? null,
       mapName: w.map_name ? (PUBG_MAP_NAMES[w.map_name] ?? w.map_name) : null,
       finisher: w.finisher ?? null,
+      weapon: null,
       totalTeams: null,
       players: [],
       isManual: true,
@@ -201,6 +205,7 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
           <Ionicons name="skull-outline" size={12} color={win.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
           <Text style={styles.finisherText}>
             Dernier kill : <Text style={[styles.finisherName, win.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{win.finisher}</Text>
+            {weaponDisplayName(win.weapon) ? ` ${weaponIcon(win.weapon)} ${weaponDisplayName(win.weapon)}` : ''}
           </Text>
         </View>
       )}

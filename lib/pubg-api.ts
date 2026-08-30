@@ -33,6 +33,118 @@ export const PUBG_MAP_NAMES: Record<string, string> = {
   Chimera_Main: 'Paramo',
 };
 
+// Table officielle PUBG (damageCauserName) : https://github.com/pubg/api-assets
+export const PUBG_WEAPON_NAMES: Record<string, string> = {
+  WeapACE32_C: 'ACE32',
+  WeapAK47_C: 'AKM',
+  WeapAUG_C: 'AUG A3',
+  WeapAWM_C: 'AWM',
+  WeapBerreta686_C: 'S686',
+  WeapBerylM762_C: 'Beryl',
+  WeapBizonPP19_C: 'Bizon',
+  WeapCowbarProjectile_C: 'Pied de biche',
+  WeapCowbar_C: 'Pied de biche',
+  WeapCrossbow_1_C: 'Arbalète',
+  WeapDP12_C: 'DBS',
+  WeapDP28_C: 'DP-28',
+  WeapDesertEagle_C: 'Deagle',
+  WeapDragunov_C: 'Dragunov',
+  WeapDuncansHK416_C: 'M416',
+  WeapFNFal_C: 'SLR',
+  WeapG18_C: 'P18C',
+  WeapG36C_C: 'G36C',
+  WeapGroza_C: 'Groza',
+  WeapHK416_C: 'M416',
+  WeapJS9_C: 'JS9',
+  WeapJuliesKar98k_C: 'Kar98k',
+  WeapK2_C: 'K2',
+  WeapKar98k_C: 'Kar98k',
+  WeapL6_C: 'Lynx AMR',
+  WeapLunchmeatsAK47_C: 'AKM',
+  WeapM16A4_C: 'M16A4',
+  WeapM1911_C: 'P1911',
+  WeapM249_C: 'M249',
+  WeapM24_C: 'M24',
+  WeapM9_C: 'P92',
+  WeapMG3_C: 'MG3',
+  WeapMP5K_C: 'MP5K',
+  WeapMP9_C: 'MP9',
+  WeapMacheteProjectile_C: 'Machette',
+  WeapMachete_C: 'Machette',
+  WeapMadsQBU88_C: 'QBU88',
+  WeapMini14_C: 'Mini 14',
+  WeapMk12_C: 'Mk12',
+  WeapMk14_C: 'Mk14 EBR',
+  WeapMk47Mutant_C: 'Mk47 Mutant',
+  WeapMosinNagant_C: 'Mosin-Nagant',
+  WeapNagantM1895_C: 'R1895',
+  WeapOriginS12_C: 'O12',
+  WeapP90_C: 'P90',
+  WeapPanProjectile_C: 'Poêle',
+  WeapPan_C: 'Poêle',
+  WeapPanzerFaust100M1_C: 'Panzerfaust',
+  WeapQBU88_C: 'QBU88',
+  WeapQBZ95_C: 'QBZ95',
+  WeapRhino_C: 'R45',
+  'WeapSCAR-L_C': 'SCAR-L',
+  WeapSKS_C: 'SKS',
+  WeapSaiga12_C: 'S12K',
+  WeapSawnoff_C: 'Sawed-off',
+  WeapSickleProjectile_C: 'Faucille',
+  WeapSickle_C: 'Faucille',
+  WeapThompson_C: 'Tommy Gun',
+  WeapUMP_C: 'UMP9',
+  WeapUZI_C: 'Micro Uzi',
+  WeapVSS_C: 'VSS',
+  WeapVector_C: 'Vector',
+  WeapWin94_C: 'Win94',
+  WeapWinchester_C: 'S1897',
+  Weapvz61Skorpion_C: 'Skorpion',
+  ProjGrenade_C: 'Grenade',
+  ProjMolotov_C: 'Molotov',
+  ProjC4_C: 'C4',
+  ProjStickyGrenade_C: 'Sticky Bomb',
+  PanzerFaust100M_Projectile_C: 'Panzerfaust',
+  Mortar_Projectile_C: 'Mortier',
+  BlueZone: 'Zone bleue',
+  Bluezonebomb_EffectActor_C: 'Grenade Zone bleue',
+  RedZoneBomb_C: 'Zone rouge',
+  RedZoneBombingField: 'Zone rouge',
+  RedZoneBombingField_Def_C: 'Zone rouge',
+  Lava: 'Lave',
+  SandStormBuff_BP_C: 'Tempête de sable',
+  'Buff_DecreaseBreathInApnea_C': 'Noyade',
+};
+
+const SNIPER_DMR = new Set([
+  'Kar98k', 'M24', 'AWM', 'Mosin-Nagant', 'Win94', 'VSS', 'Dragunov', 'Mini 14',
+  'SKS', 'SLR', 'Mk12', 'Mk14 EBR', 'QBU88', 'Lynx AMR', 'Arbalète',
+]);
+const SHOTGUNS = new Set(['S686', 'S1897', 'S12K', 'DBS', 'Sawed-off', 'O12']);
+const MELEE = new Set(['Pied de biche', 'Machette', 'Poêle', 'Faucille']);
+const THROWABLES = new Set(['Grenade', 'Molotov', 'C4', 'Sticky Bomb', 'Panzerfaust', 'Mortier', 'Grenade Zone bleue']);
+
+// Icône (emoji) par catégorie d'arme plutôt qu'une vraie icône du jeu : pas d'assets
+// PUBG officiels disponibles (propriété du studio), l'emoji donne un repère visuel
+// par catégorie sans utiliser d'assets protégés.
+export function weaponIcon(weaponCode: string | null): string {
+  if (!weaponCode) return '';
+  const name = PUBG_WEAPON_NAMES[weaponCode] ?? weaponCode;
+  if (name === 'Zone bleue' || name === 'Grenade Zone bleue') return '⚡';
+  if (name === 'Zone rouge') return '🔴';
+  if (name === 'Noyade' || name === 'Lave' || name === 'Tempête de sable') return '⚠️';
+  if (SNIPER_DMR.has(name)) return '🎯';
+  if (SHOTGUNS.has(name)) return '💥';
+  if (MELEE.has(name)) return '🔪';
+  if (THROWABLES.has(name)) return '💣';
+  return '🔫';
+}
+
+export function weaponDisplayName(weaponCode: string | null): string | null {
+  if (!weaponCode) return null;
+  return PUBG_WEAPON_NAMES[weaponCode] ?? null;
+}
+
 export interface SeasonHighlights {
   totalWins: number;
   totalMatches: number;
@@ -220,6 +332,7 @@ export interface LastMatch {
   matchDate: Date;
   isWin: boolean;
   finisher: string | null;
+  weapon: string | null;
   mapName: string | null;
   placement: number | null;
   totalTeams: number | null;
@@ -248,7 +361,7 @@ async function buildLastMatchFromRows(
 
     const { data: cache } = await supabase
       .from('match_cache')
-      .select('map_name, finisher')
+      .select('map_name, finisher, weapon')
       .eq('match_id', matchId)
       .single();
 
@@ -257,6 +370,7 @@ async function buildLastMatchFromRows(
       matchDate: new Date(firstRow.match_date),
       isWin,
       finisher: cache?.finisher ?? null,
+      weapon: cache?.weapon ?? null,
       mapName: cache?.map_name ?? null,
       placement,
       totalTeams: null,

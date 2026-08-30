@@ -40,33 +40,37 @@ async function fetchPUBG(endpoint: string, retries = 1): Promise<any> {
   return res.json()
 }
 
-async function fetchFinisher(telemetryUrl: string): Promise<string | null> {
+function weaponOf(killEvent: any): string | null {
+  return killEvent?.finishDamageInfo?.damageCauserName ?? killEvent?.damageCauserName ?? null
+}
+
+async function fetchFinisher(telemetryUrl: string): Promise<{ name: string | null; weapon: string | null }> {
   try {
     const res = await fetch(telemetryUrl)
-    if (!res.ok) return null
+    if (!res.ok) return { name: null, weapon: null }
     const events: any[] = await res.json()
     const killEvents = events.filter((e) => e._T === 'LogPlayerKillV2' || e._T === 'LogPlayerKill')
-    if (killEvents.length === 0) return null
+    if (killEvents.length === 0) return { name: null, weapon: null }
     killEvents.sort((a, b) => a._D.localeCompare(b._D))
     const lastKill = killEvents[killEvents.length - 1]
     const finisherName = lastKill.finisher?.name ?? lastKill.killer?.name
     const victimName = lastKill.victim?.name
-    if (finisherName && finisherName !== victimName) return finisherName
+    if (finisherName && finisherName !== victimName) return { name: finisherName, weapon: weaponOf(lastKill) }
     const isBlueZone =
       lastKill.damageCauserName === 'BlueZone' ||
       lastKill.damageTypeCategory === 'Damage_BlueZone' ||
       lastKill.finishDamageInfo?.damageCauserName === 'BlueZone' ||
       (!finisherName && !lastKill.killer?.name)
-    if (isBlueZone) return 'Zone bleue'
+    if (isBlueZone) return { name: 'Zone bleue', weapon: null }
     const validKills = killEvents.filter((e) => {
       const fn = e.finisher?.name ?? e.killer?.name
       return fn && fn !== e.victim?.name
     })
-    if (validKills.length === 0) return null
+    if (validKills.length === 0) return { name: null, weapon: null }
     const lastValid = validKills[validKills.length - 1]
-    return lastValid.finisher?.name ?? lastValid.killer?.name ?? null
+    return { name: lastValid.finisher?.name ?? lastValid.killer?.name ?? null, weapon: weaponOf(lastValid) }
   } catch {
-    return null
+    return { name: null, weapon: null }
   }
 }
 
@@ -101,7 +105,7 @@ async function fetchAndCacheMatch(
 ): Promise<boolean | null> {
   const { data: cached } = await supabase
     .from('match_cache')
-    .select('data, map_name, finisher')
+    .select('data, map_name, finisher, weapon')
     .eq('match_id', matchId)
     .single()
 
@@ -141,14 +145,19 @@ async function fetchAndCacheMatch(
       }
 
       let finisher = cached.finisher ?? null
+      let weapon = cached.weapon ?? null
       if (isGroupWin && !finisher) {
         const telemetryAsset = (raw.included as any[]).find(
           (i: any) => i.type === 'asset' && i.attributes?.name === 'telemetry'
         )
-        if (telemetryAsset?.attributes?.URL) finisher = await fetchFinisher(telemetryAsset.attributes.URL)
+        if (telemetryAsset?.attributes?.URL) {
+          const result = await fetchFinisher(telemetryAsset.attributes.URL)
+          finisher = result.name
+          weapon = result.weapon
+        }
       }
 
-      await supabase.from('match_cache').update({ map_name: mapName || null, finisher, data: matchData }).eq('match_id', matchId)
+      await supabase.from('match_cache').update({ map_name: mapName || null, finisher, weapon, data: matchData }).eq('match_id', matchId)
       if (!isGroupComplete) return null
 
       await supabase.from('player_match_stats').upsert(
@@ -206,15 +215,20 @@ async function fetchAndCacheMatch(
     const isGroupWin = groupPlayers.length === GROUP_PLAYERS.length && groupPlayers.some((p: any) => p.winPlace === 1)
 
     let finisher: string | null = null
+    let weapon: string | null = null
     if (isGroupWin) {
       const telemetryAsset = (raw.included as any[]).find(
         (i: any) => i.type === 'asset' && i.attributes?.name === 'telemetry'
       )
-      if (telemetryAsset?.attributes?.URL) finisher = await fetchFinisher(telemetryAsset.attributes.URL)
+      if (telemetryAsset?.attributes?.URL) {
+        const result = await fetchFinisher(telemetryAsset.attributes.URL)
+        finisher = result.name
+        weapon = result.weapon
+      }
     }
 
     await supabase.from('match_cache').upsert(
-      { match_id: matchId, match_date: matchData.matchDate, game_mode: gameMode, map_name: (PUBG_MAP_NAMES[mapName] ?? mapName) || null, finisher, data: matchData },
+      { match_id: matchId, match_date: matchData.matchDate, game_mode: gameMode, map_name: (PUBG_MAP_NAMES[mapName] ?? mapName) || null, finisher, weapon, data: matchData },
       { onConflict: 'match_id', ignoreDuplicates: true }
     )
 

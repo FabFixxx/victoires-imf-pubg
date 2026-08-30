@@ -27,6 +27,8 @@ import {
   getLastWin,
   getLastServerSync,
   PUBG_MAP_NAMES,
+  weaponDisplayName,
+  weaponIcon,
   MonthlyStats,
   LastMatch,
 } from '../../lib/pubg-api';
@@ -48,6 +50,7 @@ interface TeamMatch {
   damage: number;
   mapName?: string;
   finisher?: string | null;
+  weapon?: string | null;
 }
 
 const MONTH_NAMES = [
@@ -127,6 +130,7 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
                 <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                 <Text style={styles.finisherText}>
                   Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                  {weaponDisplayName(match.weapon) ? ` ${weaponIcon(match.weapon)} ${weaponDisplayName(match.weapon)}` : ''}
                 </Text>
               </View>
             )}
@@ -323,18 +327,20 @@ export default function DashboardScreen() {
     const matchIds = Array.from(matchMap.keys());
     const { data: cacheRows } = await supabase
       .from('match_cache')
-      .select('match_id, map_name, finisher')
+      .select('match_id, map_name, finisher, weapon')
       .in('match_id', matchIds);
     const mapNameById: Record<string, string> = {};
     const finisherById: Record<string, string> = {};
+    const weaponById: Record<string, string> = {};
     for (const row of cacheRows ?? []) {
       if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
       if (row.finisher) finisherById[row.match_id] = row.finisher;
+      if (row.weapon) weaponById[row.match_id] = row.weapon;
     }
     const sorted = Array.from(matchMap.values())
       .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
       .slice(0, 10)
-      .map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null }));
+      .map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null, weapon: weaponById[m.match_id] ?? null }));
     setRecentTeamMatches(sorted);
     } finally {
       setLoading(false);
@@ -641,6 +647,7 @@ export default function DashboardScreen() {
                           <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                           <Text style={styles.finisherText}>
                             Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                            {weaponDisplayName(match.weapon ?? null) ? ` ${weaponIcon(match.weapon ?? null)} ${weaponDisplayName(match.weapon ?? null)}` : ''}
                           </Text>
                         </>
                       )}

@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
-import { PUBG_MAP_NAMES } from '../../lib/pubg-api';
+import { PUBG_MAP_NAMES, weaponDisplayName, weaponIcon } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { GROUP_PLAYERS, PlayerName, getDisplayName } from '../../constants/players';
 import { PLAYER_COLORS } from '../../lib/availability';
@@ -31,6 +31,7 @@ interface RecentMatch {
   is_win: boolean;
   mapName?: string;
   finisher?: string | null;
+  weapon?: string | null;
 }
 
 interface PlayerStats {
@@ -130,18 +131,20 @@ export default function StatsScreen() {
       const matchIds = sorted.map((m) => m.match_id);
       const { data: cacheRows } = await supabase
         .from('match_cache')
-        .select('match_id, map_name, finisher')
+        .select('match_id, map_name, finisher, weapon')
         .in('match_id', matchIds.length ? matchIds : ['__none__']);
 
       if (requestIdRef.current !== requestId) return;
 
       const mapNameById: Record<string, string> = {};
       const finisherById: Record<string, string> = {};
+      const weaponById: Record<string, string> = {};
       for (const row of cacheRows ?? []) {
         if (row.map_name) mapNameById[row.match_id] = PUBG_MAP_NAMES[row.map_name] ?? row.map_name;
         if (row.finisher) finisherById[row.match_id] = row.finisher;
+        if (row.weapon) weaponById[row.match_id] = row.weapon;
       }
-      setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null })));
+      setRecent(sorted.map((m) => ({ ...m, mapName: mapNameById[m.match_id], finisher: finisherById[m.match_id] ?? null, weapon: weaponById[m.match_id] ?? null })));
     } finally {
       // Ne réinitialiser loading que si aucune requête plus récente n'a pris le relais.
       if (requestIdRef.current === requestId) setLoading(false);
@@ -328,6 +331,7 @@ export default function StatsScreen() {
                               <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
                               <Text style={styles.matchFinisherText}>
                                 Dernier kill : <Text style={[styles.matchFinisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                                {weaponDisplayName(match.weapon ?? null) ? ` ${weaponIcon(match.weapon ?? null)} ${weaponDisplayName(match.weapon ?? null)}` : ''}
                               </Text>
                             </>
                           )}
