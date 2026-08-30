@@ -354,10 +354,14 @@ export default function VictoiresScreen() {
         {currentSeason && (
           <>
             {/* ── Total victoires de la saison ── */}
+            {/* Réutilise victories.length (déjà dédupliqué dans getVictoriesForSeason :
+                une victoire manuelle dont la date coïncide avec un vrai match synchronisé
+                n'est comptée qu'une fois) plutôt que de recalculer un total séparé qui
+                pourrait diverger. */}
             <View style={styles.totalWinsRow}>
               <Ionicons name="trophy" size={14} color={Colors.primary} />
               <Text style={styles.totalWinsText}>
-                {imfStats ? imfStats.totalWins + currentSeason.manualWinsDetail.length : '—'} victoire{(imfStats ? imfStats.totalWins + currentSeason.manualWinsDetail.length : 0) > 1 ? 's' : ''} cette saison
+                {!loading ? victories.length : '—'} victoire{victories.length > 1 ? 's' : ''} cette saison
               </Text>
             </View>
 
