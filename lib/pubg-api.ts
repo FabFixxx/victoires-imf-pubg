@@ -122,8 +122,8 @@ export const PUBG_WEAPON_NAMES: Record<string, string> = {
   BP_MolotovFireDebuff_C: 'Molotov',
   ProjIncendiary_C: 'Molotov',
   ProjMolotov_DamageField_Direct_C: 'Molotov',
-  BP_KillTruck_C: 'Camion',
-  WeapTurret_KillTruck_Main_C: 'Camion',
+  BP_KillTruck_C: 'Voiture',
+  WeapTurret_KillTruck_Main_C: 'Voiture',
 };
 
 export function weaponDisplayName(weaponCode: string | null): string | null {
