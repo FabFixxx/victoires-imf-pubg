@@ -637,20 +637,18 @@ export default function DashboardScreen() {
                       {formatMatchDate(new Date(match.match_date))}
                       {match.mapName ? ` · ${match.mapName}` : ''}
                     </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
-                        {match.is_win ? '#1 🏆' : `#${match.win_place}`}
-                      </Text>
-                      {match.is_win && match.finisher && (
-                        <>
-                          <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
-                          <Text style={styles.finisherText}>
-                            Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
-                            {weaponDisplayName(match.weapon ?? null) ? ` (${weaponDisplayName(match.weapon ?? null)})` : ''}
-                          </Text>
-                        </>
-                      )}
-                    </View>
+                    <Text style={[styles.teamMatchResult, match.is_win ? styles.teamMatchResultWin : styles.teamMatchResultLoss]}>
+                      {match.is_win ? '#1 🏆' : `#${match.win_place}`}
+                    </Text>
+                    {match.is_win && match.finisher && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                        <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
+                        <Text style={styles.finisherText}>
+                          Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                          {weaponDisplayName(match.weapon ?? null) ? ` (${weaponDisplayName(match.weapon ?? null)})` : ''}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.teamMatchStats}>
                     <Text style={styles.teamMatchKills}>{match.kills}K / {match.assists}A</Text>
