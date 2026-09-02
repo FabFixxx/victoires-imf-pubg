@@ -105,6 +105,25 @@ Deno.serve(async (req) => {
       return new Response('ok - date_4votes_pending scheduled/updated')
     }
 
+    // --- Check 1.5 : cette date atteint-elle 3 votes, sans qu'aucune date ne soit
+    // déjà retenue cette semaine ? (uniquement pertinent tant qu'aucune session n'est fixée) ---
+    if (playersOnDay.length === 3) {
+      const { data: retainedThisWeek } = await supabase
+        .from('notification_log').select('key').eq('type', 'retained_session').gte('key', weekStart).lte('key', weekEnd)
+
+      if ((retainedThisWeek?.length ?? 0) === 0) {
+        const { data: existingThreeVote } = await supabase
+          .from('notification_log').select('key').eq('type', 'date_3votes').eq('key', date).maybeSingle()
+
+        if (!existingThreeVote) {
+          await supabase.from('notification_log').upsert(
+            { type: 'date_3votes_pending', key: date, sent_at: new Date().toISOString() },
+            { onConflict: 'type,key' }
+          )
+        }
+      }
+    }
+
     // --- Check 2 : les 4 ont-ils tous répondu cette semaine (dispos ou aucune dispo) ? ---
     const { data: weekRows } = await supabase
       .from('player_availability')

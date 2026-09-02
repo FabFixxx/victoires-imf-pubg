@@ -280,6 +280,43 @@ Deno.serve(async (_req) => {
     }
   }
 
+  // --- PENDING DATE_3VOTES (debounce "Nouvelle possibilité", uniquement si aucune
+  // date n'est encore retenue cette semaine) ---
+  const { data: allThreePending } = await supabase
+    .from('notification_log').select('key, sent_at').eq('type', 'date_3votes_pending')
+  const threePendingReady = (allThreePending ?? []).filter((e: any) => now >= fireAt(e.sent_at))
+
+  for (const entry of threePendingReady) {
+    const date = entry.key
+    const ws = getWeekStart(date)
+    const we = getWeekEnd(ws)
+
+    await supabase.from('notification_log').delete().eq('type', 'date_3votes_pending').eq('key', date)
+
+    if (date < todayStr) continue // date passée, plus pertinent de notifier
+
+    // Re-vérifier que la date a toujours exactement 3 votes
+    const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', date)
+    const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username)
+    if (playersOnDay.length !== 3) continue
+
+    // Re-vérifier qu'aucune date n'a été retenue entre-temps cette semaine
+    const { data: retainedThisWeek } = await supabase
+      .from('notification_log').select('key').eq('type', 'retained_session').gte('key', ws).lte('key', we)
+    if ((retainedThisWeek?.length ?? 0) > 0) continue
+
+    // Claim atomique
+    const { error: claimError } = await supabase.from('notification_log').insert({ type: 'date_3votes', key: date })
+    if (claimError) continue // Déjà traité
+
+    await sendPushToAll(
+      supabase, players,
+      '👀 Nouvelle possibilité de session IMF !',
+      `3 joueurs dispo le ${formatDate(date)} — plus qu'1 pour valider !`,
+      'date_3votes'
+    )
+  }
+
   // --- PENDING SESSION_CANCELLED (debounce "Session annulée !") ---
   // Planifié soit par notify-on-availability (vote retiré sur une date retenue),
   // soit par le client (toggle manuel RETENUE -> 4/4). Même formule de debounce que
