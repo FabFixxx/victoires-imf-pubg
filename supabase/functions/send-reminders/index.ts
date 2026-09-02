@@ -311,7 +311,7 @@ Deno.serve(async (_req) => {
 
     await sendPushToAll(
       supabase, players,
-      '👀 Nouvelle possibilité de session IMF !',
+      '🤞 Nouvelle possibilité de session IMF !',
       `3 joueurs dispo le ${formatDate(date)} — plus qu'un pour valider !`,
       'date_3votes'
     )
