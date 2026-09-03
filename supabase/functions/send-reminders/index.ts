@@ -317,6 +317,36 @@ Deno.serve(async (_req) => {
     )
   }
 
+  // --- PURGE HISTORIQUE (player_availability_log) : ne garde que ~2 semaines
+  // (semaine courante + semaine précédente), diagnostic uniquement, pas la peine
+  // de conserver plus vieux ---
+  await supabase
+    .from('player_availability_log')
+    .delete()
+    .lt('created_at', new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString())
+
+  // --- PENDING DATE_RESET_3VOTES (lève le marqueur date_reached_3votes si la date
+  // est toujours sous 3 votes après le délai — sinon (toggle rapide) ne fait rien) ---
+  const { data: allResetPending } = await supabase
+    .from('notification_log').select('key, sent_at').eq('type', 'date_reset_3votes_pending')
+  const resetPendingReady = (allResetPending ?? []).filter((e: any) => now >= fireAt(e.sent_at))
+
+  for (const entry of resetPendingReady) {
+    const date = entry.key
+
+    await supabase.from('notification_log').delete().eq('type', 'date_reset_3votes_pending').eq('key', date)
+
+    const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', date)
+    const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username)
+
+    // Toujours sous 3 : on lève le marqueur, une future remontée à 3 votes pourra
+    // renotifier légitimement. Remonté à 3 (ou plus) entre-temps : rien à faire, le
+    // marqueur reste posé (comportement voulu : pas de re-notif pour un simple toggle).
+    if (playersOnDay.length < 3) {
+      await supabase.from('notification_log').delete().eq('type', 'date_reached_3votes').eq('key', date)
+    }
+  }
+
   // --- PENDING SESSION_CANCELLED (debounce "Session annulée !") ---
   // Planifié soit par notify-on-availability (vote retiré sur une date retenue),
   // soit par le client (toggle manuel RETENUE -> 4/4). Même formule de debounce que

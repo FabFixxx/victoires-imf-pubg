@@ -34,9 +34,28 @@ Deno.serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       )
 
+      // Historique (diagnostic) : trace chaque retrait de vote, indépendamment du reste.
+      await supabase.from('player_availability_log').insert({
+        player_username: oldRecord.player_username ?? null,
+        date: deletedDate,
+        action: 'delete',
+      })
+
       const { data: dayRows } = await supabase.from('player_availability').select('player_username').eq('date', deletedDate)
       const playersOnDay = (dayRows ?? []).map((r: any) => r.player_username)
       const stillFour = GROUP_PLAYERS.every((p) => playersOnDay.includes(p))
+
+      if (playersOnDay.length < 3) {
+        // Sous le seuil de 3 : planifier (pas immédiat) la levée du marqueur
+        // date_reached_3votes, pour permettre une future notif légitime si cette date
+        // remonte à 3 votes plus tard. send-reminders revérifiera juste avant de lever
+        // le marqueur que c'est toujours sous 3 (sinon un toggle rapide redescend puis
+        // remonte avant le traitement, et on ne doit rien faire).
+        await supabase.from('notification_log').upsert(
+          { type: 'date_reset_3votes_pending', key: deletedDate, sent_at: new Date().toISOString() },
+          { onConflict: 'type,key' }
+        )
+      }
 
       if (!stillFour) {
         // Vérifier AVANT de nettoyer si cette date était la session retenue (officielle) :
@@ -79,6 +98,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // Historique (diagnostic) : trace chaque ajout de vote.
+    await supabase.from('player_availability_log').insert({
+      player_username: record.player_username ?? null,
+      date,
+      action: 'insert',
+    })
+
     const weekStart = getWeekStart(date)
     const weekEnd = getWeekEnd(weekStart)
 
@@ -105,17 +131,20 @@ Deno.serve(async (req) => {
       return new Response('ok - date_4votes_pending scheduled/updated')
     }
 
-    // --- Check 1.5 : cette date atteint-elle 3 votes, sans qu'aucune date ne soit
-    // déjà retenue cette semaine ? (uniquement pertinent tant qu'aucune session n'est fixée) ---
+    // --- Check 1.5 : cette date atteint-elle 3 votes pour la PREMIÈRE FOIS ? ---
+    // Claim atomique et permanent (peu importe si la notif part réellement ou est
+    // bloquée par une session déjà retenue) : empêche qu'un simple retrait+remise
+    // de vote (toggle = delete+insert) par un joueur déjà compté ne redéclenche une
+    // notif pour une date qui avait déjà atteint ce seuil auparavant.
     if (playersOnDay.length === 3) {
-      const { data: retainedThisWeek } = await supabase
-        .from('notification_log').select('key').eq('type', 'retained_session').gte('key', weekStart).lte('key', weekEnd)
+      const { error: firstTimeClaimError } = await supabase
+        .from('notification_log').insert({ type: 'date_reached_3votes', key: date })
 
-      if ((retainedThisWeek?.length ?? 0) === 0) {
-        const { data: existingThreeVote } = await supabase
-          .from('notification_log').select('key').eq('type', 'date_3votes').eq('key', date).maybeSingle()
+      if (!firstTimeClaimError) {
+        const { data: retainedThisWeek } = await supabase
+          .from('notification_log').select('key').eq('type', 'retained_session').gte('key', weekStart).lte('key', weekEnd)
 
-        if (!existingThreeVote) {
+        if ((retainedThisWeek?.length ?? 0) === 0) {
           await supabase.from('notification_log').upsert(
             { type: 'date_3votes_pending', key: date, sent_at: new Date().toISOString() },
             { onConflict: 'type,key' }

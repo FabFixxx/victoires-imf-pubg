@@ -97,6 +97,18 @@ CREATE TABLE IF NOT EXISTS player_availability (
 );
 ALTER TABLE player_availability DISABLE ROW LEVEL SECURITY;
 
+-- Historique des ajouts/retraits de vote (diagnostic uniquement, écrit par
+-- notify-on-availability avec la service role key). RLS activé, aucune policy :
+-- accessible seulement via la service role, jamais par le client de l'app.
+CREATE TABLE IF NOT EXISTS player_availability_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_username TEXT,
+  date DATE NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('insert', 'delete')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE player_availability_log ENABLE ROW LEVEL SECURITY;
+
 -- Victoires manuelles par saison IMF (override du calcul automatique)
 ALTER TABLE imf_seasons ADD COLUMN IF NOT EXISTS manual_wins INT;
 
