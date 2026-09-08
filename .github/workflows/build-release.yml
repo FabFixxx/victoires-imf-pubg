@@ -59,10 +59,12 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             ## 🆕 Nouveautés
-            - L'arme utilisée pour le dernier kill s'affiche maintenant à côté du finisher (ex: "FabFix (M416)"), sur l'accueil, les stats et la page Victoires
+            - Notification "Nouvelle possibilité de session" envoyée dès 3 votes sur une date (au lieu d'attendre le 4e), quand aucune session n'est encore retenue cette semaine-là
 
             ## 🐛 Corrections
-            - Le total de victoires en haut de la page Victoires pouvait afficher un chiffre faux pendant environ 1 seconde en changeant de saison
-            - Tableau des joueurs (page Victoires) : colonnes harmonisées, "Joueurs" aligné à gauche, Kills/Assists/Dommages alignés à droite avec leurs en-têtes bien positionnés au-dessus
-            - Icône du dernier kill mal positionnée dans "Matchs récents IMF"
-            - Renommage "Joueur" → "Joueurs"
+            - Le calendrier n'affiche plus les dates passées dans "Meilleures dates cette semaine"
+            - La notif "3 votes" pouvait se redéclencher à tort quand un joueur retirait puis remettait son vote sur la même date
+            - Formulation et emoji ajustés sur la notif "3 votes"
+
+            ## 🔒 Sécurité
+            - Renforcement de la sécurité côté serveur (accès aux données et aux notifications push)
