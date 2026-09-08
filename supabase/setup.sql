@@ -141,7 +141,27 @@ CREATE TABLE IF NOT EXISTS web_push_subscriptions (
   subscription JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-ALTER TABLE web_push_subscriptions DISABLE ROW LEVEL SECURITY;
+-- RLS activé SANS policy SELECT : contient les endpoints/clés de chiffrement push de
+-- vrais utilisateurs — un accès en lecture avec la clé anon permettrait de les récupérer
+-- et de pousser de fausses notifs via l'edge function/api de push. Le client écrit son
+-- propre abonnement (lib/web-push-client.ts : upsert + delete par username) mais ne le
+-- relit jamais, donc INSERT/UPDATE/DELETE restent ouverts ; SELECT reste réservé à la
+-- service role (utilisée par les Edge Functions pour l'envoi réel des notifs).
+ALTER TABLE web_push_subscriptions ENABLE ROW LEVEL SECURITY;
+-- La base live avait deux policies "allow all"/"public_all" (FOR ALL USING true) posées
+-- par-dessus le RLS activé, qui rouvraient l'accès en lecture malgré ENABLE ROW LEVEL
+-- SECURITY (les policies permissives s'additionnent en OR) — les retirer explicitement.
+DROP POLICY IF EXISTS "allow all" ON web_push_subscriptions;
+DROP POLICY IF EXISTS "public_all" ON web_push_subscriptions;
+DROP POLICY IF EXISTS "allow anon insert" ON web_push_subscriptions;
+CREATE POLICY "allow anon insert" ON web_push_subscriptions
+  FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "allow anon update" ON web_push_subscriptions;
+CREATE POLICY "allow anon update" ON web_push_subscriptions
+  FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "allow anon delete" ON web_push_subscriptions;
+CREATE POLICY "allow anon delete" ON web_push_subscriptions
+  FOR DELETE USING (true);
 
 -- Dédup notifications (évite d'envoyer 2x la même notif)
 CREATE TABLE IF NOT EXISTS notification_log (

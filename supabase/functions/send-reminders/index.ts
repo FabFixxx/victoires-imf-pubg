@@ -572,7 +572,6 @@ Deno.serve(async (_req) => {
     ])
 
     const toNotify: string[] = []
-    const logs: any[] = []
 
     for (const player of players) {
       if (answered.has(player.username)) continue
@@ -584,8 +583,13 @@ Deno.serve(async (_req) => {
       const key = `${todayStr}_${player.username}`
       if (sentTodaySet.has(`dispo_reminder:${key}`)) continue
 
+      // Claim atomique par joueur (comme les autres blocs ci-dessus) : insert AVANT
+      // d'envoyer, pour ne jamais notifier deux fois si la fonction tourne deux fois
+      // en chevauchement (retry cron, déclenchement manuel concurrent, etc.).
+      const { error: claimError } = await supabase.from('notification_log').insert({ type: 'dispo_reminder', key })
+      if (claimError) continue // déjà réclamé par une exécution concurrente
+
       toNotify.push(player.username)
-      logs.push({ type: 'dispo_reminder', key, sent_at: new Date().toISOString() })
     }
 
     if (toNotify.length) {
@@ -597,7 +601,6 @@ Deno.serve(async (_req) => {
         `Tu n'as pas encore renseigné tes dispos pour ${weekWording} !`,
         'dispo_reminder'
       )
-      await supabase.from('notification_log').insert(logs)
       result.dispo_sent = toNotify.length
     }
   }
