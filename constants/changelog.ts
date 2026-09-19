@@ -14,6 +14,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '19 septembre 2026',
     notes: "🆕 Nouveauté\n" +
       "- La notification \"3 joueurs dispo\" indique maintenant qui manque (ex: \"plus qu'un (Nicotom) pour valider !\")\n\n" +
+      "⚡ Corrections\n" +
+      "- Grande bande vide en bas de tous les écrans sauf Victoires\n\n" +
       "🧹 Nettoyage\n" +
       "- Le build de l'APK ne dépend plus d'Expo/EAS du tout (compilation et signature locales)\n" +
       "- Le changelog est maintenant embarqué directement dans l'appli (plus de dépendance réseau à l'ouverture de l'écran)",
