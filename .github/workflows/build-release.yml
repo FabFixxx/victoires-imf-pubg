@@ -33,24 +33,43 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Build local (--local) : compile directement sur ce runner au lieu
+      # d'envoyer le job au service cloud EAS, qui a son propre quota mensuel
+      # partagé avec seedbox-manager (même compte fabfix). Ne consomme aucun
+      # quota EAS - seul le fetch du keystore de signature (via EXPO_TOKEN)
+      # passe encore par le compte Expo.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # "tools" (paquet par défaut de cette action) n'existe plus dans le
+      # dépôt Android SDK (déprécié par Google, sdkmanager échoue dessus) -
+      # ubuntu-latest a déjà un SDK préinstallé, seul platform-tools sert ici.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('package-lock.json', 'app.json') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build APK
-        id: build
         run: |
           set -o pipefail
-          eas build --platform android --profile preview --non-interactive --wait 2>&1 | tee build_output.txt
-          ARTIFACT_URL=$(grep -oP 'https://\S+\.apk' build_output.txt | head -1)
-          echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
-          cat build_output.txt
-
-      - name: Download APK
-        run: |
-          curl -L "${{ steps.build.outputs.artifact_url }}" \
-            -o "victoires-imf-v${{ steps.version.outputs.version }}.apk"
+          eas build --platform android --profile preview --local --non-interactive \
+            --output "victoires-imf-v${{ steps.version.outputs.version }}.apk" 2>&1 | tee build_output.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
