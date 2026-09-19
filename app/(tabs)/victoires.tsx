@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../lib/theme';
+import type { ColorScheme } from '../../constants/colors';
 import { PUBG_MAP_NAMES, getFinisherStats, getTopMaps, getImfSeasonHighlights, SeasonHighlights, weaponDisplayName } from '../../lib/pubg-api';
 import { supabase } from '../../lib/supabase';
 import { getImfSeasons, ImfSeason } from '../../lib/imf-seasons';
@@ -172,6 +173,8 @@ async function getVictoriesForSeason(year: number, startDate: string, endDate: s
 }
 
 function VictoryCard({ index, total, win }: { index: number; total: number; win: Victory }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   return (
     <View style={[styles.card, win.isManual && styles.cardManual]}>
       <View style={styles.cardHeader}>
@@ -202,9 +205,9 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
 
       {win.finisher && (
         <View style={styles.finisherRow}>
-          <Ionicons name="skull-outline" size={12} color={win.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
+          <Ionicons name="skull-outline" size={12} color={win.finisher === 'Zone bleue' ? colors.blueZone : colors.win} style={{ marginTop: 1 }} />
           <Text style={styles.finisherText}>
-            Dernier kill : <Text style={[styles.finisherName, win.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{win.finisher}</Text>
+            Dernier kill : <Text style={[styles.finisherName, win.finisher === 'Zone bleue' && { color: colors.blueZone }]}>{win.finisher}</Text>
             {weaponDisplayName(win.weapon) ? ` (${weaponDisplayName(win.weapon)})` : ''}
           </Text>
         </View>
@@ -223,7 +226,7 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
             {win.players.map((p) => (
               <View key={p.username} style={styles.tableRow}>
                 <View style={[styles.tableCell, styles.tableCellPlayer, styles.playerCell]}>
-                  <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[p.username] ?? Colors.textMuted }]} />
+                  <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[p.username] ?? colors.textMuted }]} />
                   <Text style={styles.tableCellPlayerValue}>{getDisplayName(p.username)}</Text>
                 </View>
                 <Text style={[styles.tableCell, styles.tableCellStat, styles.tableCellValue]}>{p.kills}</Text>
@@ -251,6 +254,8 @@ function VictoryCard({ index, total, win }: { index: number; total: number; win:
 }
 
 export default function VictoiresScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [seasons, setSeasons] = useState<ImfSeason[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [victories, setVictories] = useState<Victory[]>([]);
@@ -344,7 +349,7 @@ export default function VictoiresScreen() {
 
       {currentSeason && (
         <View style={styles.seasonInfo}>
-          <Ionicons name="calendar-outline" size={12} color={Colors.textMuted} />
+          <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
           <Text style={styles.seasonDates}>
             {formatSeasonDates(currentSeason.startDate, currentSeason.endDate, currentSeason.isCurrent)}
           </Text>
@@ -354,7 +359,7 @@ export default function VictoiresScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {currentSeason && (
           <>
@@ -364,7 +369,7 @@ export default function VictoiresScreen() {
                 n'est comptée qu'une fois) plutôt que de recalculer un total séparé qui
                 pourrait diverger. */}
             <View style={styles.totalWinsRow}>
-              <Ionicons name="trophy" size={14} color={Colors.primary} />
+              <Ionicons name="trophy" size={14} color={colors.primary} />
               <Text style={styles.totalWinsText}>
                 {!loading ? victories.length : '—'} victoire{victories.length > 1 ? 's' : ''} cette saison
               </Text>
@@ -430,16 +435,16 @@ export default function VictoiresScreen() {
                       </Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         {isZone
-                          ? <Ionicons name="flash" size={9} color={Colors.blueZone} />
-                          : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
+                          ? <Ionicons name="flash" size={9} color={colors.blueZone} />
+                          : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? colors.textMuted }]} />
                         }
-                        <Text style={[styles.listLabel, isZone && { color: Colors.blueZone }]}>
+                        <Text style={[styles.listLabel, isZone && { color: colors.blueZone }]}>
                           {isZone ? 'Zone bleue' : getDisplayName(f.username as any)}
                         </Text>
                       </View>
                       <View style={styles.listValueWrap}>
-                        <Ionicons name="skull-outline" size={12} color={f.count > 0 ? (isZone ? Colors.blueZone : Colors.win) : Colors.textMuted} />
-                        <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted, isZone && f.count > 0 && { color: Colors.blueZone }]}>
+                        <Ionicons name="skull-outline" size={12} color={f.count > 0 ? (isZone ? colors.blueZone : colors.win) : colors.textMuted} />
+                        <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted, isZone && f.count > 0 && { color: colors.blueZone }]}>
                           {f.count} dernier{f.count > 1 ? 's' : ''} kill
                         </Text>
                       </View>
@@ -452,7 +457,7 @@ export default function VictoiresScreen() {
         )}
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
         ) : victories.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>Aucune victoire pour cette saison</Text>
@@ -473,12 +478,13 @@ export default function VictoiresScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+function getStyles(colors: ColorScheme) {
+  return StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
-  title: { fontSize: 22, fontWeight: '900', color: Colors.text, letterSpacing: 3 },
+  title: { fontSize: 22, fontWeight: '900', color: colors.text, letterSpacing: 3 },
 
-  seasonPicker: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  seasonPicker: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
   seasonPickerContent: { paddingHorizontal: 12, gap: 4, paddingVertical: 8 },
   seasonTab: {
     flexDirection: 'row',
@@ -487,14 +493,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
   },
-  seasonTabActive: { backgroundColor: Colors.primary + '22', borderColor: Colors.primary },
-  seasonTabText: { fontSize: 14, fontWeight: '700', color: Colors.textMuted },
-  seasonTabTextActive: { color: Colors.primary },
-  currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.win },
+  seasonTabActive: { backgroundColor: colors.primary + '22', borderColor: colors.primary },
+  seasonTabText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  seasonTabTextActive: { color: colors.primary },
+  currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.win },
 
   seasonInfo: {
     flexDirection: 'row',
@@ -502,9 +508,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
-  seasonDates: { fontSize: 11, color: Colors.textMuted },
+  seasonDates: { fontSize: 11, color: colors.textMuted },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 12, gap: 10, paddingBottom: 32 },
@@ -512,14 +518,14 @@ const styles = StyleSheet.create({
   countRow: { alignItems: 'flex-end', paddingHorizontal: 4, paddingBottom: 4 },
 
   totalWinsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, paddingBottom: 4 },
-  totalWinsText: { fontSize: 14, fontWeight: '800', color: Colors.primary },
+  totalWinsText: { fontSize: 14, fontWeight: '800', color: colors.primary },
 
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     marginBottom: 4,
   },
   statsBarItem: {
@@ -531,18 +537,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     textTransform: 'uppercase',
     marginBottom: 3,
   },
   statsBarValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: Colors.text,
+    color: colors.text,
   },
   statsBarDivider: {
     width: 1,
-    backgroundColor: Colors.cardBorder,
+    backgroundColor: colors.cardBorder,
     marginVertical: 8,
   },
 
@@ -550,15 +556,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.5,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 6,
     marginTop: 2,
   },
   listCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
     marginBottom: 10,
   },
@@ -571,20 +577,20 @@ const styles = StyleSheet.create({
   },
   listRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: colors.cardBorder,
   },
   listRank: {
     width: 26,
     fontSize: 11,
     fontWeight: '800',
-    color: Colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
   },
-  listRankGold: { color: Colors.primary },
+  listRankGold: { color: colors.primary },
   listLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.text,
+    color: colors.text,
   },
   listValueWrap: {
     flexDirection: 'row',
@@ -594,30 +600,30 @@ const styles = StyleSheet.create({
   listValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.primary,
+    color: colors.primary,
   },
   listValueMuted: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   listEmpty: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
-  countText: { fontSize: 11, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  countText: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   empty: { flex: 1, alignItems: 'center', marginTop: 60 },
-  emptyText: { color: Colors.textMuted, fontSize: 14 },
+  emptyText: { color: colors.textMuted, fontSize: 14 },
 
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
   },
-  cardManual: { borderColor: Colors.textMuted + '44' },
+  cardManual: { borderColor: colors.textMuted + '44' },
 
   cardHeader: {
     flexDirection: 'row',
@@ -630,29 +636,29 @@ const styles = StyleSheet.create({
   cardHeaderRight: { alignItems: 'flex-end', gap: 4 },
 
   victoryNumRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  victoryNum: { fontSize: 18, fontWeight: '900', color: Colors.win },
+  victoryNum: { fontSize: 18, fontWeight: '900', color: colors.win },
   manualBadge: {
-    backgroundColor: Colors.textMuted + '22',
+    backgroundColor: colors.textMuted + '22',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: Colors.textMuted + '44',
+    borderColor: colors.textMuted + '44',
   },
-  manualBadgeText: { fontSize: 9, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  manualBadgeText: { fontSize: 9, color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
 
-  cardDate: { fontSize: 11, color: Colors.textMuted },
+  cardDate: { fontSize: 11, color: colors.textMuted },
 
   mapBadge: {
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: colors.primary + '22',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: Colors.primary + '55',
+    borderColor: colors.primary + '55',
   },
-  mapBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
-  teamsCount: { fontSize: 10, color: Colors.textMuted },
+  mapBadgeText: { fontSize: 11, fontWeight: '700', color: colors.primary },
+  teamsCount: { fontSize: 10, color: colors.textMuted },
 
   finisherRow: {
     flexDirection: 'row',
@@ -661,10 +667,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 10,
   },
-  finisherText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
-  finisherName: { fontWeight: '800', color: Colors.win },
+  finisherText: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  finisherName: { fontWeight: '800', color: colors.win },
 
-  divider: { height: 1, backgroundColor: Colors.cardBorder },
+  divider: { height: 1, backgroundColor: colors.cardBorder },
 
   playersTable: { padding: 10, gap: 2 },
   tableHeader: { flexDirection: 'row', paddingBottom: 4 },
@@ -673,7 +679,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     borderTopWidth: 1,
-    borderTopColor: Colors.cardBorder,
+    borderTopColor: colors.cardBorder,
   },
   tableCell: { fontSize: 12 },
   tableCellPlayer: { flex: 2 },
@@ -681,8 +687,9 @@ const styles = StyleSheet.create({
   tableCellDmg: { flex: 1, textAlign: 'right' },
   playerCell: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   playerDot: { width: 7, height: 7, borderRadius: 3.5 },
-  tableCellPlayerValue: { color: Colors.text, fontWeight: '600', fontSize: 12 },
-  tableCellValue: { color: Colors.textSecondary, fontVariant: ['tabular-nums'] },
-  tableCellTotal: { color: Colors.primary, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  tableHeaderText: { fontSize: 10, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
-});
+  tableCellPlayerValue: { color: colors.text, fontWeight: '600', fontSize: 12 },
+  tableCellValue: { color: colors.textSecondary, fontVariant: ['tabular-nums'] },
+  tableCellTotal: { color: colors.primary, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  tableHeaderText: { fontSize: 10, color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  });
+}

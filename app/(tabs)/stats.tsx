@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -9,7 +9,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../lib/theme';
+import type { ColorScheme } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
 import { PUBG_MAP_NAMES, weaponDisplayName } from '../../lib/pubg-api';
@@ -89,6 +90,8 @@ async function getPlayerStatsBetween(username: string, start: string, end: strin
 }
 
 export default function StatsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [selected, setSelected] = useState<PlayerName>(GROUP_PLAYERS[0]);
   const [stats, setStats] = useState<Record<string, PlayerStats>>({});
   const [recent, setRecent] = useState<RecentMatch[]>([]);
@@ -220,7 +223,7 @@ export default function StatsScreen() {
           </View>
           {selectedSeason && (
             <View style={styles.seasonInfo}>
-              <Ionicons name="calendar-outline" size={12} color={Colors.textMuted} />
+              <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
               <Text style={styles.seasonDates}>
                 {formatSeasonDates(selectedSeason.startDate, selectedSeason.endDate, selectedSeason.isCurrent)}
               </Text>
@@ -253,12 +256,12 @@ export default function StatsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={Colors.primary}
+            tintColor={colors.primary}
           />
         }
       >
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
         ) : !current || current.matches === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>Aucune donnée pour {getDisplayName(selected)}</Text>
@@ -270,8 +273,8 @@ export default function StatsScreen() {
           <>
             {/* Hero card */}
             <View style={styles.heroCard}>
-              <View style={[styles.heroAvatar, { borderColor: PLAYER_COLORS[selected] ?? Colors.primary, backgroundColor: (PLAYER_COLORS[selected] ?? Colors.primary) + '33' }]}>
-                <Text style={[styles.heroAvatarText, { color: PLAYER_COLORS[selected] ?? Colors.primary }]}>{selected[0].toUpperCase()}</Text>
+              <View style={[styles.heroAvatar, { borderColor: PLAYER_COLORS[selected] ?? colors.primary, backgroundColor: (PLAYER_COLORS[selected] ?? colors.primary) + '33' }]}>
+                <Text style={[styles.heroAvatarText, { color: PLAYER_COLORS[selected] ?? colors.primary }]}>{selected[0].toUpperCase()}</Text>
               </View>
               <View style={styles.heroInfo}>
                 <Text style={styles.heroName}>{getDisplayName(selected)}</Text>
@@ -328,9 +331,9 @@ export default function StatsScreen() {
                           </Text>
                           {match.is_win && match.finisher && (
                             <>
-                              <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
+                              <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? colors.blueZone : colors.win} style={{ marginTop: 1 }} />
                               <Text style={styles.matchFinisherText}>
-                                Dernier kill : <Text style={[styles.matchFinisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                                Dernier kill : <Text style={[styles.matchFinisherName, match.finisher === 'Zone bleue' && { color: colors.blueZone }]}>{match.finisher}</Text>
                                 {weaponDisplayName(match.weapon ?? null) ? ` (${weaponDisplayName(match.weapon ?? null)})` : ''}
                               </Text>
                             </>
@@ -359,8 +362,9 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+function getStyles(colors: ColorScheme) {
+  return StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
     paddingHorizontal: 16,
     paddingTop: 20,
@@ -369,11 +373,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: Colors.text,
+    color: colors.text,
     letterSpacing: 3,
   },
 
-  seasonPicker: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
+  seasonPicker: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
   seasonPickerContent: { paddingHorizontal: 12, gap: 4, paddingVertical: 8 },
   seasonTab: {
     flexDirection: 'row',
@@ -382,23 +386,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
   },
-  seasonTabActive: { backgroundColor: Colors.primary + '22', borderColor: Colors.primary },
-  seasonTabText: { fontSize: 14, fontWeight: '700', color: Colors.textMuted },
-  seasonTabTextActive: { color: Colors.primary },
-  currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.win },
+  seasonTabActive: { backgroundColor: colors.primary + '22', borderColor: colors.primary },
+  seasonTabText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  seasonTabTextActive: { color: colors.primary },
+  currentDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.win },
   seasonInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
   },
-  seasonDates: { fontSize: 11, color: Colors.textMuted },
+  seasonDates: { fontSize: 11, color: colors.textMuted },
 
   playerTabs: {
     flexDirection: 'row',
@@ -410,37 +414,37 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: 9,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
   },
   tabActive: {
-    backgroundColor: Colors.primary + '22',
-    borderColor: Colors.primary,
+    backgroundColor: colors.primary + '22',
+    borderColor: colors.primary,
   },
   tabInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tabDot: { width: 7, height: 7, borderRadius: 3.5 },
   tabText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
-  tabTextActive: { color: Colors.primary },
+  tabTextActive: { color: colors.primary },
   content: { flex: 1, paddingHorizontal: 16 },
   empty: {
     marginTop: 60,
     alignItems: 'center',
     gap: 8,
   },
-  emptyText: { fontSize: 16, color: Colors.textSecondary },
-  emptyHint: { fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
+  emptyText: { fontSize: 16, color: colors.textSecondary },
+  emptyHint: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   heroCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -452,25 +456,25 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: colors.primary + '33',
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroAvatarText: { fontSize: 22, fontWeight: '900', color: Colors.primary },
+  heroAvatarText: { fontSize: 22, fontWeight: '900', color: colors.primary },
   heroInfo: { flex: 1 },
-  heroName: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  heroMatches: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  heroName: { fontSize: 18, fontWeight: '800', color: colors.text },
+  heroMatches: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   heroWins: { alignItems: 'center' },
-  heroWinsValue: { fontSize: 28, fontWeight: '900', color: Colors.primary },
-  heroWinsLabel: { fontSize: 10, color: Colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
+  heroWinsValue: { fontSize: 28, fontWeight: '900', color: colors.primary },
+  heroWinsLabel: { fontSize: 10, color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' },
   row: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   matchList: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
     marginBottom: 10,
   },
@@ -479,7 +483,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: colors.cardBorder,
     gap: 10,
   },
   matchIndicator: {
@@ -487,16 +491,17 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 2,
   },
-  matchWin: { backgroundColor: Colors.win },
-  matchLoss: { backgroundColor: Colors.textMuted },
+  matchWin: { backgroundColor: colors.win },
+  matchLoss: { backgroundColor: colors.textMuted },
   matchInfo: { flex: 1 },
-  matchDate: { fontSize: 12, color: Colors.textSecondary },
+  matchDate: { fontSize: 12, color: colors.textSecondary },
   matchResult: { fontSize: 13, fontWeight: '800', lineHeight: 18 },
-  matchResultWin: { color: Colors.win },
-  matchResultLoss: { color: Colors.textMuted },
-  matchFinisherText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
-  matchFinisherName: { fontWeight: '800', color: Colors.win },
+  matchResultWin: { color: colors.win },
+  matchResultLoss: { color: colors.textMuted },
+  matchFinisherText: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  matchFinisherName: { fontWeight: '800', color: colors.win },
   matchStats: { width: 110, alignItems: 'flex-end' },
-  matchKills: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  matchDmg: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-});
+  matchKills: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  matchDmg: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  });
+}

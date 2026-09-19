@@ -21,7 +21,8 @@ LocaleConfig.locales['fr'] = {
   dayNamesShort: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
 };
 LocaleConfig.defaultLocale = 'fr';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../lib/theme';
+import type { ColorScheme } from '../../constants/colors';
 import { getCurrentPlayer } from '../../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
 import {
@@ -89,6 +90,8 @@ function addDaysToStr(dateStr: string, days: number): string {
 }
 
 export default function CalendarScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const today = getToday();
   const windowEnd = addMonths(today, 3);
   const currentWeekMonday = getMondayOf(today);
@@ -311,13 +314,13 @@ export default function CalendarScreen() {
       result[day.date] = {
         dots: day.players.map((p) => ({
           key: p,
-          color: PLAYER_COLORS[p] ?? Colors.textMuted,
-          selectedDotColor: PLAYER_COLORS[p] ?? Colors.textMuted,
+          color: PLAYER_COLORS[p] ?? colors.textMuted,
+          selectedDotColor: PLAYER_COLORS[p] ?? colors.textMuted,
         })),
         marked: true,
         selected: isAllFour || isMine || isChosen,
-        selectedColor: isChosen ? Colors.win + '55' : isAllFour ? '#FFD70066' : Colors.primary + '33',
-        selectedTextColor: Colors.text,
+        selectedColor: isChosen ? colors.win + '55' : isAllFour ? '#FFD70066' : colors.primary + '33',
+        selectedTextColor: colors.text,
       };
     }
     return result;
@@ -374,7 +377,7 @@ export default function CalendarScreen() {
       <ScrollView
         style={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={loadAll} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={loadAll} tintColor={colors.primary} />
         }
       >
         {/* Meilleures dates cette semaine */}
@@ -404,7 +407,7 @@ export default function CalendarScreen() {
                     </View>
                     <View style={styles.bestDateDots}>
                       {GROUP_PLAYERS.map((p) => (
-                        <View key={p} style={[styles.playerDot, { backgroundColor: day.players.includes(p) ? PLAYER_COLORS[p] : Colors.backgroundSecondary, borderColor: PLAYER_COLORS[p] }]} />
+                        <View key={p} style={[styles.playerDot, { backgroundColor: day.players.includes(p) ? PLAYER_COLORS[p] : colors.backgroundSecondary, borderColor: PLAYER_COLORS[p] }]} />
                       ))}
                     </View>
                   </View>
@@ -448,7 +451,7 @@ export default function CalendarScreen() {
                     </View>
                     <View style={styles.bestDateDots}>
                       {GROUP_PLAYERS.map((p) => (
-                        <View key={p} style={[styles.playerDot, { backgroundColor: day.players.includes(p) ? PLAYER_COLORS[p] : Colors.backgroundSecondary, borderColor: PLAYER_COLORS[p] }]} />
+                        <View key={p} style={[styles.playerDot, { backgroundColor: day.players.includes(p) ? PLAYER_COLORS[p] : colors.backgroundSecondary, borderColor: PLAYER_COLORS[p] }]} />
                       ))}
                     </View>
                   </View>
@@ -480,17 +483,17 @@ export default function CalendarScreen() {
           onMonthChange={handleMonthChange}
           theme={{
             backgroundColor: 'transparent',
-            calendarBackground: Colors.backgroundSecondary,
-            dayTextColor: Colors.text,
-            textDisabledColor: Colors.textMuted,
-            monthTextColor: Colors.text,
-            arrowColor: Colors.primary,
-            selectedDayBackgroundColor: Colors.primary,
+            calendarBackground: colors.backgroundSecondary,
+            dayTextColor: colors.text,
+            textDisabledColor: colors.textMuted,
+            monthTextColor: colors.text,
+            arrowColor: colors.primary,
+            selectedDayBackgroundColor: colors.primary,
             selectedDayTextColor: '#000',
-            todayTextColor: Colors.primary,
-            todayBackgroundColor: Colors.primary + '22',
-            dotColor: Colors.primary,
-            textSectionTitleColor: Colors.text,
+            todayTextColor: colors.primary,
+            todayBackgroundColor: colors.primary + '22',
+            dotColor: colors.primary,
+            textSectionTitleColor: colors.text,
             textDayHeaderFontSize: 13,
             textDayHeaderFontWeight: '800',
             textMonthFontWeight: '800',
@@ -545,7 +548,7 @@ export default function CalendarScreen() {
             <Ionicons
               name={myNoAvailThisWeek ? 'close-circle' : 'ban-outline'}
               size={18}
-              color={myNoAvailThisWeek ? '#fff' : Colors.danger}
+              color={myNoAvailThisWeek ? '#fff' : colors.danger}
             />
             <Text style={[styles.noAvailBtnText, myNoAvailThisWeek && styles.noAvailBtnTextActive]}>
               {myNoAvailThisWeek
@@ -591,7 +594,7 @@ export default function CalendarScreen() {
             <Ionicons
               name={myNoAvail ? 'close-circle' : 'ban-outline'}
               size={18}
-              color={myNoAvail ? '#fff' : Colors.danger}
+              color={myNoAvail ? '#fff' : colors.danger}
             />
             <Text style={[styles.noAvailBtnText, myNoAvail && styles.noAvailBtnTextActive]}>
               {myNoAvail
@@ -652,108 +655,110 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+function getStyles(colors: ColorScheme) {
+  return StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
   header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 },
-  title: { fontSize: 22, fontWeight: '900', color: Colors.text, letterSpacing: 3 },
+  title: { fontSize: 22, fontWeight: '900', color: colors.text, letterSpacing: 3 },
   content: { flex: 1 },
   legend: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: colors.cardBorder,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendName: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
-  legendNameMe: { color: Colors.text, fontWeight: '800' },
+  legendName: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  legendNameMe: { color: colors.text, fontWeight: '800' },
   calendar: {
     marginHorizontal: 12,
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
   },
   section: { paddingHorizontal: 16, marginTop: 16 },
   sectionTitle: {
-    fontSize: 11, fontWeight: '800', color: Colors.primary,
+    fontSize: 11, fontWeight: '800', color: colors.primary,
     letterSpacing: 2.5, marginBottom: 10,
   },
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
   },
   statusGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   statusCell: {
     width: '50%', flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', padding: 10, paddingHorizontal: 14,
-    borderBottomWidth: 1, borderBottomColor: Colors.cardBorder,
+    borderBottomWidth: 1, borderBottomColor: colors.cardBorder,
   },
   statusCellLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusName: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
-  statusNameMe: { color: Colors.text },
+  statusName: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  statusNameMe: { color: colors.text },
   respondedBadge: {
-    backgroundColor: Colors.win + '22', borderWidth: 1, borderColor: Colors.win,
+    backgroundColor: colors.win + '22', borderWidth: 1, borderColor: colors.win,
     borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3,
   },
-  respondedBadgeText: { fontSize: 10, fontWeight: '700', color: Colors.win },
-  noAvailBadge: { backgroundColor: Colors.danger + '22', borderColor: Colors.danger },
-  noAvailBadgeText: { color: Colors.danger },
-  waitingText: { fontSize: 12, color: Colors.textMuted, fontStyle: 'italic' },
+  respondedBadgeText: { fontSize: 10, fontWeight: '700', color: colors.win },
+  noAvailBadge: { backgroundColor: colors.danger + '22', borderColor: colors.danger },
+  noAvailBadgeText: { color: colors.danger },
+  waitingText: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
   noAvailBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 10, padding: 14, borderRadius: 10,
-    borderWidth: 1.5, borderColor: Colors.danger,
-    backgroundColor: Colors.danger + '18',
+    borderWidth: 1.5, borderColor: colors.danger,
+    backgroundColor: colors.danger + '18',
   },
-  noAvailBtnActive: { backgroundColor: Colors.danger, borderColor: Colors.danger },
-  noAvailBtnText: { fontSize: 14, fontWeight: '700', color: Colors.danger },
+  noAvailBtnActive: { backgroundColor: colors.danger, borderColor: colors.danger },
+  noAvailBtnText: { fontSize: 14, fontWeight: '700', color: colors.danger },
   noAvailBtnTextActive: { color: '#fff' },
   bestDateRow: {
     flexDirection: 'row', alignItems: 'center',
     padding: 12, paddingHorizontal: 14,
-    borderBottomWidth: 1, borderBottomColor: Colors.cardBorder, gap: 10,
+    borderBottomWidth: 1, borderBottomColor: colors.cardBorder, gap: 10,
   },
   bestDateRowPerfect: { backgroundColor: '#FFD70011' },
   bestDateRowChosen: { backgroundColor: '#4CAF5011' },
   bestDateInfo: { flex: 1, gap: 6 },
   bestDateTitleRow: { flexDirection: 'row', alignItems: 'center' },
-  bestDateLabel: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  bestDateLabel: { fontSize: 13, fontWeight: '600', color: colors.text },
   bestDateLabelPerfect: { color: '#FFD700' },
   bestDateDots: { flexDirection: 'row', gap: 4 },
   playerDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5 },
   retenubadge: {
-    backgroundColor: Colors.win + '33', borderWidth: 1, borderColor: Colors.win,
+    backgroundColor: colors.win + '33', borderWidth: 1, borderColor: colors.win,
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
-  retenuBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.win, letterSpacing: 0.5 },
+  retenuBadgeText: { fontSize: 10, fontWeight: '800', color: colors.win, letterSpacing: 0.5 },
   fourFourBadge: {
     backgroundColor: '#FFD70033', borderWidth: 1, borderColor: '#FFD700',
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
   fourFourBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFD700' },
   countBadge: {
-    backgroundColor: Colors.primary + '22', borderWidth: 1, borderColor: Colors.primary,
+    backgroundColor: colors.primary + '22', borderWidth: 1, borderColor: colors.primary,
     borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
   },
-  countBadgeText: { fontSize: 11, fontWeight: '800', color: Colors.primary },
+  countBadgeText: { fontSize: 11, fontWeight: '800', color: colors.primary },
   emptyRow: { padding: 16, alignItems: 'center' },
-  emptyText: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
+  emptyText: { fontSize: 13, color: colors.textMuted, fontStyle: 'italic' },
   confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  confirmBox: { backgroundColor: Colors.card, borderRadius: 14, padding: 24, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: Colors.cardBorder },
-  confirmTitle: { fontSize: 17, fontWeight: '800', color: Colors.text, marginBottom: 10 },
-  confirmText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21 },
-  confirmSub: { fontSize: 12, color: Colors.danger, marginTop: 8, fontStyle: 'italic' },
+  confirmBox: { backgroundColor: colors.card, borderRadius: 14, padding: 24, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: colors.cardBorder },
+  confirmTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: 10 },
+  confirmText: { fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
+  confirmSub: { fontSize: 12, color: colors.danger, marginTop: 8, fontStyle: 'italic' },
   confirmButtons: { flexDirection: 'row', gap: 10, marginTop: 20 },
-  confirmCancel: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: Colors.cardBorder, alignItems: 'center' },
-  confirmCancelText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  confirmOk: { flex: 1, padding: 12, borderRadius: 10, backgroundColor: Colors.danger, alignItems: 'center' },
+  confirmCancel: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.cardBorder, alignItems: 'center' },
+  confirmCancelText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  confirmOk: { flex: 1, padding: 12, borderRadius: 10, backgroundColor: colors.danger, alignItems: 'center' },
   confirmOkText: { fontSize: 14, fontWeight: '800', color: '#fff' },
-});
+  });
+}

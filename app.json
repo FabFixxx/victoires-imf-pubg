@@ -5,7 +5,7 @@
     "version": "1.4.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "scheme": "victoires-imf-pubg",
     "ios": {
       "supportsTablet": false,
@@ -48,7 +48,8 @@
           "backgroundColor": "#0A0A0A"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-navigation-bar"
     ],
     "experiments": {
       "typedRoutes": true

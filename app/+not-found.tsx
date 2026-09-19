@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { Link, Stack } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../lib/theme';
+import type { ColorScheme } from '../constants/colors';
 
 export default function NotFoundScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
@@ -16,21 +20,23 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  text: {
-    fontSize: 18,
-    color: Colors.textSecondary,
-  },
-  link: {
-    fontSize: 15,
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-});
+function getStyles(colors: ColorScheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+    },
+    text: {
+      fontSize: 18,
+      color: colors.textSecondary,
+    },
+    link: {
+      fontSize: 15,
+      color: colors.primary,
+      fontWeight: '700',
+    },
+  });
+}

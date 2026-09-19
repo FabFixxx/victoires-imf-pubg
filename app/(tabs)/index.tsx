@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -15,7 +15,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../lib/theme';
+import type { ColorScheme } from '../../constants/colors';
 import { StatCard } from '../../components/StatCard';
 import { SectionHeader } from '../../components/SectionHeader';
 import {
@@ -111,6 +112,8 @@ function formatNotifItemTime(dateStr: string, groupLabel: string): string {
 }
 
 function MatchCard({ match, title }: { match: LastMatch; title: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const totalKills = match.players.reduce((s, p) => s + p.kills, 0);
   const totalAssists = match.players.reduce((s, p) => s + p.assists, 0);
   const totalDmg = match.players.reduce((s, p) => s + p.damage, 0);
@@ -126,9 +129,9 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
               </Text>
             {match.isWin && match.finisher && (
               <View style={styles.finisherInline}>
-                <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
+                <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? colors.blueZone : colors.win} style={{ marginTop: 1 }} />
                 <Text style={styles.finisherText}>
-                  Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                  Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: colors.blueZone }]}>{match.finisher}</Text>
                   {weaponDisplayName(match.weapon) ? ` (${weaponDisplayName(match.weapon)})` : ''}
                 </Text>
               </View>
@@ -152,7 +155,7 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
           {[...match.players].sort((a, b) => GROUP_PLAYERS.indexOf(a.username as any) - GROUP_PLAYERS.indexOf(b.username as any)).map((p) => (
             <View key={p.username} style={styles.playerStat}>
               <View style={styles.playerNameRow}>
-                <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[p.username] ?? Colors.textMuted }]} />
+                <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[p.username] ?? colors.textMuted }]} />
                 <Text style={styles.playerName}>{getDisplayName(p.username)}</Text>
               </View>
               <Text style={styles.playerKills}>{p.kills}K / {p.assists}A</Text>
@@ -166,6 +169,8 @@ function MatchCard({ match, title }: { match: LastMatch; title: string }) {
 }
 
 export default function DashboardScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const now = new Date();
   const [viewMonth, setViewMonth] = useState(now.getMonth());
@@ -413,7 +418,7 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={loading && !syncing}
             onRefresh={() => loadData(viewMonth, viewYear)}
-            tintColor={Colors.primary}
+            tintColor={colors.primary}
           />
         }
       >
@@ -425,7 +430,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.notifBtn} onPress={handleOpenNotifications}>
-              <Ionicons name="notifications-outline" size={20} color={Colors.primary} />
+              <Ionicons name="notifications-outline" size={20} color={colors.primary} />
               {hasUnread && (
                 <View style={styles.notifDot}>
                   <Text style={styles.notifDotText}>!</Text>
@@ -437,9 +442,9 @@ export default function DashboardScreen() {
               onPress={handleSync}
             >
               {syncing ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Ionicons name="refresh" size={20} color={Colors.primary} />
+                <Ionicons name="refresh" size={20} color={colors.primary} />
               )}
             </TouchableOpacity>
           </View>
@@ -451,7 +456,7 @@ export default function DashboardScreen() {
 
         {isEmpty && !loading && (
           <View style={styles.emptyBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={Colors.primary} />
+            <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
             <Text style={styles.emptyBannerText}>
               Appuie sur ↻ pour synchroniser les données PUBG
             </Text>
@@ -477,7 +482,7 @@ export default function DashboardScreen() {
               </View>
             ) : (
               <View style={styles.emptyBanner}>
-                <Ionicons name="information-circle-outline" size={18} color={Colors.primary} />
+                <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
                 <Text style={styles.emptyBannerText}>
                   Aucune donnée — synchro en cours ou renseigne les victoires dans les réglages
                 </Text>
@@ -537,18 +542,18 @@ export default function DashboardScreen() {
         <View style={styles.monthNav}>
           <View style={styles.monthNavLine} />
           <TouchableOpacity onPress={() => navigateMonth(-1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={14} color={Colors.primary} />
+            <Ionicons name="chevron-back" size={14} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.monthNavLabel}>{MONTH_NAMES[viewMonth]} {viewYear}</Text>
           <TouchableOpacity onPress={() => navigateMonth(1)} disabled={isCurrentMonth} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-forward" size={14} color={isCurrentMonth ? 'transparent' : Colors.primary} />
+            <Ionicons name="chevron-forward" size={14} color={isCurrentMonth ? 'transparent' : colors.primary} />
           </TouchableOpacity>
           <View style={styles.monthNavLine} />
         </View>
 
         <View style={styles.row}>
           {loadingMonthly
-            ? <ActivityIndicator color={Colors.primary} style={{ marginVertical: 12 }} />
+            ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
             : <StatCard label="Victoires du groupe" value={monthly?.totalWins ?? '—'} accent large />}
         </View>
 
@@ -603,16 +608,16 @@ export default function DashboardScreen() {
                       </Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         {isZone
-                          ? <Ionicons name="flash" size={9} color={Colors.blueZone} />
-                          : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? Colors.textMuted }]} />
+                          ? <Ionicons name="flash" size={9} color={colors.blueZone} />
+                          : <View style={[styles.playerDot, { backgroundColor: PLAYER_COLORS[f.username] ?? colors.textMuted }]} />
                         }
-                        <Text style={[styles.listLabel, isZone && { color: Colors.blueZone }]}>
+                        <Text style={[styles.listLabel, isZone && { color: colors.blueZone }]}>
                           {isZone ? 'Zone bleue' : getDisplayName(f.username as any)}
                         </Text>
                       </View>
                       <View style={styles.listValueWrap}>
-                        <Ionicons name="skull-outline" size={12} color={f.count > 0 ? (isZone ? Colors.blueZone : Colors.win) : Colors.textMuted} />
-                        <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted, isZone && f.count > 0 && { color: Colors.blueZone }]}>
+                        <Ionicons name="skull-outline" size={12} color={f.count > 0 ? (isZone ? colors.blueZone : colors.win) : colors.textMuted} />
+                        <Text style={[styles.listValue, f.count === 0 && styles.listValueMuted, isZone && f.count > 0 && { color: colors.blueZone }]}>
                           {f.count} dernier{f.count > 1 ? 's' : ''} kill
                         </Text>
                       </View>
@@ -642,9 +647,9 @@ export default function DashboardScreen() {
                     </Text>
                     {match.is_win && match.finisher && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-                        <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? Colors.blueZone : Colors.win} style={{ marginTop: 1 }} />
+                        <Ionicons name="skull-outline" size={12} color={match.finisher === 'Zone bleue' ? colors.blueZone : colors.win} style={{ marginTop: 1 }} />
                         <Text style={styles.finisherText}>
-                          Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: Colors.blueZone }]}>{match.finisher}</Text>
+                          Dernier kill : <Text style={[styles.finisherName, match.finisher === 'Zone bleue' && { color: colors.blueZone }]}>{match.finisher}</Text>
                           {weaponDisplayName(match.weapon ?? null) ? ` (${weaponDisplayName(match.weapon ?? null)})` : ''}
                         </Text>
                       </View>
@@ -678,11 +683,11 @@ export default function DashboardScreen() {
             <View style={styles.notifModalHeader}>
               <Text style={styles.notifModalTitle}>Notifications</Text>
               <TouchableOpacity onPress={handleCloseNotifications}>
-                <Ionicons name="close" size={22} color={Colors.textMuted} />
+                <Ionicons name="close" size={22} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
             {loadingNotifs ? (
-              <ActivityIndicator color={Colors.primary} style={{ marginVertical: 24 }} />
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
             ) : notifications.length === 0 ? (
               <Text style={styles.notifEmpty}>Aucune notification pour le moment</Text>
             ) : (
@@ -690,7 +695,7 @@ export default function DashboardScreen() {
               <ScrollView
                 showsVerticalScrollIndicator
                 refreshControl={
-                  <RefreshControl refreshing={refreshingNotifs} onRefresh={handleRefreshNotifications} tintColor={Colors.primary} />
+                  <RefreshControl refreshing={refreshingNotifs} onRefresh={handleRefreshNotifications} tintColor={colors.primary} />
                 }
               >
                 {groupNotificationsByDay(notifications).map((group) => (
@@ -725,7 +730,7 @@ export default function DashboardScreen() {
             )}
             {confirmClearNotifs ? (
               <View style={[styles.notifModalButtons, { flexDirection: 'column', gap: 8 }]}>
-                <Text style={{ color: Colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
                   Vider tout l'historique des notifications ?
                 </Text>
                 <View style={styles.notifModalButtons}>
@@ -733,7 +738,7 @@ export default function DashboardScreen() {
                     <Text style={styles.notifCancelBtnText}>Annuler</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.notifSubmitBtn, { backgroundColor: Colors.danger }]}
+                    style={[styles.notifSubmitBtn, { backgroundColor: colors.danger }]}
                     onPress={handleClearNotifications}
                   >
                     <Text style={styles.notifSubmitBtnText}>Confirmer</Text>
@@ -743,10 +748,10 @@ export default function DashboardScreen() {
             ) : (
               <View style={styles.notifModalButtons}>
                 <TouchableOpacity
-                  style={[styles.notifCancelBtn, { backgroundColor: Colors.danger + '22', borderColor: Colors.danger }]}
+                  style={[styles.notifCancelBtn, { backgroundColor: colors.danger + '22', borderColor: colors.danger }]}
                   onPress={() => setConfirmClearNotifs(true)}
                 >
-                  <Text style={[styles.notifCancelBtnText, { color: Colors.danger }]}>Supprimer</Text>
+                  <Text style={[styles.notifCancelBtnText, { color: colors.danger }]}>Supprimer</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.notifSubmitBtn} onPress={handleCloseNotifications}>
                   <Text style={styles.notifSubmitBtnText}>Fermer</Text>
@@ -762,15 +767,16 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function getStyles(colors: ColorScheme) {
+  return StyleSheet.create({
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
-  monthNavLine: { flex: 1, height: 1, backgroundColor: Colors.cardBorder },
+  monthNavLine: { flex: 1, height: 1, backgroundColor: colors.cardBorder },
   monthNavLabel: {
     fontSize: 11, fontWeight: '800', letterSpacing: 2.5,
-    color: Colors.primary, textTransform: 'uppercase',
+    color: colors.primary, textTransform: 'uppercase',
     width: 160, textAlign: 'center',
   },
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: 'row',
@@ -782,13 +788,13 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: Colors.text,
+    color: colors.text,
     letterSpacing: 3,
   },
   appTitleAccent: {
     fontSize: 38,
     fontWeight: '900',
-    color: Colors.primary,
+    color: colors.primary,
     letterSpacing: 6,
     lineHeight: 40,
   },
@@ -801,9 +807,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -814,9 +820,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: Colors.danger,
+    backgroundColor: colors.danger,
     borderWidth: 1.5,
-    borderColor: Colors.card,
+    borderColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -830,19 +836,19 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   syncBtnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '22',
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '22',
   },
   syncStatus: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 2,
     letterSpacing: 0.3,
   },
@@ -850,9 +856,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.primary + '15',
+    backgroundColor: colors.primary + '15',
     borderWidth: 1,
-    borderColor: Colors.primary + '44',
+    borderColor: colors.primary + '44',
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
@@ -860,15 +866,15 @@ const styles = StyleSheet.create({
   emptyBannerText: {
     flex: 1,
     fontSize: 13,
-    color: Colors.secondary,
+    color: colors.secondary,
   },
   row: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     marginBottom: 10,
   },
   statsBarItem: {
@@ -880,33 +886,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     textTransform: 'uppercase',
     marginBottom: 3,
   },
   statsBarValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: Colors.text,
+    color: colors.text,
   },
   statsBarDivider: {
     width: 1,
-    backgroundColor: Colors.cardBorder,
+    backgroundColor: colors.cardBorder,
     marginVertical: 8,
   },
   listTitle: {
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.5,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 6,
     marginTop: 2,
   },
   listCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
     marginBottom: 10,
   },
@@ -919,20 +925,20 @@ const styles = StyleSheet.create({
   },
   listRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: colors.cardBorder,
   },
   listRank: {
     width: 26,
     fontSize: 11,
     fontWeight: '800',
-    color: Colors.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
   },
-  listRankGold: { color: Colors.primary },
+  listRankGold: { color: colors.primary },
   listLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.text,
+    color: colors.text,
   },
   listValueWrap: {
     flexDirection: 'row',
@@ -942,41 +948,41 @@ const styles = StyleSheet.create({
   listValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.primary,
+    color: colors.primary,
   },
   listValueMuted: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '500',
   },
   listEmpty: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   matchCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 10,
     padding: 14,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     marginBottom: 10,
   },
-  matchCardWin: { borderColor: Colors.win },
+  matchCardWin: { borderColor: colors.win },
   matchCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  matchDate: { fontSize: 12, color: Colors.textSecondary },
+  matchDate: { fontSize: 12, color: colors.textSecondary },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   badgeWin: {
-    backgroundColor: Colors.win + '22',
+    backgroundColor: colors.win + '22',
     borderWidth: 1,
-    borderColor: Colors.win,
+    borderColor: colors.win,
   },
-  badgeLoss: { backgroundColor: Colors.cardBorder },
-  badgeText: { fontSize: 11, fontWeight: '800', color: Colors.text, letterSpacing: 0.5 },
+  badgeLoss: { backgroundColor: colors.cardBorder },
+  badgeText: { fontSize: 11, fontWeight: '800', color: colors.text, letterSpacing: 0.5 },
   teamTotals: {
     alignItems: 'center',
     flex: 1,
@@ -984,12 +990,12 @@ const styles = StyleSheet.create({
   teamTotalsKA: {
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.primary,
+    color: colors.primary,
     letterSpacing: 0.5,
   },
   teamTotalsDmg: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   finisherInline: {
@@ -998,13 +1004,13 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 3,
   },
-  finisherText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
-  finisherName: { fontWeight: '800', color: Colors.win },
+  finisherText: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  finisherName: { fontWeight: '800', color: colors.win },
   matchList: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: colors.cardBorder,
     overflow: 'hidden',
     marginBottom: 10,
   },
@@ -1013,31 +1019,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.cardBorder,
+    borderBottomColor: colors.cardBorder,
     gap: 10,
   },
   teamMatchIndicator: { width: 4, height: 36, borderRadius: 2 },
-  teamMatchWin: { backgroundColor: Colors.win },
-  teamMatchLoss: { backgroundColor: Colors.textMuted },
+  teamMatchWin: { backgroundColor: colors.win },
+  teamMatchLoss: { backgroundColor: colors.textMuted },
   teamMatchInfo: { flex: 1 },
-  teamMatchDate: { fontSize: 12, color: Colors.textSecondary },
+  teamMatchDate: { fontSize: 12, color: colors.textSecondary },
   teamMatchResult: { fontSize: 13, fontWeight: '800', lineHeight: 18 },
-  teamMatchResultWin: { color: Colors.win },
-  teamMatchResultLoss: { color: Colors.textMuted },
+  teamMatchResultWin: { color: colors.win },
+  teamMatchResultLoss: { color: colors.textMuted },
   teamMatchStats: { width: 110, alignItems: 'flex-end' },
-  teamMatchKills: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  teamMatchDmg: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  teamMatchKills: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  teamMatchDmg: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   playersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   playerStat: { flex: 1, minWidth: '40%' },
   playerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   playerDot: { width: 8, height: 8, borderRadius: 4 },
-  playerName: { fontSize: 13, fontWeight: '700', color: Colors.text },
-  playerKills: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
-  playerDmg: { fontSize: 11, color: Colors.textMuted },
+  playerName: { fontSize: 13, fontWeight: '700', color: colors.text },
+  playerKills: { fontSize: 12, color: colors.primary, fontWeight: '600', marginTop: 2 },
+  playerDmg: { fontSize: 11, color: colors.textMuted },
   notifModalRoot: { flex: 1, justifyContent: 'flex-end' },
   notifModalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
   notifModalContent: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderTopLeftRadius: 16, borderTopRightRadius: 16,
     padding: 20, paddingBottom: 36, maxHeight: '80%', width: '100%', flex: 1,
   },
@@ -1045,28 +1051,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: 16,
   },
-  notifModalTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  notifEmpty: { fontSize: 13, color: Colors.textMuted, textAlign: 'center', paddingVertical: 24 },
+  notifModalTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
+  notifEmpty: { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: 24 },
   notifGroupLabel: {
     fontSize: 10, fontWeight: '800', letterSpacing: 1.2,
-    color: Colors.textMuted, marginTop: 14, marginBottom: 4,
+    color: colors.textMuted, marginTop: 14, marginBottom: 4,
   },
   notifItem: { paddingVertical: 12, gap: 4, flexDirection: 'row' },
-  notifItemBorder: { borderBottomWidth: 1, borderBottomColor: Colors.cardBorder },
-  notifItemUnread: { backgroundColor: Colors.primary + '0d' },
+  notifItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+  notifItemUnread: { backgroundColor: colors.primary + '0d' },
   notifItemMain: { flex: 1, gap: 4 },
   notifItemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  notifItemUnreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.danger },
-  notifItemTitle: { fontSize: 12, fontWeight: '700', color: Colors.text },
+  notifItemUnreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.danger },
+  notifItemTitle: { fontSize: 12, fontWeight: '700', color: colors.text },
   notifItemTitleUnread: { fontWeight: '800' },
-  notifItemBody: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
-  notifItemDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  notifItemBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+  notifItemDate: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   notifModalButtons: { flexDirection: 'row', gap: 10, marginTop: 16 },
   notifCancelBtn: {
     flex: 1, padding: 14, borderRadius: 10, borderWidth: 1,
-    borderColor: Colors.cardBorder, alignItems: 'center',
+    borderColor: colors.cardBorder, alignItems: 'center',
   },
-  notifCancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  notifSubmitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' },
-  notifSubmitBtnText: { fontSize: 14, fontWeight: '800', color: Colors.background },
-});
+  notifCancelBtnText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  notifSubmitBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' },
+  notifSubmitBtnText: { fontSize: 14, fontWeight: '800', color: colors.background },
+  });
+}

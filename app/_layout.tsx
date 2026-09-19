@@ -1,7 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
-import { Colors } from '../constants/colors';
+import * as NavigationBar from 'expo-navigation-bar';
+import { ColorScheme } from '../constants/colors';
+import { ThemeProvider, useTheme } from '../lib/theme';
 import { getCurrentPlayer, setCurrentPlayer } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
 import { PLAYER_COLORS } from '../lib/availability';
@@ -34,9 +36,16 @@ function openNotificationsIfRequested(data: any) {
 
 type InitState = 'loading' | 'select' | 'ready';
 
-export default function RootLayout() {
+function RootNavigator() {
+  const { colors, resolvedMode } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [initState, setInitState] = useState<InitState>('loading');
   const [currentPlayer, setPlayer] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    NavigationBar.setStyle(resolvedMode === 'dark' ? 'light' : 'dark');
+  }, [resolvedMode]);
 
   useEffect(() => {
     // `settled` départage qui décide en premier entre le timeout de secours et la résolution
@@ -134,10 +143,10 @@ export default function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.loading}>
-          <StatusBar style="light" />
+          <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
           <Text style={styles.appName}>VICTOIRES IMF</Text>
           <Text style={styles.appNameAccent}>PUBG</Text>
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 24 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
         </View>
       </GestureHandlerRootView>
     );
@@ -147,7 +156,7 @@ export default function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView style={styles.selectContainer}>
-          <StatusBar style="light" />
+          <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
           <View style={styles.selectHeader}>
             <Text style={styles.appName}>VICTOIRES IMF</Text>
             <Text style={styles.appNameAccent}>PUBG</Text>
@@ -155,7 +164,7 @@ export default function RootLayout() {
           </View>
           <View style={styles.playerList}>
             {GROUP_PLAYERS.map((name) => {
-              const color = PLAYER_COLORS[name] ?? Colors.primary;
+              const color = PLAYER_COLORS[name] ?? colors.primary;
               return (
                 <TouchableOpacity
                   key={name}
@@ -177,7 +186,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
+      <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
@@ -185,75 +194,85 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    padding: 24,
-  },
-  selectHeader: {
-    alignItems: 'center',
-    marginTop: 48,
-    marginBottom: 48,
-  },
-  appName: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: Colors.text,
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-  },
-  appNameAccent: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: Colors.primary,
-    letterSpacing: 8,
-    lineHeight: 52,
-  },
-  selectSubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginTop: 16,
-    letterSpacing: 1,
-  },
-  playerList: {
-    gap: 12,
-  },
-  playerBtn: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  playerBtnAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary + '33',
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerBtnAvatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  playerBtnText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
-    letterSpacing: 0.5,
-  },
-});
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootNavigator />
+    </ThemeProvider>
+  );
+}
+
+function getStyles(colors: ColorScheme) {
+  return StyleSheet.create({
+    loading: {
+      flex: 1,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    selectContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 24,
+    },
+    selectHeader: {
+      alignItems: 'center',
+      marginTop: 48,
+      marginBottom: 48,
+    },
+    appName: {
+      fontSize: 22,
+      fontWeight: '900',
+      color: colors.text,
+      letterSpacing: 3,
+      textTransform: 'uppercase',
+    },
+    appNameAccent: {
+      fontSize: 48,
+      fontWeight: '900',
+      color: colors.primary,
+      letterSpacing: 8,
+      lineHeight: 52,
+    },
+    selectSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginTop: 16,
+      letterSpacing: 1,
+    },
+    playerList: {
+      gap: 12,
+    },
+    playerBtn: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+    playerBtnAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primary + '33',
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playerBtnAvatarText: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.primary,
+    },
+    playerBtnText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: 0.5,
+    },
+  });
+}
