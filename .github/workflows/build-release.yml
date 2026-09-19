@@ -33,11 +33,19 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Build local (--local) : compile directement sur ce runner au lieu
-      # d'envoyer le job au service cloud EAS, qui a son propre quota mensuel
-      # partagé avec seedbox-manager (même compte fabfix). Ne consomme aucun
-      # quota EAS - seul le fetch du keystore de signature (via EXPO_TOKEN)
-      # passe encore par le compte Expo.
+      # Build entièrement local, sans EAS ni compte Expo : expo prebuild
+      # génère le projet natif localement (aucun réseau/compte nécessaire),
+      # puis Gradle compile et signe directement avec le vrai keystore de
+      # production (extrait une fois depuis EAS le 19/09/2026, stocké
+      # uniquement en secrets GitHub - jamais dans le repo).
+      - name: Write .env for build-time EXPO_PUBLIC_* vars
+        run: |
+          cat > .env <<EOF
+          EXPO_PUBLIC_PUBG_API_KEY=${{ secrets.EXPO_PUBLIC_PUBG_API_KEY }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_SUPABASE_URL=${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EOF
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -60,16 +68,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Prebuild native Android project
+        run: npx expo prebuild --platform android --no-install
 
-      - name: Build APK
+      - name: Decode signing keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+
+      - name: Build & sign APK
+        working-directory: android
         run: |
           set -o pipefail
-          eas build --platform android --profile preview --local --non-interactive \
-            --output "victoires-imf-v${{ steps.version.outputs.version }}.apk" 2>&1 | tee build_output.txt
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=/tmp/release.keystore \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk "victoires-imf-v${{ steps.version.outputs.version }}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
