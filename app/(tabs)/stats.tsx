@@ -197,7 +197,7 @@ export default function StatsScreen() {
 
   return (
     <SwipeableScreen>
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>STATISTIQUES</Text>
       </View>

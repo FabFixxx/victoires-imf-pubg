@@ -411,7 +411,7 @@ export default function DashboardScreen() {
 
   return (
     <SwipeableScreen>
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         style={styles.container}
         refreshControl={
