@@ -12,8 +12,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: 'v1.5.1',
     date: '19 septembre 2026',
-    notes: "🧹 Nettoyage\n" +
-      "- Le build de l'APK ne dépend plus d'Expo/EAS du tout (compilation et signature locales)",
+    notes: "🆕 Nouveauté\n" +
+      "- La notification \"3 joueurs dispo\" indique maintenant qui manque (ex: \"plus qu'un (Nicotom) pour valider !\")\n\n" +
+      "🧹 Nettoyage\n" +
+      "- Le build de l'APK ne dépend plus d'Expo/EAS du tout (compilation et signature locales)\n" +
+      "- Le changelog est maintenant embarqué directement dans l'appli (plus de dépendance réseau à l'ouverture de l'écran)",
   },
   {
     version: 'v1.5.0',

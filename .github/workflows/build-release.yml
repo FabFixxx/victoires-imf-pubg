@@ -94,5 +94,9 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
+            🆕 Nouveauté
+            - La notification "3 joueurs dispo" indique maintenant qui manque (ex: "plus qu'un (Nicotom) pour valider !")
+
             🧹 Nettoyage
             - Le build de l'APK ne dépend plus d'Expo/EAS du tout (compilation et signature locales)
+            - Le changelog est maintenant embarqué directement dans l'appli (plus de dépendance réseau à l'ouverture de l'écran)
