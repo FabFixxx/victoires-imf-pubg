@@ -309,10 +309,12 @@ Deno.serve(async (_req) => {
     const { error: claimError } = await supabase.from('notification_log').insert({ type: 'date_3votes', key: date })
     if (claimError) continue // Déjà traité
 
+    const missingPlayer = GROUP_PLAYERS.find((p) => !playersOnDay.includes(p))
+
     await sendPushToAll(
       supabase, players,
       '🤞 Nouvelle possibilité de session IMF !',
-      `3 joueurs dispo le ${formatDate(date)} — plus qu'un pour valider !`,
+      `3 joueurs dispo le ${formatDate(date)} — plus qu'un${missingPlayer ? ` (${missingPlayer})` : ''} pour valider !`,
       'date_3votes'
     )
   }
