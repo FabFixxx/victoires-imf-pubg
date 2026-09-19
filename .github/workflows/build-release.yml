@@ -41,6 +41,7 @@ jobs:
       - name: Build APK
         id: build
         run: |
+          set -o pipefail
           eas build --platform android --profile preview --non-interactive --wait 2>&1 | tee build_output.txt
           ARTIFACT_URL=$(grep -oP 'https://\S+\.apk' build_output.txt | head -1)
           echo "artifact_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
@@ -58,13 +59,5 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## 🆕 Nouveautés
-            - Notification "Nouvelle possibilité de session" envoyée dès 3 votes sur une date (au lieu d'attendre le 4e), quand aucune session n'est encore retenue cette semaine-là
-
-            ## 🐛 Corrections
-            - Le calendrier n'affiche plus les dates passées dans "Meilleures dates cette semaine"
-            - La notif "3 votes" pouvait se redéclencher à tort quand un joueur retirait puis remettait son vote sur la même date
-            - Formulation et emoji ajustés sur la notif "3 votes"
-
-            ## 🔒 Sécurité
-            - Renforcement de la sécurité côté serveur (accès aux données et aux notifications push)
+            ## 🎨 Nouveautés
+            - Thème clair, en plus du thème sombre habituel (qui reste celui par défaut) : réglable dans Réglages → Apparence, avec un choix "Système" qui suit automatiquement le thème du téléphone
