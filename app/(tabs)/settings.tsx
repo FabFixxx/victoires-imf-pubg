@@ -28,6 +28,7 @@ import {
   ImfSeason, ManualWin,
 } from '../../lib/imf-seasons';
 import { GROUP_PLAYERS, getDisplayName } from '../../constants/players';
+import { CHANGELOG } from '../../constants/changelog';
 import { PLAYER_COLORS, getNotificationPrefs, saveNotificationPrefs, NotificationPrefs } from '../../lib/availability';
 import { SwipeableScreen } from '../../components/SwipeableScreen';
 
@@ -80,8 +81,6 @@ export default function SettingsScreen() {
 
   // Modal changelog
   const [showChangelogModal, setShowChangelogModal] = useState(false);
-  const [releases, setReleases] = useState<{ version: string; date: string; notes: string }[]>([]);
-  const [loadingReleases, setLoadingReleases] = useState(false);
 
   // Modal ajout saison
   const [showSeasonModal, setShowSeasonModal] = useState(false);
@@ -307,31 +306,8 @@ export default function SettingsScreen() {
   };
 
 
-  const handleOpenChangelog = async () => {
+  const handleOpenChangelog = () => {
     setShowChangelogModal(true);
-    if (releases.length > 0) return;
-    setLoadingReleases(true);
-    try {
-      const res = await fetch('https://api.github.com/repos/FabFixxx/victoires-imf-pubg/releases');
-      const data = await res.json();
-      const parsed = (data ?? []).map((r: any) => ({
-        version: r.tag_name ?? '',
-        date: r.published_at ? new Date(r.published_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '',
-        notes: r.body ?? '',
-      }));
-      parsed.sort((a, b) => {
-        const va = a.version.replace(/^v/, '').split('.').map(Number);
-        const vb = b.version.replace(/^v/, '').split('.').map(Number);
-        for (let i = 0; i < 3; i++) {
-          if ((vb[i] ?? 0) !== (va[i] ?? 0)) return (vb[i] ?? 0) - (va[i] ?? 0);
-        }
-        return 0;
-      });
-      setReleases(parsed);
-    } catch {
-      setReleases([]);
-    }
-    setLoadingReleases(false);
   };
 
   const openTracker = (username: string) => {
@@ -601,18 +577,16 @@ export default function SettingsScreen() {
                 <Ionicons name="close" size={22} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
-            {loadingReleases ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
-            ) : releases.length === 0 ? (
+            {CHANGELOG.length === 0 ? (
               <Text style={styles.emptyWins}>Aucune version disponible</Text>
             ) : (
               <View style={{ flex: 1, minHeight: 0 }}>
                 <ScrollView showsVerticalScrollIndicator>
-                  {releases.map((r, i) => (
-                    <View key={r.version} style={[styles.changelogItem, i < releases.length - 1 && styles.changelogBorder]}>
+                  {CHANGELOG.map((r, i) => (
+                    <View key={r.version} style={[styles.changelogItem, i < CHANGELOG.length - 1 && styles.changelogBorder]}>
                       <View style={styles.changelogHeader}>
                         <Text style={styles.changelogVersion}>{r.version}</Text>
-                        {r.date ? <Text style={styles.changelogDate}>{r.date}</Text> : null}
+                        {r.date ? <Text style={styles.changelogDate}>- {r.date}</Text> : null}
                       </View>
                       {r.notes ? <Text style={styles.changelogNotes}>{r.notes}</Text> : null}
                     </View>
@@ -1220,7 +1194,7 @@ function getStyles(colors: ColorScheme) {
   versionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   changelogItem: { paddingVertical: 14 },
   changelogBorder: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
-  changelogHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  changelogHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   changelogVersion: { fontSize: 15, fontWeight: '800', color: colors.primary },
   changelogDate: { fontSize: 12, color: colors.textMuted },
   changelogNotes: { fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
