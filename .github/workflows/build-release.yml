@@ -94,5 +94,5 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            ## 🧹 Nettoyage
+            🧹 Nettoyage
             - Le build de l'APK ne dépend plus d'Expo/EAS du tout (compilation et signature locales)
