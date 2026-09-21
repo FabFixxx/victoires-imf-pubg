@@ -396,6 +396,33 @@ Deno.serve(async (_req) => {
     await sendPushToAll(supabase, players, '🚫 Session annulée !', body, 'session_cancelled')
   }
 
+  // --- PENDING SESSION_RETAINED (debounce "Session retenue !") ---
+  // Planifié par le client quand une date est marquée retenue manuellement
+  // (addRetainedSession) - symétrique à SESSION_CANCELLED ci-dessus. Le retenue
+  // automatique (4 votes atteints) a déjà sa propre notif immédiate plus haut
+  // (date_4votes / new_date_4votes), donc pas de doublon à craindre ici.
+  const { data: allRetainPending } = await supabase
+    .from('notification_log').select('key, sent_at').eq('type', 'session_retained_pending')
+  const retainPendingReady = (allRetainPending ?? []).filter((e: any) => now >= fireAt(e.sent_at))
+
+  for (const entry of retainPendingReady) {
+    const date = entry.key
+
+    await supabase.from('notification_log').delete().eq('type', 'session_retained_pending').eq('key', date)
+
+    if (date < todayStr) continue // date passée, plus pertinent de notifier
+
+    const { data: stillRetained } = await supabase
+      .from('notification_log').select('key').eq('type', 'retained_session').eq('key', date).maybeSingle()
+    if (!stillRetained) continue // re-démarquée entre-temps, confirmation obsolète
+
+    // Mutex : n'envoyer qu'une fois par date
+    const { error: claimError } = await supabase.from('notification_log').insert({ type: 'session_retained', key: date })
+    if (claimError) continue
+
+    await sendPushToAll(supabase, players, '✅ Session retenue !', `La session du ${formatDate(date)} est confirmée comme date retenue.`, 'session_retained')
+  }
+
   // --- PENDING WEEK_COMPLETE ---
   // fire_at = prochaine heure pleine après (vote_time + 30 min)
   // Si re-vote, sent_at est mis à jour dans notify-on-availability → fire_at se décale.

@@ -101,21 +101,26 @@ export async function getRetainedSessions(weekStart: string, weekEnd: string): P
   return (data ?? []).map((r: any) => r.key);
 }
 
-export async function addRetainedSession(date: string, actor: string): Promise<void> {
-  const { error } = await supabase.from('notification_log').upsert(
-    { type: 'retained_session', key: date },
-    { onConflict: 'type,key', ignoreDuplicates: true }
-  );
-  if (error) console.error('[addRetainedSession] failed:', error.message);
-
-  await supabase.from('retained_session_log').insert({ player_username: actor, date, action: 'retain' });
+function mondayOf(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  const day = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  return d.toISOString().split('T')[0];
 }
 
-export async function removeRetainedSession(date: string, actor: string): Promise<void> {
+function sundayOf(mondayStr: string): string {
+  const d = new Date(mondayStr + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 6);
+  return d.toISOString().split('T')[0];
+}
+
+// Un seul démarquage à la fois, sans re-déclencher l'enforcement "une seule date
+// retenue par semaine" (sinon addRetainedSession <-> unretainOne boucleraient).
+async function unretainOne(date: string, actor: string): Promise<void> {
   const { error } = await supabase.from('notification_log').delete()
     .eq('type', 'retained_session')
     .eq('key', date);
-  if (error) console.error('[removeRetainedSession] failed:', error.message);
+  if (error) console.error('[unretainOne] failed:', error.message);
 
   await supabase.from('retained_session_log').insert({ player_username: actor, date, action: 'unretain' });
 
@@ -126,7 +131,44 @@ export async function removeRetainedSession(date: string, actor: string): Promis
     { type: 'session_cancelled_pending', key: date, sent_at: new Date().toISOString() },
     { onConflict: 'type,key' }
   );
-  if (pendingError) console.error('[removeRetainedSession] pending schedule failed:', pendingError.message);
+  if (pendingError) console.error('[unretainOne] pending schedule failed:', pendingError.message);
+}
+
+export async function addRetainedSession(date: string, actor: string): Promise<void> {
+  // Une seule date retenue par semaine : démarque toute autre date déjà retenue
+  // sur la même semaine (chacune reçoit sa propre notif "Session annulée !" via
+  // unretainOne, comme un démarquage manuel normal) avant de marquer la nouvelle.
+  // Sans ça, un retenue manuel pouvait coexister silencieusement avec le retenue
+  // automatique (4 votes) d'une autre date de la même semaine - vécu en prod le
+  // 21/09/2026 sur le 24 (auto) + 25 (manuel), le second sans aucune notif.
+  const weekStart = mondayOf(date);
+  const weekEnd = sundayOf(weekStart);
+  const { data: others } = await supabase
+    .from('notification_log').select('key').eq('type', 'retained_session')
+    .gte('key', weekStart).lte('key', weekEnd).neq('key', date);
+  for (const other of others ?? []) {
+    await unretainOne(other.key, actor);
+  }
+
+  const { error } = await supabase.from('notification_log').upsert(
+    { type: 'retained_session', key: date },
+    { onConflict: 'type,key', ignoreDuplicates: true }
+  );
+  if (error) console.error('[addRetainedSession] failed:', error.message);
+
+  await supabase.from('retained_session_log').insert({ player_username: actor, date, action: 'retain' });
+
+  // Debounce symétrique à unretainOne : send-reminders enverra "Session retenue !"
+  // à la prochaine heure pleine, et annulera si la date a été re-démarquée entre-temps.
+  const { error: pendingError } = await supabase.from('notification_log').upsert(
+    { type: 'session_retained_pending', key: date, sent_at: new Date().toISOString() },
+    { onConflict: 'type,key' }
+  );
+  if (pendingError) console.error('[addRetainedSession] pending schedule failed:', pendingError.message);
+}
+
+export async function removeRetainedSession(date: string, actor: string): Promise<void> {
+  await unretainOne(date, actor);
 }
 
 // ── Préférences de notifications ──
