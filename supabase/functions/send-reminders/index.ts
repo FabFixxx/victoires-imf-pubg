@@ -189,7 +189,7 @@ function buildWeekCompleteNotif(fourVote: string[], threeVote: string[]): { titl
   }
   if (fourVote.length > 1) {
     const dates = fourVote.map(formatDate)
-    return { title: '✅ Session IMF confirmée !', body: `Plusieurs dates possibles : ${dates.join(', ')}. La date retenue est le ${dates[0]} !` }
+    return { title: '✅ Session IMF confirmée !', body: `La date retenue est le ${dates[0]} ! (plusieurs dates possibles cette semaine : ${dates.join(', ')})` }
   }
   return { title: '📋 Tout le monde a répondu !', body: `Pas de date commune à 4. Meilleures dates : ${threeVote.map(formatDate).join(', ')}. À vous de choisir !` }
 }
