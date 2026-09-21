@@ -290,15 +290,15 @@ export default function CalendarScreen() {
   }, []);
 
   const handleToggleRetained = async (date: string) => {
-    if (togglingRetained) return;
+    if (togglingRetained || !currentPlayer) return;
     setTogglingRetained(date);
     try {
       if (retainedDates.has(date)) {
         setRetainedDates((prev) => { const next = new Set(prev); next.delete(date); return next; });
-        await removeRetainedSession(date);
+        await removeRetainedSession(date, currentPlayer);
       } else {
         setRetainedDates((prev) => new Set([...prev, date]));
-        await addRetainedSession(date);
+        await addRetainedSession(date, currentPlayer);
       }
     } finally {
       setTogglingRetained(null);

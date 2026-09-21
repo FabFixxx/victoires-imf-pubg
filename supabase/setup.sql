@@ -191,6 +191,18 @@ CREATE TABLE IF NOT EXISTS chosen_dates (
 );
 ALTER TABLE chosen_dates DISABLE ROW LEVEL SECURITY;
 
+-- Historique des marquages/démarquages "session retenue" (qui, quand) - écrit
+-- directement par le client (comme notification_log), pour pouvoir répondre à
+-- "qui a annulé la session retenue ?" sans avoir à deviner depuis les votes.
+CREATE TABLE IF NOT EXISTS retained_session_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_username TEXT NOT NULL,
+  date DATE NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('retain', 'unretain')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE retained_session_log DISABLE ROW LEVEL SECURITY;
+
 -- Préférences de notifications par joueur
 CREATE TABLE IF NOT EXISTS notification_preferences (
   player_username TEXT PRIMARY KEY,

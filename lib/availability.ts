@@ -101,19 +101,23 @@ export async function getRetainedSessions(weekStart: string, weekEnd: string): P
   return (data ?? []).map((r: any) => r.key);
 }
 
-export async function addRetainedSession(date: string): Promise<void> {
+export async function addRetainedSession(date: string, actor: string): Promise<void> {
   const { error } = await supabase.from('notification_log').upsert(
     { type: 'retained_session', key: date },
     { onConflict: 'type,key', ignoreDuplicates: true }
   );
   if (error) console.error('[addRetainedSession] failed:', error.message);
+
+  await supabase.from('retained_session_log').insert({ player_username: actor, date, action: 'retain' });
 }
 
-export async function removeRetainedSession(date: string): Promise<void> {
+export async function removeRetainedSession(date: string, actor: string): Promise<void> {
   const { error } = await supabase.from('notification_log').delete()
     .eq('type', 'retained_session')
     .eq('key', date);
   if (error) console.error('[removeRetainedSession] failed:', error.message);
+
+  await supabase.from('retained_session_log').insert({ player_username: actor, date, action: 'unretain' });
 
   // Debounce comme les autres notifs : planifie "Session annulée !" au lieu d'envoyer
   // tout de suite. send-reminders traitera ce pending à la prochaine heure pleine et
