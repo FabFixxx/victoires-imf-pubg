@@ -233,6 +233,15 @@ Deno.serve(async (_req) => {
     .filter((e: any) => now >= fireAt(e.sent_at))
     .sort((a: any, b: any) => a.key.localeCompare(b.key)) // traite les dates dans l'ordre chronologique
 
+  // Dates déjà citées par un message "Session confirmée" dans CE run (voir
+  // plus bas) : si deux dates atteignent 4/4 dans le même batch (ex: le
+  // dernier joueur coche deux jours d'un coup), la première traitée envoie
+  // déjà "Plusieurs dates possibles : X, Y" (allFourDates vient des vraies
+  // données de vote, pas juste de la date en cours) - inutile de renvoyer
+  // "Nouvelle possibilité" pour Y juste après, ça fait doublon (confirmé en
+  // direct : 2 notifs reçues à la même minute pour ce cas exact).
+  const announcedThisRun = new Set<string>()
+
   for (const entry of datePendingReady) {
     const date = entry.key
     const ws = getWeekStart(date)
@@ -269,12 +278,15 @@ Deno.serve(async (_req) => {
         await supabase.from('notification_log').upsert({ type: 'retained_session', key: date }, { onConflict: 'type,key', ignoreDuplicates: true })
         if (earliestRetained) await supabase.from('notification_log').delete().eq('type', 'retained_session').eq('key', earliestRetained)
       }
-      await sendPushToAll(supabase, players, '🎉 Nouvelle possibilité de session IMF !', `Tout le monde est aussi dispo le ${formatDate(date)} !`, 'new_date_4votes')
+      if (!announcedThisRun.has(date)) {
+        await sendPushToAll(supabase, players, '🎉 Nouvelle possibilité de session IMF !', `Tout le monde est aussi dispo le ${formatDate(date)} !`, 'new_date_4votes')
+      }
     } else {
       // Première date → auto-retenir
       await supabase.from('notification_log').upsert({ type: 'retained_session', key: date }, { onConflict: 'type,key', ignoreDuplicates: true })
       const { data: weekRows } = await supabase.from('player_availability').select('player_username, date').gte('date', ws).lte('date', we)
       const allFourDates = groupByDate(weekRows ?? []).filter((d) => d.players.length >= GROUP_PLAYERS.length).map((d) => d.date).sort()
+      allFourDates.forEach((d) => announcedThisRun.add(d))
       const { title, body } = buildWeekCompleteNotif(allFourDates, [])
       await sendPushToAll(supabase, players, title, body, 'date_4votes')
     }
