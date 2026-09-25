@@ -21,7 +21,8 @@
       "package": "com.imf.victoirespubg",
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
-      "versionCode": 27
+      "versionCode": 27,
+      "permissions": ["REQUEST_INSTALL_PACKAGES"]
     },
     "web": {
       "favicon": "./assets/favicon.png",

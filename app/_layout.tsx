@@ -8,8 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
-  Linking,
   Platform,
   AppState,
 } from 'react-native';
@@ -23,7 +21,8 @@ import { getCurrentPlayer, setCurrentPlayer } from '../lib/storage';
 import { GROUP_PLAYERS, getDisplayName } from '../constants/players';
 import { PLAYER_COLORS } from '../lib/availability';
 import { registerPushToken, refreshAppBadge } from '../lib/notifications';
-import { checkForUpdate } from '../lib/update-check';
+import { checkForUpdate, type UpdateInfo } from '../lib/update-check';
+import { UpdateModal } from '../components/UpdateModal';
 import { registerWebPush } from '../lib/web-push-client';
 
 // Ouvre directement la page des notifications quand l'utilisateur tape sur un push
@@ -41,6 +40,7 @@ function RootNavigator() {
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [initState, setInitState] = useState<InitState>('loading');
   const [currentPlayer, setPlayer] = useState<string | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -73,17 +73,7 @@ function RootNavigator() {
           refreshAppBadge(player);
           checkForUpdate().then((info) => {
             if (!info || Platform.OS === 'web') return;
-            Alert.alert(
-              '🆕 Mise à jour disponible',
-              `La version ${info.version} est disponible. Tu peux voir les nouveautés dans Réglages → Version.`,
-              [
-                { text: 'Plus tard', style: 'cancel' },
-                {
-                  text: 'Mettre à jour',
-                  onPress: () => Linking.openURL(info.downloadUrl),
-                },
-              ]
-            );
+            setUpdateInfo(info);
           }).catch((e) => console.error('[RootLayout] checkForUpdate failed:', e));
         }
       } catch {
@@ -190,6 +180,9 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
+      {updateInfo && (
+        <UpdateModal info={updateInfo} onDismiss={() => setUpdateInfo(null)} colors={colors} />
+      )}
     </GestureHandlerRootView>
   );
 }
