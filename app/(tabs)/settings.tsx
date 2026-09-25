@@ -594,6 +594,13 @@ export default function SettingsScreen() {
                 </ScrollView>
               </View>
             )}
+            <TouchableOpacity
+              style={styles.githubBtn}
+              onPress={() => Linking.openURL('https://github.com/FabFixxx/victoires-imf-pubg/releases')}
+            >
+              <Ionicons name="logo-github" size={16} color={colors.text} />
+              <Text style={styles.githubBtnText}>Voir les releases sur GitHub</Text>
+            </TouchableOpacity>
           </View>
         </View>
         </GestureHandlerRootView>
@@ -1198,6 +1205,12 @@ function getStyles(colors: ColorScheme) {
   changelogVersion: { fontSize: 15, fontWeight: '800', color: colors.primary },
   changelogDate: { fontSize: 12, color: colors.textMuted },
   changelogNotes: { fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
+  githubBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 16, padding: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.cardBorder,
+  },
+  githubBtnText: { fontSize: 13, fontWeight: '600', color: colors.text },
   themeRow: { flexDirection: 'row', padding: 10, gap: 8 },
   themeBtn: {
     flex: 1,
