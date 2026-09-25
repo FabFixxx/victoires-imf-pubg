@@ -22,7 +22,13 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: 'v1.5.2',
     date: '25 septembre 2026',
     notes: "🆕 Nouveauté\n" +
-      "- Mise à jour : téléchargement et installation en un tap avec pourcentage d'avancement, au lieu d'ouvrir juste la page GitHub dans le navigateur\n\n" +
+      "- Mise à jour : téléchargement et installation en un tap avec pourcentage d'avancement, au lieu d'ouvrir juste la page GitHub dans le navigateur\n" +
+      "- Notifie enfin quand une session est retenue manuellement (ne le faisait jamais avant, contrairement au retenue automatique à 4 votes)\n" +
+      "- Journal de qui a manuellement retenu/annulé une session (pour diagnostiquer une notif inattendue)\n\n" +
+      "⚡ Corrections\n" +
+      "- Empêche 2 dates retenues sur la même semaine\n" +
+      "- Notification \"Session confirmée\" : la date retenue passe en premier, les autres dates possibles entre parenthèses\n" +
+      "- Doublon de notification corrigé quand 2 dates atteignent 4/4 votes dans le même passage\n\n" +
       "🧹 Nettoyage\n" +
       "- Fenêtre de mise à jour thémée (claire/sombre) à la place de la popup système",
   },
