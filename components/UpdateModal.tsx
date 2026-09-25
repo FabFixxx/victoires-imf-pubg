@@ -38,6 +38,16 @@ async function downloadAndInstallUpdate(
     flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
     type: 'application/vnd.android.package-archive',
   });
+  // startActivityAsync ne se résout qu'au retour à l'appli (installateur
+  // annulé/terminé) - l'installateur système a déjà fini de lire l'APK à ce
+  // moment-là, sûr de le supprimer. Sans ça, le fichier (~50 Mo) restait en
+  // cache indéfiniment (jamais nettoyé, confirmé en relisant le code).
+  try {
+    file.delete();
+  } catch {
+    // Pas grave si ça échoue (fichier déjà absent, permissions...) - le
+    // prochain téléchargement écrase de toute façon le même nom de fichier.
+  }
 }
 
 /** Fenêtre "nouvelle version" thémée (pas la popup système Alert.alert, qui
