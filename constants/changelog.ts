@@ -10,6 +10,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 'v1.5.3',
+    date: '25 septembre 2026',
+    notes: "🧹 Nettoyage\n" +
+      "- Mise à jour : l'APK téléchargé restait dans le cache indéfiniment après l'installation, jamais supprimé",
+  },
+  {
     version: 'v1.5.2',
     date: '25 septembre 2026',
     notes: "🆕 Nouveauté\n" +

@@ -94,8 +94,5 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
-            🆕 Nouveauté
-            - Mise à jour : téléchargement et installation en un tap avec pourcentage d'avancement, au lieu d'ouvrir juste la page GitHub dans le navigateur
-
             🧹 Nettoyage
-            - Fenêtre de mise à jour thémée (claire/sombre) à la place de la popup système
+            - Mise à jour : l'APK téléchargé restait dans le cache indéfiniment après l'installation, jamais supprimé
