@@ -95,11 +95,7 @@ jobs:
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
             🆕 Nouveauté
-            - La notification "3 joueurs dispo" indique maintenant qui manque (ex: "plus qu'un (Nicotom) pour valider !")
-
-            ⚡ Corrections
-            - Grande bande vide en bas de tous les écrans sauf Victoires
+            - Mise à jour : téléchargement et installation en un tap avec pourcentage d'avancement, au lieu d'ouvrir juste la page GitHub dans le navigateur
 
             🧹 Nettoyage
-            - Le build de l'APK ne dépend plus d'Expo/EAS du tout (compilation et signature locales)
-            - Le changelog est maintenant embarqué directement dans l'appli (plus de dépendance réseau à l'ouverture de l'écran)
+            - Fenêtre de mise à jour thémée (claire/sombre) à la place de la popup système

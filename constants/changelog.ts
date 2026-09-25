@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 'v1.5.2',
+    date: '25 septembre 2026',
+    notes: "🆕 Nouveauté\n" +
+      "- Mise à jour : téléchargement et installation en un tap avec pourcentage d'avancement, au lieu d'ouvrir juste la page GitHub dans le navigateur\n\n" +
+      "🧹 Nettoyage\n" +
+      "- Fenêtre de mise à jour thémée (claire/sombre) à la place de la popup système",
+  },
+  {
     version: 'v1.5.1',
     date: '19 septembre 2026',
     notes: "🆕 Nouveauté\n" +
