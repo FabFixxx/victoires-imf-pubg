@@ -12,8 +12,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: 'v1.5.3',
     date: '25 septembre 2026',
-    notes: "🧹 Nettoyage\n" +
-      "- Mise à jour : l'APK téléchargé restait dans le cache indéfiniment après l'installation, jamais supprimé",
+    notes: "🆕 Nouveauté\n" +
+      "- Historique des versions : bouton pour voir les releases sur GitHub\n\n" +
+      "🧹 Nettoyage\n" +
+      "- Mise à jour : l'APK téléchargé restait dans le cache indéfiniment après l'installation, jamais supprimé\n" +
+      "- Fenêtre de mise à jour : même mise en forme que seedbox-manager (titre, texte, bouton \"Plus tard\")",
   },
   {
     version: 'v1.5.2',

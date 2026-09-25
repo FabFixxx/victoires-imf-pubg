@@ -94,5 +94,9 @@ jobs:
           name: "Version ${{ steps.version.outputs.version }}"
           files: victoires-imf-v${{ steps.version.outputs.version }}.apk
           body: |
+            🆕 Nouveauté
+            - Historique des versions : bouton pour voir les releases sur GitHub
+
             🧹 Nettoyage
             - Mise à jour : l'APK téléchargé restait dans le cache indéfiniment après l'installation, jamais supprimé
+            - Fenêtre de mise à jour : même mise en forme que seedbox-manager (titre, texte, bouton "Plus tard")
