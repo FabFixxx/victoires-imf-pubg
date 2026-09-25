@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import { File, Paths } from 'expo-file-system';
 // getContentUriAsync spécifiquement depuis le sous-module "legacy" : depuis
 // 'expo-file-system' directement, cette fonction lève une exception
@@ -93,15 +94,15 @@ export function UpdateModal({
     <Modal visible transparent animationType="fade" onRequestClose={onDismiss}>
       <Pressable style={styles.backdrop} onPress={status === 'downloading' ? undefined : onDismiss}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>🆕 Mise à jour disponible</Text>
+          <Text style={styles.title}>Nouvelle version disponible</Text>
           <Text style={styles.body}>
-            La version {info.version} est disponible.
+            La version {info.version} est disponible{Constants.expoConfig?.version ? ` (version ${Constants.expoConfig.version} installée)` : ''}.
           </Text>
           {status === 'error' && (
             <>
               <Text style={styles.errorText}>Échec du téléchargement automatique{errorDetail ? ` : ${errorDetail}` : ''}.</Text>
-              <Pressable onPress={() => Linking.openURL(info.downloadUrl)}>
-                <Text style={styles.linkText}>Télécharger depuis GitHub</Text>
+              <Pressable onPress={() => Linking.openURL('https://github.com/FabFixxx/victoires-imf-pubg/releases/latest')}>
+                <Text style={styles.linkText}>Voir sur GitHub</Text>
               </Pressable>
             </>
           )}
@@ -148,21 +149,18 @@ function getStyles(colors: ColorScheme) {
       padding: 20,
     },
     title: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 8 },
-    body: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 8 },
-    errorText: { color: colors.danger, fontSize: 13, marginTop: 4, marginBottom: 4 },
-    linkText: { color: colors.primary, fontSize: 13, fontWeight: '700', marginBottom: 8 },
-    buttonRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-    secondaryBtn: {
-      flex: 1, alignItems: 'center', paddingVertical: 12,
-      borderRadius: 10, backgroundColor: colors.backgroundSecondary,
-      borderWidth: 1, borderColor: colors.cardBorder,
-    },
-    secondaryBtnText: { color: colors.textMuted, fontSize: 15, fontWeight: '700' },
+    body: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+    errorText: { color: colors.danger, fontSize: 13, marginTop: 8 },
+    linkText: { color: colors.primary, fontSize: 13, fontWeight: '700', marginTop: 4 },
+    buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 20 },
+    secondaryBtn: { paddingVertical: 10, paddingHorizontal: 14 },
+    secondaryBtnText: { color: colors.textMuted, fontSize: 14, fontWeight: '700' },
     primaryBtn: {
-      flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12,
-      borderRadius: 10, backgroundColor: colors.primary,
+      backgroundColor: colors.primary, borderRadius: 10,
+      paddingVertical: 10, paddingHorizontal: 18,
+      alignItems: 'center', justifyContent: 'center', minWidth: 110,
     },
-    primaryBtnDisabled: { opacity: 0.8 },
-    primaryBtnText: { color: '#0A0A0A', fontSize: 15, fontWeight: '700' },
+    primaryBtnDisabled: { opacity: 0.7 },
+    primaryBtnText: { color: '#0A0A0A', fontSize: 14, fontWeight: '700' },
   });
 }
