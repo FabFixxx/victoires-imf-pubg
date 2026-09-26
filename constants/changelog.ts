@@ -10,6 +10,12 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: 'v1.5.4',
+    date: '26 septembre 2026',
+    notes: "🔒 Sécurité\n" +
+      "- Mise à jour : la vérification de version et le téléchargement de l'APK passent maintenant par notre propre serveur (avant : accès direct à GitHub) - prépare le passage du dépôt en privé, sans rien changer pour toi",
+  },
+  {
     version: 'v1.5.3',
     date: '25 septembre 2026',
     notes: "🆕 Nouveauté\n" +
