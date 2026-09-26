@@ -1,8 +1,12 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const GITHUB_RELEASES_API =
-  'https://api.github.com/repos/FabFixxx/victoires-imf-pubg/releases/latest';
+// Passe par notre propre serveur (api/app-version.js), plus par GitHub
+// directement : le dépôt est privé, un appel non authentifié depuis le
+// client échouerait (404) - voir api/_lib/github.js pour le token côté
+// serveur. Même pattern que seedbox-manager.
+const APP_VERSION_API = 'https://imf.ignorelist.com/api/app-version';
+const APP_DOWNLOAD_URL = 'https://imf.ignorelist.com/api/app-download';
 
 function parseVersion(v: string): number[] {
   return v.replace(/^v/, '').split('.').map(Number);
@@ -27,25 +31,22 @@ export interface UpdateInfo {
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
   if (Platform.OS !== 'android') return null;
   try {
-    const res = await fetch(GITHUB_RELEASES_API);
+    const res = await fetch(APP_VERSION_API);
     if (!res.ok) return null;
     const data = await res.json();
 
-    const latestTag: string = data.tag_name ?? '';
+    const latestVersion: string = data.version ?? '';
     const currentVersion = Constants.expoConfig?.version ?? '1.0.0';
 
-    if (!latestTag || !isNewer(latestTag, currentVersion)) return null;
+    if (!latestVersion || !isNewer(latestVersion, currentVersion)) return null;
 
-    const apkAsset = (data.assets ?? []).find((a: { name: string }) =>
-      a.name.endsWith('.apk')
-    );
-    const downloadUrl: string =
-      apkAsset?.browser_download_url ?? data.html_url ?? '';
-
+    // downloadUrl n'est plus une URL de release précise (le serveur résout
+    // toujours "la dernière" lui-même, voir api/app-download.js) - toujours
+    // le même endpoint fixe.
     return {
-      version: latestTag,
-      downloadUrl,
-      releaseNotes: data.body ?? '',
+      version: latestVersion,
+      downloadUrl: APP_DOWNLOAD_URL,
+      releaseNotes: '',
     };
   } catch {
     return null;

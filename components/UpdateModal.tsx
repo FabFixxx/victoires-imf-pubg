@@ -11,9 +11,10 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import type { UpdateInfo } from '../lib/update-check';
 import type { ColorScheme } from '../constants/colors';
 
-/** Télécharge l'APK de la release GitHub (dépôt public - pas besoin de
- * token/proxy, contrairement à seedbox-manager) et lance directement
- * l'installateur natif Android, sans passer par le navigateur. */
+/** Télécharge l'APK via notre propre serveur (api/app-download.js, qui fait
+ * le pont avec l'API GitHub côté serveur - le dépôt est privé) et lance
+ * directement l'installateur natif Android, sans passer par le navigateur.
+ * Même mécanisme que seedbox-manager. */
 async function downloadAndInstallUpdate(
   downloadUrl: string,
   onProgress: (percent: number | null) => void
